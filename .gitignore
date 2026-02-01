@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# macOS
+.DS_Store
+*.DS_Store
+
+# IDE
+.idea/
+
+# Subprojects (have their own git)
+hotel-ai-dashboard-v2/
+
+# Backups
+backups/
+
+# Temporary files
+*.tmp
+*.log
