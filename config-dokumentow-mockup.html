@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Konfiguracja dokumentów — Mockup</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0f;
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    padding: 32px;
+    min-height: 100vh;
+  }
+
+  .settings-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* Top-level settings tabs */
+  .settings-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding-bottom: 0;
+    overflow-x: auto;
+  }
+  .settings-tab {
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #94a3b8;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .settings-tab:hover { color: #e2e8f0; }
+  .settings-tab.active {
+    color: #c084fc;
+    border-bottom-color: #c084fc;
+  }
+
+  /* Section header */
+  .section-header {
+    margin-bottom: 24px;
+  }
+  .section-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #f1f5f9;
+    margin-bottom: 4px;
+  }
+  .section-header p {
+    font-size: 13px;
+    color: #64748b;
+  }
+
+  /* Shared data section */
+  .shared-section {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .shared-section .shared-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #c084fc;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .shared-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .shared-grid.three-col {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  /* Form field */
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .field label {
+    font-size: 12px;
+    color: #94a3b8;
+    font-weight: 500;
+  }
+  .field input, .field textarea {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #e2e8f0;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .field input:focus, .field textarea:focus {
+    border-color: #c084fc;
+  }
+  .field input.filled {
+    border-color: rgba(255,255,255,0.15);
+  }
+  .field input.empty {
+    border-color: rgba(251, 191, 36, 0.3);
+    background: rgba(251, 191, 36, 0.03);
+  }
+  .field textarea { resize: vertical; min-height: 60px; }
+
+  .logo-placeholder {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.05);
+    border: 2px dashed rgba(255,255,255,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .logo-placeholder.has-logo {
+    border-style: solid;
+    border-color: rgba(255,255,255,0.1);
+    background: linear-gradient(135deg, rgba(192,132,252,0.1), rgba(168,85,247,0.05));
+    color: #c084fc;
+    font-size: 20px;
+  }
+
+  /* Accordion sections */
+  .accordion {
+    margin-bottom: 12px;
+  }
+  .accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .accordion-header:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: rgba(255,255,255,0.12);
+  }
+  .accordion.open .accordion-header {
+    border-radius: 12px 12px 0 0;
+    border-bottom-color: rgba(255,255,255,0.04);
+  }
+  .accordion-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .accordion-icon {
+    font-size: 18px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+  }
+  .accordion-icon.offers { background: rgba(59, 130, 246, 0.1); color: #60a5fa; }
+  .accordion-icon.contracts { background: rgba(168, 85, 247, 0.1); color: #c084fc; }
+  .accordion-icon.schedules { background: rgba(16, 185, 129, 0.1); color: #34d399; }
+  .accordion-icon.timeline { background: rgba(251, 191, 36, 0.1); color: #fbbf24; }
+
+  .accordion-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: #f1f5f9;
+  }
+  .accordion-subtitle {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 1px;
+  }
+  .accordion-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Progress badge */
+  .progress-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 500;
+  }
+  .progress-badge.complete {
+    background: rgba(16, 185, 129, 0.1);
+    color: #34d399;
+  }
+  .progress-badge.partial {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+  }
+  .progress-badge.empty {
+    background: rgba(255,255,255,0.05);
+    color: #64748b;
+  }
+  .progress-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .progress-dot.complete { background: #34d399; }
+  .progress-dot.partial { background: #fbbf24; }
+  .progress-dot.empty { background: #64748b; }
+
+  .chevron {
+    color: #64748b;
+    font-size: 14px;
+    transition: transform 0.2s;
+  }
+  .accordion.open .chevron {
+    transform: rotate(90deg);
+  }
+
+  /* Accordion body */
+  .accordion-body {
+    display: none;
+    padding: 20px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+  }
+  .accordion.open .accordion-body {
+    display: block;
+  }
+
+  .fields-group {
+    margin-bottom: 16px;
+  }
+  .fields-group:last-child { margin-bottom: 0; }
+  .fields-group-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin-bottom: 10px;
+    font-weight: 600;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* Color swatches */
+  .color-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .color-swatch {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 2px solid rgba(255,255,255,0.1);
+    cursor: pointer;
+  }
+  .color-label {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  /* USP chips */
+  .usp-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .usp-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+
+  /* Annotation */
+  .mockup-label {
+    text-align: center;
+    color: #475569;
+    font-size: 11px;
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* Before/After comparison */
+  .comparison {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+  .comparison-panel {
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .comparison-panel.before {
+    background: rgba(239, 68, 68, 0.03);
+    border-color: rgba(239, 68, 68, 0.15);
+  }
+  .comparison-panel.after {
+    background: rgba(16, 185, 129, 0.03);
+    border-color: rgba(16, 185, 129, 0.15);
+  }
+  .comparison-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .comparison-label.before { color: #ef4444; }
+  .comparison-label.after { color: #10b981; }
+  .comparison-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .comparison-tab {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #94a3b8;
+    background: rgba(255,255,255,0.03);
+  }
+  .comparison-tab.highlight {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.08);
+    border: 1px dashed rgba(251, 191, 36, 0.3);
+  }
+  .comparison-tab .tab-note {
+    font-size: 10px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+</style>
+</head>
+<body>
+
+<div class="settings-container">
+
+  <!-- Before/After comparison -->
+  <div class="comparison">
+    <div class="comparison-panel before">
+      <div class="comparison-label before">TERAZ</div>
+      <div class="comparison-tabs">
+        <div class="comparison-tab">Email firmowy</div>
+        <div class="comparison-tab highlight">
+          Branding ofert
+          <div class="tab-note">Tylko dane do ofert PDF</div>
+        </div>
+        <div class="comparison-tab highlight" style="color: #ef4444; background: rgba(239,68,68,0.08); border: 1px dashed rgba(239,68,68,0.3);">
+          ??? Umowy
+          <div class="tab-note">Brak panelu — 10 pól NULL</div>
+        </div>
+        <div class="comparison-tab">Integracje</div>
+        <div class="comparison-tab">Inne...</div>
+      </div>
+    </div>
+    <div class="comparison-panel after">
+      <div class="comparison-label after">PO ZMIANIE</div>
+      <div class="comparison-tabs">
+        <div class="comparison-tab">Email firmowy</div>
+        <div class="comparison-tab" style="color: #10b981; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);">
+          Konfiguracja dokumentów
+          <div class="tab-note" style="color: #10b981;">Oferty + Umowy + Rozpiski + Harmonogram</div>
+        </div>
+        <div class="comparison-tab">Integracje</div>
+        <div class="comparison-tab">Inne...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simulated Settings Tabs -->
+  <div class="settings-tabs">
+    <div class="settings-tab">Email firmowy</div>
+    <div class="settings-tab active">Konfiguracja dokumentów</div>
+    <div class="settings-tab">Integracje</div>
+    <div class="settings-tab">Powiadomienia</div>
+    <div class="settings-tab">Zespół</div>
+  </div>
+
+  <!-- Section header -->
+  <div class="section-header">
+    <h2>Konfiguracja dokumentów</h2>
+    <p>Dane firmowe i branding dla wszystkich generatorów dokumentów</p>
+  </div>
+
+  <!-- SHARED DATA (always visible) -->
+  <div class="shared-section">
+    <div class="shared-label">Dane wspólne — używane we wszystkich dokumentach</div>
+    <div style="display: flex; gap: 20px; align-items: flex-start;">
+      <div class="logo-placeholder has-logo">KP</div>
+      <div style="flex: 1;">
+        <div class="shared-grid" style="margin-bottom: 12px;">
+          <div class="field">
+            <label>Nazwa firmy</label>
+            <input type="text" value="Resort Król Plaza Sp. z o.o." class="filled">
+          </div>
+          <div class="field">
+            <label>Adres</label>
+            <input type="text" value="ul. Bałtycka 16, 76-107 Jarosławiec" class="filled">
+          </div>
+        </div>
+        <div class="shared-grid">
+          <div class="field">
+            <label>Email kontaktowy</label>
+            <input type="text" value="konferencje@krolplaza.pl" class="filled">
+          </div>
+          <div class="field">
+            <label>Telefon</label>
+            <input type="text" value="+48 511 612 820" class="filled">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCORDION: Wizard ofert -->
+  <div class="accordion open">
+    <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="accordion-left">
+        <div class="accordion-icon offers">📋</div>
+        <div>
+          <div class="accordion-title">Wizard ofert i kalkulacji</div>
+          <div class="accordion-subtitle">Kolory, tagline, USP, galeria, warunki, stopka PDF</div>
+        </div>
+      </div>
+      <div class="accordion-right">
+        <div class="progress-badge complete">
+          <div class="progress-dot complete"></div>
+          8/8
+        </div>
+        <span class="chevron">›</span>
+      </div>
+    </div>
+    <div class="accordion-body">
+      <div class="fields-group">
+        <div class="fields-group-label">Kolory marki</div>
+        <div class="color-row">
+          <div class="color-swatch" style="background: #8B3A62;"></div>
+          <span class="color-label">Główny — #8B3A62</span>
+          <div style="width: 24px;"></div>
+          <div class="color-swatch" style="background: #D4AF37;"></div>
+          <span class="color-label">Akcent — #D4AF37</span>
+        </div>
+      </div>
+      <div class="fields-group">
+        <div class="fields-group-label">Tagline & USP</div>
+        <div class="field" style="margin-bottom: 10px;">
+          <label>Tagline</label>
+          <input type="text" value="Luksusowy wypoczynek nad morzem" class="filled">
+        </div>
+        <div class="usp-chips">
+          <span class="usp-chip">Widok na morze</span>
+          <span class="usp-chip">Strefa SPA</span>
+          <span class="usp-chip">Restauracja</span>
+          <span class="usp-chip">Sala konferencyjna</span>
+        </div>
+      </div>
+      <div class="fields-group">
+        <div class="shared-grid">
+          <div class="field">
+            <label>Stopka PDF</label>
+            <textarea class="filled" style="font-size: 12px;">Resort Król Plaza Sp. z o.o. • NIP: 1234567890</textarea>
+          </div>
+          <div class="field">
+            <label>Warunki oferty</label>
+            <textarea class="filled" style="font-size: 12px;">Oferta ważna 14 dni od daty wystawienia...</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCORDION: Wizard umów -->
+  <div class="accordion open">
+    <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="accordion-left">
+        <div class="accordion-icon contracts">📝</div>
+        <div>
+          <div class="accordion-title">Wizard umów</div>
+          <div class="accordion-subtitle">Dane prawne, bank, sygnatariusz, warunki kontraktu</div>
+        </div>
+      </div>
+      <div class="accordion-right">
+        <div class="progress-badge partial">
+          <div class="progress-dot partial"></div>
+          2/10
+        </div>
+        <span class="chevron">›</span>
+      </div>
+    </div>
+    <div class="accordion-body">
+      <div class="fields-group">
+        <div class="fields-group-label">Dane rejestrowe</div>
+        <div class="shared-grid three-col">
+          <div class="field">
+            <label>NIP</label>
+            <input type="text" placeholder="np. 123-456-78-90" class="empty">
+          </div>
+          <div class="field">
+            <label>REGON</label>
+            <input type="text" placeholder="np. 123456789" class="empty">
+          </div>
+          <div class="field">
+            <label>KRS</label>
+            <input type="text" placeholder="np. 0000123456" class="empty">
+          </div>
+        </div>
+      </div>
+      <div class="fields-group">
+        <div class="fields-group-label">Dane bankowe</div>
+        <div class="shared-grid">
+          <div class="field">
+            <label>Nazwa banku</label>
+            <input type="text" placeholder="np. PKO Bank Polski" class="empty">
+          </div>
+          <div class="field">
+            <label>Numer konta</label>
+            <input type="text" placeholder="np. PL 12 1234 5678 9012 3456 7890 1234" class="empty">
+          </div>
+        </div>
+      </div>
+      <div class="fields-group">
+        <div class="fields-group-label">Osoba podpisująca umowy</div>
+        <div class="shared-grid">
+          <div class="field">
+            <label>Imię i nazwisko</label>
+            <input type="text" placeholder="np. Jan Kowalski" class="empty">
+          </div>
+          <div class="field">
+            <label>Stanowisko</label>
+            <input type="text" placeholder="np. Dyrektor Generalny" class="empty">
+          </div>
+        </div>
+      </div>
+      <div class="fields-group">
+        <div class="fields-group-label">Domyślne warunki</div>
+        <div class="shared-grid">
+          <div class="field">
+            <label>Warunki płatności</label>
+            <textarea placeholder="Domyślne warunki płatności dla nowych umów..." class="empty"></textarea>
+          </div>
+          <div class="field">
+            <label>Warunki anulacji</label>
+            <textarea placeholder="Domyślne warunki anulacji dla nowych umów..." class="empty"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="fields-group">
+        <div class="fields-group-label">Ustawienia</div>
+        <div class="shared-grid three-col">
+          <div class="field">
+            <label>Prefix numeracji</label>
+            <input type="text" value="UM" class="filled">
+          </div>
+          <div class="field">
+            <label>Ważność umowy (dni)</label>
+            <input type="text" value="14" class="filled">
+          </div>
+          <div class="field">
+            <label>Domyślna zaliczka (%)</label>
+            <input type="text" value="30" class="filled">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCORDION: Wizard rozpisek -->
+  <div class="accordion">
+    <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="accordion-left">
+        <div class="accordion-icon schedules">📊</div>
+        <div>
+          <div class="accordion-title">Wizard rozpisek</div>
+          <div class="accordion-subtitle">Szablony rozpisek, formatowanie, domyślne godziny</div>
+        </div>
+      </div>
+      <div class="accordion-right">
+        <div class="progress-badge complete">
+          <div class="progress-dot complete"></div>
+          4/4
+        </div>
+        <span class="chevron">›</span>
+      </div>
+    </div>
+    <div class="accordion-body">
+      <div class="fields-group">
+        <div class="fields-group-label">Ustawienia rozpisek</div>
+        <div class="shared-grid">
+          <div class="field">
+            <label>Domyślna godzina check-in</label>
+            <input type="text" value="15:00" class="filled">
+          </div>
+          <div class="field">
+            <label>Domyślna godzina check-out</label>
+            <input type="text" value="11:00" class="filled">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCORDION: Harmonogram -->
+  <div class="accordion">
+    <div class="accordion-header" onclick="this.parentElement.classList.toggle('open')">
+      <div class="accordion-left">
+        <div class="accordion-icon timeline">📅</div>
+        <div>
+          <div class="accordion-title">Harmonogram</div>
+          <div class="accordion-subtitle">Domyślne bloki czasowe, szablony harmonogramów</div>
+        </div>
+      </div>
+      <div class="accordion-right">
+        <div class="progress-badge empty">
+          <div class="progress-dot empty"></div>
+          0/3
+        </div>
+        <span class="chevron">›</span>
+      </div>
+    </div>
+    <div class="accordion-body">
+      <div class="fields-group">
+        <div class="fields-group-label">Ustawienia harmonogramu</div>
+        <p style="font-size: 13px; color: #64748b;">Konfiguracja domyślnych bloków czasowych...</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup-label">
+    Mockup UI — Pure Alpha • Konfiguracja dokumentów (accordion pattern)<br>
+    Pola z żółtą ramką = puste, wymagające uzupełnienia
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,2865 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pure Alpha — Pure Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  button, input, textarea { font-family: inherit; }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+
+  :root {
+    /* PA Design Tokens */
+    --pa-bg: linear-gradient(180deg, #f8f6f3 0%, #f5f3f0 50%, #f2f0ed 100%);
+    --pa-surface: rgba(255,255,255,0.90);
+    --pa-glass: rgba(255,255,255,0.70);
+    --pa-glass-strong: rgba(255,255,255,0.85);
+    --pa-border-light: rgba(0,0,0,0.06);
+    --pa-border-medium: rgba(0,0,0,0.10);
+    --pa-border-strong: rgba(0,0,0,0.14);
+    --pa-primary: #6366f1;
+    --pa-primary-hover: #4f46e5;
+    --pa-primary-light: rgba(99,102,241,0.08);
+    --pa-primary-medium: rgba(99,102,241,0.15);
+    --pa-success: #10b981;
+    --pa-success-light: rgba(16,185,129,0.08);
+    --pa-warning: #f59e0b;
+    --pa-warning-light: rgba(245,158,11,0.08);
+    --pa-danger: #ef4444;
+    --pa-danger-light: rgba(239,68,68,0.08);
+    --pa-text: #0f172a;
+    --pa-text-secondary: #475569;
+    --pa-text-muted: #94a3b8;
+    --pa-text-faint: #cbd5e1;
+    --pa-shadow-card-lg: 0 30px 80px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.04);
+    --pa-shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+    --pa-radius: 12px;
+    --pa-radius-lg: 16px;
+    --pa-radius-2xl: 32px;
+    --pa-radius-full: 9999px;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--pa-bg);
+    background-attachment: fixed;
+    color: var(--pa-text);
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ═══════════ TOPBAR ═══════════ */
+  .topbar {
+    height: 60px;
+    background: var(--pa-glass-strong);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--pa-border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    position: relative;
+    z-index: 10;
+  }
+  .topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .topbar-logo {
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: -0.4px;
+    background: linear-gradient(135deg, var(--pa-primary), #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .topbar-divider {
+    width: 1px;
+    height: 22px;
+    background: var(--pa-border-medium);
+  }
+  .topbar-hotel {
+    font-size: 13px;
+    color: var(--pa-text-secondary);
+    font-weight: 500;
+  }
+  .topbar-nav {
+    display: flex;
+    gap: 2px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .topbar-nav-item {
+    padding: 6px 14px;
+    border-radius: var(--pa-radius-full);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--pa-text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .topbar-nav-item:hover {
+    color: var(--pa-text-secondary);
+    background: rgba(0,0,0,0.03);
+  }
+  .topbar-nav-item.active {
+    color: var(--pa-primary);
+    background: var(--pa-primary-light);
+  }
+  .topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .topbar-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--pa-radius);
+    border: none;
+    background: transparent;
+    color: var(--pa-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .topbar-btn:hover {
+    background: rgba(0,0,0,0.04);
+    color: var(--pa-text-secondary);
+  }
+  .topbar-btn.chat-active {
+    background: var(--pa-primary-light);
+    color: var(--pa-primary);
+  }
+  .badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: var(--pa-radius-full);
+    background: var(--pa-danger);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    border: 2px solid var(--pa-surface);
+    box-shadow: 0 2px 6px rgba(239,68,68,0.3);
+  }
+
+  /* ═══════════ BACKDROP ═══════════ */
+  .chat-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,23,42,0.20);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .chat-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ═══════════ CHAT MODAL ═══════════ */
+  .chat-modal {
+    width: 960px;
+    height: 640px;
+    background: var(--pa-glass-strong);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border-radius: var(--pa-radius-2xl);
+    border: 1px solid var(--pa-border-light);
+    display: flex;
+    overflow: hidden;
+    box-shadow: var(--pa-shadow-card-lg), 0 0 0 1px rgba(255,255,255,0.5) inset;
+    transform: scale(0.95) translateY(12px);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .chat-backdrop.open .chat-modal {
+    transform: scale(1) translateY(0);
+  }
+
+  /* ═══════════ SIDEBAR ═══════════ */
+  .chat-sidebar {
+    width: 250px;
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border-right: 1px solid rgba(255,255,255,0.35);
+    display: flex;
+    flex-direction: column;
+  }
+  .sidebar-header {
+    padding: 18px 16px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .sidebar-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    background: linear-gradient(135deg, #b8976a 0%, #d4af37 40%, #e8cc73 60%, #c9a44b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .sidebar-close {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--pa-radius-full);
+    border: none;
+    background: rgba(0,0,0,0.04);
+    color: var(--pa-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.15s;
+  }
+  .sidebar-close:hover {
+    background: var(--pa-danger-light);
+    color: var(--pa-danger);
+  }
+  .sidebar-search-wrap {
+    padding: 0 12px 12px;
+  }
+  .sidebar-search {
+    width: 100%;
+    padding: 9px 12px 9px 34px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--pa-border-light);
+    border-radius: var(--pa-radius);
+    color: var(--pa-text);
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.2s;
+    background-image: url("data:image/svg+xml,%3Csvg width='14' height='14' fill='none' stroke='%2394a3b8' stroke-width='2' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: 11px center;
+  }
+  .sidebar-search:focus {
+    border-color: rgba(99,102,241,0.3);
+    background-color: white;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+  }
+  .sidebar-search::placeholder {
+    color: var(--pa-text-faint);
+  }
+  .channel-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 8px 8px;
+  }
+  .channel-section {
+    margin-bottom: 4px;
+  }
+  .section-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 8px 4px;
+  }
+  .section-label span {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--pa-text-muted);
+  }
+  .section-add {
+    width: 44px;
+    height: 44px;
+    margin: -13px -13px -13px 0;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--pa-text-faint);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.1s, background 0.1s;
+  }
+  .section-add:hover {
+    background: var(--pa-primary-light);
+    color: var(--pa-primary);
+  }
+  .ch-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: var(--pa-radius);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-size: 13px;
+    color: var(--pa-text-secondary);
+    position: relative;
+  }
+  .ch-item:hover {
+    background: rgba(0,0,0,0.03);
+    color: var(--pa-text);
+  }
+  .ch-item.active {
+    background: var(--pa-primary-light);
+    color: var(--pa-primary);
+    font-weight: 500;
+  }
+  .ch-icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .ch-hash {
+    font-weight: 600;
+    font-size: 14px;
+    opacity: 0.5;
+  }
+  .ch-name {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ch-badge {
+    min-width: 18px;
+    height: 18px;
+    border-radius: var(--pa-radius-full);
+    background: var(--pa-primary);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 5px;
+    flex-shrink: 0;
+  }
+  .ch-badge.muted {
+    background: rgba(0,0,0,0.06);
+    color: var(--pa-text-muted);
+  }
+
+  /* DM avatar */
+  .dm-av {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--pa-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 600;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .dm-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--pa-radius-full);
+    border: 2px solid var(--pa-surface);
+  }
+  .dm-dot.on { background: var(--pa-success); }
+  .dm-dot.away { background: var(--pa-warning); }
+  .dm-dot.off { background: var(--pa-text-faint); }
+
+  /* Sidebar footer */
+  .sidebar-footer {
+    padding: 12px 14px;
+    border-top: 1px solid var(--pa-border-light);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .my-av {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--pa-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .my-info {
+    flex: 1;
+  }
+  .my-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pa-text);
+  }
+  .my-role {
+    font-size: 10px;
+    color: var(--pa-text-muted);
+  }
+  .my-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: var(--pa-radius-full);
+    background: var(--pa-success);
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.15);
+  }
+
+  /* ═══════════ AVATAR COLORS ═══════════ */
+  .av-indigo { background: rgba(99,102,241,0.12); color: #6366f1; }
+  .av-violet { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+  .av-emerald { background: rgba(16,185,129,0.12); color: #10b981; }
+  .av-amber { background: rgba(245,158,11,0.12); color: #f59e0b; }
+  .av-rose { background: rgba(244,63,94,0.12); color: #f43f5e; }
+  .av-orange { background: rgba(249,115,22,0.12); color: #f97316; }
+
+  /* ═══════════ MAIN CHAT ═══════════ */
+  .chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(180deg, rgba(248,246,243,0.35) 0%, rgba(245,243,240,0.25) 100%);
+  }
+
+  /* CHAT HEADER */
+  .chat-header {
+    height: 56px;
+    background: rgba(255,255,255,0.50);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+    border-bottom: 1px solid rgba(255,255,255,0.30);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    flex-shrink: 0;
+  }
+  .chat-h-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .chat-h-hash {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--pa-text-faint);
+  }
+  .chat-h-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--pa-text);
+    letter-spacing: -0.2px;
+  }
+  .chat-h-sep {
+    width: 1px;
+    height: 16px;
+    background: var(--pa-border-medium);
+  }
+  .chat-h-desc {
+    font-size: 12px;
+    color: var(--pa-text-muted);
+  }
+  .chat-h-right {
+    display: flex;
+    gap: 2px;
+  }
+  .h-action {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--pa-radius);
+    border: none;
+    background: transparent;
+    color: var(--pa-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+  }
+  .h-action:hover {
+    background: rgba(0,0,0,0.04);
+    color: var(--pa-text-secondary);
+  }
+
+  /* PINNED BAR */
+  .pinned-bar {
+    padding: 8px 20px;
+    background: linear-gradient(90deg, rgba(245,158,11,0.06), rgba(255,255,255,0.40));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--pa-text-secondary);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .pinned-bar:hover {
+    background: linear-gradient(90deg, rgba(245,158,11,0.10), rgba(255,255,255,0.50));
+  }
+  .pinned-icon {
+    color: var(--pa-warning);
+    font-size: 13px;
+  }
+  .pinned-bar strong {
+    color: var(--pa-text);
+    font-weight: 600;
+  }
+  .pinned-count {
+    margin-left: auto;
+    font-size: 10px;
+    color: var(--pa-text-muted);
+    background: rgba(245,158,11,0.10);
+    padding: 2px 8px;
+    border-radius: var(--pa-radius-full);
+    font-weight: 500;
+  }
+
+  /* ═══════════ MESSAGES ═══════════ */
+  .messages-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .date-div {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 14px 0 8px;
+  }
+  .date-div::before, .date-div::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--pa-border-light);
+  }
+  .date-div span {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--pa-text-muted);
+    white-space: nowrap;
+    padding: 3px 12px;
+    background: rgba(255,255,255,0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: var(--pa-radius-full);
+    border: 1px solid rgba(255,255,255,0.35);
+  }
+
+  /* Message group */
+  .msg {
+    display: flex;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: var(--pa-radius);
+    transition: background 0.1s;
+    position: relative;
+  }
+  .msg:hover {
+    background: rgba(255,255,255,0.35);
+  }
+  .msg.mention-hl {
+    background: linear-gradient(90deg, rgba(99,102,241,0.06), transparent);
+    border-left: 2.5px solid var(--pa-primary);
+    padding-left: 8px;
+  }
+  .msg-av {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--pa-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .msg-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .msg-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 2px;
+  }
+  .msg-author {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pa-text);
+  }
+  .msg-tag {
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: var(--pa-radius-full);
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+  .msg-tag.mgr { background: rgba(139,92,246,0.10); color: #7c3aed; }
+  .msg-tag.rec { background: rgba(16,185,129,0.10); color: #059669; }
+  .msg-tag.hsk { background: rgba(249,115,22,0.10); color: #ea580c; }
+  .msg-time {
+    font-size: 11px;
+    color: var(--pa-text-faint);
+    font-weight: 400;
+  }
+  .msg-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--pa-text-secondary);
+  }
+  .mention {
+    color: var(--pa-primary);
+    background: rgba(99,102,241,0.08);
+    padding: 0 4px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .mention:hover {
+    background: rgba(99,102,241,0.15);
+  }
+
+  /* File attachment */
+  .msg-attach {
+    margin-top: 8px;
+  }
+  .attach-file {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.50);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.40);
+    border-radius: var(--pa-radius);
+    cursor: pointer;
+    transition: all 0.15s;
+    max-width: 300px;
+  }
+  .attach-file:hover {
+    background: rgba(255,255,255,0.70);
+    border-color: rgba(255,255,255,0.50);
+    box-shadow: var(--pa-shadow-sm);
+  }
+  .file-ic {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+  }
+  .file-ic.pdf { background: rgba(239,68,68,0.08); color: #dc2626; }
+  .file-ic.xls { background: rgba(16,185,129,0.08); color: #059669; }
+  .file-ic.doc { background: rgba(59,130,246,0.08); color: #2563eb; }
+  .file-nm {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--pa-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .file-sz {
+    font-size: 10px;
+    color: var(--pa-text-muted);
+    margin-top: 1px;
+  }
+
+  /* Image attachment */
+  .attach-img {
+    display: inline-block;
+    margin-top: 8px;
+    border-radius: var(--pa-radius);
+    overflow: hidden;
+    border: 1px solid var(--pa-border-light);
+    cursor: pointer;
+    transition: all 0.15s;
+    max-width: 300px;
+  }
+  .attach-img:hover {
+    box-shadow: var(--pa-shadow-sm);
+    border-color: var(--pa-border-medium);
+  }
+  .img-placeholder {
+    width: 300px;
+    height: 170px;
+    background: linear-gradient(135deg, rgba(240,244,255,0.60) 0%, rgba(253,242,248,0.50) 50%, rgba(254,243,199,0.40) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .img-placeholder .ph-icon {
+    opacity: 0.4;
+  }
+  .img-placeholder .ph-name {
+    font-size: 11px;
+    color: var(--pa-text-muted);
+    font-weight: 500;
+  }
+  .img-placeholder .ph-meta {
+    font-size: 10px;
+    color: var(--pa-text-faint);
+  }
+
+  /* Reactions */
+  .msg-reactions {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .rx {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: var(--pa-radius-full);
+    border: 1px solid var(--pa-border-light);
+    background: white;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+  }
+  .rx:hover {
+    border-color: var(--pa-border-medium);
+    background: rgba(0,0,0,0.04);
+  }
+  .rx.mine {
+    border-color: rgba(99,102,241,0.25);
+    background: rgba(99,102,241,0.04);
+  }
+  .rx-count {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--pa-text-secondary);
+  }
+
+  /* Thread link */
+  .msg-thread {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding: 4px 0;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--pa-primary);
+    transition: opacity 0.12s;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+  }
+  .msg-thread:hover { opacity: 0.75; }
+  .thread-avs {
+    display: flex;
+  }
+  .thread-av {
+    width: 18px;
+    height: 18px;
+    border-radius: var(--pa-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    font-weight: 700;
+    margin-left: -5px;
+    border: 2px solid var(--pa-surface);
+  }
+  .thread-av:first-child { margin-left: 0; }
+
+  /* Quick task */
+  .msg-task {
+    margin-top: 8px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, rgba(99,102,241,0.04), rgba(255,255,255,0.40));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.30);
+    border-radius: var(--pa-radius);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .task-cb {
+    width: 18px;
+    height: 18px;
+    border-radius: 5px;
+    border: 2px solid rgba(99,102,241,0.35);
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .task-cb:hover {
+    border-color: var(--pa-primary);
+    background: rgba(99,102,241,0.05);
+  }
+  .task-label {
+    flex: 1;
+    font-size: 12px;
+    color: var(--pa-text-secondary);
+  }
+  .task-assignee {
+    font-size: 11px;
+    color: var(--pa-primary);
+    padding: 2px 10px;
+    background: rgba(99,102,241,0.08);
+    border-radius: var(--pa-radius-full);
+    font-weight: 500;
+  }
+
+  /* Hover actions */
+  .msg-actions {
+    position: absolute;
+    top: -10px;
+    right: 10px;
+    display: flex;
+    gap: 1px;
+    background: rgba(255,255,255,0.70);
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid rgba(255,255,255,0.45);
+    border-radius: 10px;
+    padding: 3px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  }
+  .msg:hover .msg-actions,
+  .msg-cont:hover .msg-actions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .act-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--pa-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.1s;
+  }
+  .act-btn:hover {
+    background: rgba(0,0,0,0.04);
+    color: var(--pa-text-secondary);
+  }
+
+  /* Continuation message */
+  .msg-cont {
+    display: flex;
+    gap: 12px;
+    padding: 2px 10px 2px 58px;
+    border-radius: var(--pa-radius);
+    transition: background 0.1s;
+    position: relative;
+  }
+  .msg-cont:hover {
+    background: rgba(0,0,0,0.02);
+  }
+  .cont-time {
+    position: absolute;
+    left: 14px;
+    font-size: 10px;
+    color: var(--pa-text-faint);
+    opacity: 0;
+    transition: opacity 0.1s;
+    top: 4px;
+  }
+  .msg-cont:hover .cont-time { opacity: 1; }
+
+  /* ═══════════ TYPING ═══════════ */
+  .typing {
+    padding: 6px 20px;
+    font-size: 11px;
+    color: var(--pa-text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .dots {
+    display: flex;
+    gap: 3px;
+  }
+  .dots span {
+    width: 5px;
+    height: 5px;
+    border-radius: var(--pa-radius-full);
+    background: var(--pa-primary);
+    opacity: 0.4;
+    animation: dot 1.4s ease-in-out infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: 0.15s; }
+  .dots span:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes dot {
+    0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+    30% { opacity: 1; transform: translateY(-3px); }
+  }
+
+  /* ═══════════ INPUT ═══════════ */
+  .chat-input-wrap {
+    padding: 10px 20px 18px;
+    flex-shrink: 0;
+  }
+  .input-box {
+    background: rgba(255,255,255,0.60);
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    border: 1px solid rgba(255,255,255,0.40);
+    border-radius: var(--pa-radius-lg);
+    transition: all 0.2s;
+    box-shadow: var(--pa-shadow-sm), 0 0 0 1px rgba(255,255,255,0.2) inset;
+  }
+  .input-box:focus-within {
+    background: rgba(255,255,255,0.75);
+    border-color: rgba(99,102,241,0.25);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.06), var(--pa-shadow-sm);
+  }
+  .input-textarea {
+    width: 100%;
+    padding: 14px 16px 4px;
+    background: transparent;
+    border: none;
+    color: var(--pa-text);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    resize: none;
+    line-height: 1.5;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  .input-textarea::placeholder {
+    color: var(--pa-text-faint);
+  }
+  .input-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px 10px;
+  }
+  .input-tools {
+    display: flex;
+    gap: 1px;
+  }
+  .tool-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--pa-text-faint);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+  }
+  .tool-btn:hover {
+    background: rgba(0,0,0,0.03);
+    color: var(--pa-text-muted);
+  }
+  .send-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: var(--pa-radius);
+    border: none;
+    background: linear-gradient(135deg, var(--pa-primary), #818cf8);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+  }
+  .send-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+  }
+
+  /* ═══════════ ROLE SWITCHER ═══════════ */
+  .role-switcher {
+    display: flex;
+    margin: 0 12px 8px;
+    background: rgba(0,0,0,0.03);
+    border-radius: var(--pa-radius);
+    padding: 3px;
+    gap: 2px;
+  }
+  .role-btn {
+    flex: 1;
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--pa-text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    letter-spacing: -0.1px;
+  }
+  .role-btn.active {
+    background: white;
+    color: var(--pa-text);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .role-btn:hover:not(.active) {
+    color: var(--pa-text-secondary);
+  }
+  .role-indicator {
+    padding: 8px 12px;
+    margin: 0 12px 4px;
+    border-radius: var(--pa-radius);
+    font-size: 10px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    line-height: 1.3;
+  }
+  .role-indicator.gm {
+    background: rgba(139,92,246,0.06);
+    color: #7c3aed;
+    border: 1px solid rgba(139,92,246,0.10);
+  }
+  .role-indicator.emp {
+    background: rgba(16,185,129,0.06);
+    color: #059669;
+    border: 1px solid rgba(16,185,129,0.10);
+  }
+  .role-indicator svg {
+    flex-shrink: 0;
+  }
+  .dept-hidden {
+    display: none;
+  }
+
+  /* ═══════════ SCROLLBAR ═══════════ */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.08);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.14);
+  }
+
+  /* Firefox scrollbar */
+  .channel-list, .messages-area {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.08) transparent;
+  }
+
+  /* ═══════════ FOCUS VISIBLE ═══════════ */
+  :focus-visible {
+    outline: 2px solid var(--pa-primary);
+    outline-offset: 2px;
+  }
+  .sidebar-search:focus-visible {
+    outline: none;
+    border-color: rgba(99,102,241,0.3);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+  }
+  .input-box:focus-within {
+    outline: none;
+  }
+
+  /* ═══════════ REDUCED MOTION ═══════════ */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* ═══════════ ACTIVE TOOL BUTTON ═══════════ */
+  .tool-btn.active-tool {
+    background: var(--pa-primary-light);
+    color: var(--pa-primary);
+  }
+
+  /* ═══════════ ATTACH DROPDOWN ═══════════ */
+  .attach-wrap {
+    position: relative;
+  }
+  .attach-dropdown {
+    position: absolute;
+    bottom: 42px;
+    left: 0;
+    background: var(--pa-glass-strong);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.45);
+    border-radius: var(--pa-radius);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.10), 0 0 0 1px rgba(255,255,255,0.3) inset;
+    padding: 4px;
+    min-width: 200px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(6px);
+    transition: all 0.15s ease;
+    z-index: 20;
+  }
+  .attach-dropdown.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .attach-opt {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--pa-text-secondary);
+    cursor: pointer;
+    transition: all 0.1s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font-family: inherit;
+  }
+  .attach-opt:hover {
+    background: var(--pa-primary-light);
+    color: var(--pa-primary);
+  }
+  .attach-opt svg {
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+  .attach-opt:hover svg {
+    opacity: 1;
+  }
+
+  /* ═══════════ GIF PICKER ═══════════ */
+  .gif-picker {
+    position: absolute;
+    bottom: 80px;
+    left: 20px;
+    right: 20px;
+    max-width: 460px;
+    height: 360px;
+    background: var(--pa-glass-strong);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.45);
+    border-radius: var(--pa-radius-lg);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.3) inset;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(10px);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 30;
+    overflow: hidden;
+  }
+  .gif-picker.open {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+  .gif-header {
+    padding: 14px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--pa-border-light);
+  }
+  .gif-close {
+    width: 26px;
+    height: 26px;
+    border-radius: var(--pa-radius-full);
+    border: none;
+    background: rgba(0,0,0,0.04);
+    color: var(--pa-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    transition: all 0.12s;
+  }
+  .gif-close:hover {
+    background: var(--pa-danger-light);
+    color: var(--pa-danger);
+  }
+  .gif-search-wrap {
+    padding: 10px 16px 8px;
+  }
+  .gif-search {
+    width: 100%;
+    padding: 8px 12px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--pa-border-light);
+    border-radius: var(--pa-radius);
+    color: var(--pa-text);
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .gif-search:focus {
+    border-color: rgba(99,102,241,0.3);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+    outline: none;
+  }
+  .gif-search::placeholder {
+    color: var(--pa-text-faint);
+  }
+  .gif-cats {
+    display: flex;
+    gap: 4px;
+    padding: 4px 16px 10px;
+    overflow-x: auto;
+  }
+  .gif-cat {
+    padding: 5px 12px;
+    border-radius: var(--pa-radius-full);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--pa-text-muted);
+    background: rgba(0,0,0,0.03);
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.12s;
+    font-family: inherit;
+  }
+  .gif-cat:hover {
+    color: var(--pa-text-secondary);
+    background: rgba(0,0,0,0.06);
+  }
+  .gif-cat.active {
+    background: var(--pa-primary-light);
+    color: var(--pa-primary);
+  }
+  .gif-grid {
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 0 16px 16px;
+    overflow-y: auto;
+  }
+  .gif-item {
+    aspect-ratio: 4/3;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s;
+    border: 1px solid var(--pa-border-light);
+  }
+  .gif-item:hover {
+    transform: scale(1.03);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+    border-color: var(--pa-primary);
+  }
+  .gif-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 24px;
+    background: linear-gradient(135deg, rgba(240,244,255,0.5), rgba(253,242,248,0.4));
+  }
+  .gif-label {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--pa-text-muted);
+    text-align: center;
+    padding: 0 4px;
+  }
+
+  /* Sent GIF in message */
+  .sent-gif {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06));
+    border: 1px solid rgba(99,102,241,0.12);
+    border-radius: var(--pa-radius);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--pa-text-secondary);
+    margin-top: 4px;
+  }
+
+  /* ═══════════ CRM DOCUMENTS MODAL ═══════════ */
+  .crm-docs-modal {
+    position: absolute;
+    inset: 0;
+    background: rgba(15,23,42,0.30);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+  .crm-docs-modal.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .crm-docs-panel {
+    width: 480px;
+    max-height: 440px;
+    background: var(--pa-glass-strong);
+    backdrop-filter: blur(40px) saturate(180%);
+    -webkit-backdrop-filter: blur(40px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.45);
+    border-radius: var(--pa-radius-lg);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.14), 0 0 0 1px rgba(255,255,255,0.3) inset;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.95);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .crm-docs-modal.open .crm-docs-panel {
+    transform: scale(1);
+  }
+  .crm-docs-header {
+    padding: 16px 18px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--pa-border-light);
+  }
+  .crm-docs-close {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--pa-radius-full);
+    border: none;
+    background: rgba(0,0,0,0.04);
+    color: var(--pa-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+  }
+  .crm-docs-close:hover {
+    background: var(--pa-danger-light);
+    color: var(--pa-danger);
+  }
+  .crm-docs-search-wrap {
+    padding: 12px 18px 8px;
+  }
+  .crm-docs-search {
+    width: 100%;
+    padding: 9px 12px;
+    background: rgba(0,0,0,0.03);
+    border: 1px solid var(--pa-border-light);
+    border-radius: var(--pa-radius);
+    color: var(--pa-text);
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .crm-docs-search:focus {
+    border-color: rgba(99,102,241,0.3);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+    outline: none;
+  }
+  .crm-docs-search::placeholder {
+    color: var(--pa-text-faint);
+  }
+  .crm-docs-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+  }
+  .crm-doc-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 8px;
+    border-radius: var(--pa-radius);
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+  .crm-doc-row:hover {
+    background: rgba(0,0,0,0.03);
+  }
+  .crm-doc-check {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--pa-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .crm-doc-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .crm-doc-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .crm-doc-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--pa-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .crm-doc-meta {
+    font-size: 10px;
+    color: var(--pa-text-muted);
+    margin-top: 1px;
+    display: flex;
+    gap: 8px;
+  }
+  .crm-doc-size {
+    color: var(--pa-text-faint);
+  }
+  .crm-docs-footer {
+    padding: 12px 18px;
+    border-top: 1px solid var(--pa-border-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .crm-attach-btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: var(--pa-radius);
+    background: linear-gradient(135deg, var(--pa-primary), #818cf8);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    box-shadow: 0 2px 8px rgba(99,102,241,0.3);
+  }
+  .crm-attach-btn:hover:not(:disabled) {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+  }
+  .crm-attach-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .crm-attach-info {
+    font-size: 11px;
+    color: var(--pa-text-muted);
+  }
+
+  /* ═══════════ CALL OVERLAY ═══════════ */
+  .call-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15,23,42,0.92) 0%, rgba(30,41,59,0.95) 100%);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .call-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .call-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--pa-radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    background: rgba(99,102,241,0.20);
+    color: #a5b4fc;
+    border: 3px solid rgba(99,102,241,0.30);
+    margin-bottom: 16px;
+    animation: callPulse 2s ease-in-out infinite;
+  }
+  @keyframes callPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.25); }
+    50% { box-shadow: 0 0 0 16px rgba(99,102,241,0); }
+  }
+  .call-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 4px;
+    letter-spacing: -0.3px;
+  }
+  .call-status {
+    font-size: 12px;
+    color: rgba(255,255,255,0.50);
+    font-weight: 500;
+    margin-bottom: 2px;
+  }
+  .call-timer {
+    font-size: 24px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    font-variant-numeric: tabular-nums;
+    margin-bottom: 40px;
+    letter-spacing: 1px;
+  }
+  .call-controls {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+  }
+  .call-ctrl-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .ctrl-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: var(--pa-radius-full);
+    background: rgba(255,255,255,0.10);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .call-ctrl-btn:hover .ctrl-icon {
+    background: rgba(255,255,255,0.18);
+  }
+  .call-ctrl-btn.active .ctrl-icon {
+    background: rgba(255,255,255,0.25);
+    border-color: rgba(255,255,255,0.20);
+  }
+  .ctrl-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.50);
+    font-weight: 500;
+  }
+  .call-end-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .call-end-btn .ctrl-icon {
+    background: var(--pa-danger);
+    border-color: rgba(239,68,68,0.3);
+  }
+  .call-end-btn:hover .ctrl-icon {
+    background: #dc2626;
+    transform: scale(1.08);
+    box-shadow: 0 4px 16px rgba(239,68,68,0.4);
+  }
+  .call-end-btn .ctrl-label {
+    color: rgba(239,68,68,0.70);
+  }
+
+  /* ═══════════ RESPONSIVE ═══════════ */
+  @media (max-width: 1024px) {
+    .chat-modal {
+      width: 90vw;
+      height: 80vh;
+    }
+    .topbar-nav {
+      position: static;
+      transform: none;
+    }
+  }
+  @media (max-width: 768px) {
+    .chat-modal {
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+    }
+    .chat-sidebar {
+      width: 220px;
+    }
+    .topbar {
+      padding: 0 16px;
+    }
+    .topbar-nav {
+      display: none;
+    }
+  }
+  @media (max-width: 768px) {
+    /* [M-3 v3] Responsive GIF picker + CRM modal */
+    .gif-picker {
+      height: 280px;
+      bottom: 70px;
+      left: 10px;
+      right: 10px;
+    }
+    .crm-docs-panel {
+      width: 95%;
+      max-height: 380px;
+    }
+  }
+  @media (max-width: 480px) {
+    .chat-modal {
+      flex-direction: column;
+    }
+    .chat-sidebar {
+      width: 100%;
+      height: 50vh;
+      border-right: none;
+      border-bottom: 1px solid rgba(255,255,255,0.35);
+    }
+    .chat-main {
+      height: 50vh;
+    }
+    .topbar-hotel {
+      display: none;
+    }
+    .topbar-divider {
+      display: none;
+    }
+    .gif-picker {
+      height: 240px;
+      bottom: 60px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ TOPBAR ═══════════════ -->
+<div class="topbar">
+  <div class="topbar-left">
+    <span class="topbar-logo">Pure Alpha</span>
+    <span class="topbar-divider"></span>
+    <span class="topbar-hotel">Hotel & Spa St. Martin's</span>
+  </div>
+  <div class="topbar-nav">
+    <span class="topbar-nav-item">Dashboard</span>
+    <span class="topbar-nav-item active">Sprzedaż</span>
+    <span class="topbar-nav-item">Newsletter</span>
+    <span class="topbar-nav-item">Rate Insight</span>
+  </div>
+  <div class="topbar-actions">
+    <button class="topbar-btn" aria-label="Powiadomienia">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M18 8A6 6 0 106 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>
+    </button>
+    <button class="topbar-btn chat-active" id="chatToggle" aria-label="Otwórz czat" aria-expanded="true">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <span class="badge" style="display:none">3</span>
+    </button>
+    <button class="topbar-btn" aria-label="Ustawienia">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════ CHAT MODAL ═══════════════ -->
+<div class="chat-backdrop open" id="chatBackdrop" role="dialog" aria-modal="true" aria-label="Pure Chat">
+<div class="chat-modal">
+
+  <!-- SIDEBAR -->
+  <div class="chat-sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">Pure Chat</span>
+      <button class="sidebar-close" id="chatClose" aria-label="Zamknij czat"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="sidebar-search-wrap">
+      <label for="chatSearch" class="sr-only">Szukaj wiadomości</label>
+      <input type="text" id="chatSearch" class="sidebar-search" placeholder="Szukaj wiadomości..." />
+    </div>
+
+    <!-- ROLE SWITCHER (demo only) -->
+    <div class="role-switcher">
+      <button class="role-btn active" data-role="gm" aria-pressed="true">GM / Owner</button>
+      <button class="role-btn" data-role="employee" aria-pressed="false">Pracownik</button>
+    </div>
+    <div class="role-indicator gm" id="roleInfo">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      Widzisz wszystkie działy
+    </div>
+
+    <div class="channel-list" role="navigation" aria-label="Lista kanałów">
+      <!-- HOTEL-WIDE -->
+      <div class="channel-section">
+        <div class="section-label">
+          <span>Hotel</span>
+          <button class="section-add" aria-label="Dodaj kanał hotelowy">+</button>
+        </div>
+        <div class="ch-item active" data-channel="ogolny" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">ogólny</span>
+          <span class="ch-badge">3</span>
+        </div>
+        <div class="ch-item" data-channel="ogloszenia" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">ogłoszenia</span>
+        </div>
+        <div class="ch-item" data-channel="usterki" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">usterki</span>
+          <span class="ch-badge">1</span>
+        </div>
+      </div>
+
+      <!-- DEPARTMENT CHANNELS -->
+      <div class="channel-section" id="deptSection">
+        <div class="section-label">
+          <span>Działy</span>
+        </div>
+        <div class="ch-item dept-ch" data-dept="recepcja" data-channel="recepcja" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">recepcja</span>
+        </div>
+        <div class="ch-item dept-ch" data-dept="fb" data-channel="fb" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">kuchnia-restauracja</span>
+          <span class="ch-badge muted">2</span>
+        </div>
+        <div class="ch-item dept-ch" data-dept="housekeeping" data-channel="housekeeping" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">housekeeping</span>
+        </div>
+        <div class="ch-item dept-ch" data-dept="sprzedaz" data-channel="sprzedaz" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">sprzedaż</span>
+        </div>
+        <div class="ch-item dept-ch" data-dept="spa" data-channel="spa" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">spa-wellness</span>
+        </div>
+        <div class="ch-item dept-ch" data-dept="konserwacja" data-channel="konserwacja" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">konserwacja</span>
+        </div>
+        <div class="ch-item dept-ch" data-dept="eventy" data-channel="eventy" role="button" tabindex="0">
+          <span class="ch-icon ch-hash">#</span>
+          <span class="ch-name">eventy</span>
+        </div>
+      </div>
+
+      <!-- DMs -->
+      <div class="channel-section">
+        <div class="section-label">
+          <span>Prywatne</span>
+          <button class="section-add" aria-label="Nowa wiadomość prywatna">+</button>
+        </div>
+        <div class="ch-item" data-channel="dm-anna" role="button" tabindex="0">
+          <div class="dm-av av-violet">AK<span class="dm-dot on" title="Online"></span></div>
+          <span class="ch-name">Anna Kowalska</span>
+        </div>
+        <div class="ch-item" data-channel="dm-tomek" role="button" tabindex="0">
+          <div class="dm-av av-emerald">TN<span class="dm-dot on" title="Online"></span></div>
+          <span class="ch-name">Tomek Nowak</span>
+        </div>
+        <div class="ch-item" data-channel="dm-maria" role="button" tabindex="0">
+          <div class="dm-av av-amber">MW<span class="dm-dot away" title="Zaraz wracam"></span></div>
+          <span class="ch-name">Maria Wiśniewska</span>
+        </div>
+        <div class="ch-item" data-channel="dm-pawel" role="button" tabindex="0">
+          <div class="dm-av av-rose">PZ<span class="dm-dot off" title="Offline"></span></div>
+          <span class="ch-name">Paweł Zieliński</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MY PROFILE -->
+    <div class="sidebar-footer" id="userProfile">
+      <div class="my-av av-violet">AK</div>
+      <div class="my-info">
+        <div class="my-name" id="userName">Anna Kowalska</div>
+        <div class="my-role" id="userRole">General Manager</div>
+      </div>
+      <span class="my-status-dot"></span>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="chat-main">
+    <!-- HEADER -->
+    <div class="chat-header">
+      <div class="chat-h-left">
+        <span class="chat-h-hash">#</span>
+        <span class="chat-h-name">ogólny</span>
+        <span class="chat-h-sep"></span>
+        <span class="chat-h-desc">24 członków</span>
+      </div>
+      <div class="chat-h-right">
+        <button class="h-action" id="audioCallBtn" title="Połączenie audio" aria-label="Rozpocznij połączenie audio">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+        </button>
+        <button class="h-action" id="videoCallBtn" title="Połączenie wideo" aria-label="Rozpocznij połączenie wideo">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        </button>
+        <button class="h-action" title="Przypięte wiadomości">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 4v6l-2 4v2h10v-2l-2-4V4M12 16v5M8 4h8"/></svg>
+        </button>
+        <button class="h-action" title="Szukaj w kanale">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        </button>
+        <button class="h-action" title="Członkowie">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- PINNED -->
+    <div class="pinned-bar" role="button" tabindex="0" aria-label="Przypięte wiadomości">
+      <span class="pinned-icon"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 4v6l-2 4v2h10v-2l-2-4V4M12 16v5M8 4h8"/></svg></span>
+      <strong>Anna K.:</strong> Harmonogram eventów na luty — sprawdź tabelę w załączniku
+      <span class="pinned-count">2 przypięte</span>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="messages-area" role="log" aria-live="polite">
+      <div class="date-div"><span>Dzisiaj, 18 lutego</span></div>
+
+      <!-- MSG 1 — Manager + PDF + thread -->
+      <div class="msg">
+        <div class="msg-av av-violet">AK</div>
+        <div class="msg-body">
+          <div class="msg-head">
+            <span class="msg-author">Anna Kowalska</span>
+            <span class="msg-tag mgr">Manager</span>
+            <span class="msg-time">09:15</span>
+          </div>
+          <div class="msg-text">
+            Dzień dobry! Przypominam — dziś od 14:00 konferencja w Sali Królewskiej (60 osób).
+            <span class="mention">@recepcja</span> proszę o przygotowanie pakietów powitalnych.
+          </div>
+          <div class="msg-attach">
+            <div class="attach-file">
+              <div class="file-ic pdf">PDF</div>
+              <div>
+                <div class="file-nm">plan-konferencji-18-02.pdf</div>
+                <div class="file-sz">2.4 MB</div>
+              </div>
+            </div>
+          </div>
+          <div class="msg-reactions">
+            <button class="rx mine">👍 <span class="rx-count">4</span></button>
+            <button class="rx">✅ <span class="rx-count">2</span></button>
+          </div>
+          <button class="msg-thread">
+            <div class="thread-avs">
+              <div class="thread-av av-emerald">TN</div>
+              <div class="thread-av av-indigo">JK</div>
+            </div>
+            3 odpowiedzi · Ostatnia 09:42
+          </button>
+        </div>
+        <div class="msg-actions">
+          <button class="act-btn" title="Reakcja"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+          <button class="act-btn" title="Odpowiedz"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button class="act-btn" title="Przypnij"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 4v6l-2 4v2h10v-2l-2-4V4M12 16v5M8 4h8"/></svg></button>
+          <button class="act-btn" title="Wiecej"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        </div>
+      </div>
+
+      <!-- MSG 2 — Photo -->
+      <div class="msg">
+        <div class="msg-av av-emerald">TN</div>
+        <div class="msg-body">
+          <div class="msg-head">
+            <span class="msg-author">Tomek Nowak</span>
+            <span class="msg-tag rec">Recepcja</span>
+            <span class="msg-time">09:28</span>
+          </div>
+          <div class="msg-text">
+            Pakiety gotowe — 60 szt. na wózku przy recepcji. Banery i kierunkowce ustawione.
+          </div>
+          <div class="attach-img">
+            <div class="img-placeholder">
+              <span class="ph-icon"><svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>
+              <span class="ph-name">przygotowania-sali-królewskiej.jpg</span>
+              <span class="ph-meta">1920 × 1080 · 3.2 MB</span>
+            </div>
+          </div>
+          <div class="msg-reactions">
+            <button class="rx">❤️ <span class="rx-count">3</span></button>
+            <button class="rx mine">💪 <span class="rx-count">2</span></button>
+          </div>
+        </div>
+        <div class="msg-actions">
+          <button class="act-btn" title="Reakcja"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+          <button class="act-btn" title="Odpowiedz"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button class="act-btn" title="Przypnij"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 4v6l-2 4v2h10v-2l-2-4V4M12 16v5M8 4h8"/></svg></button>
+          <button class="act-btn" title="Wiecej"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        </div>
+      </div>
+
+      <!-- MSG 3 — Mention highlight + quick task -->
+      <div class="msg mention-hl">
+        <div class="msg-av av-orange">MW</div>
+        <div class="msg-body">
+          <div class="msg-head">
+            <span class="msg-author">Maria Wiśniewska</span>
+            <span class="msg-tag hsk">Housekeeping</span>
+            <span class="msg-time">09:35</span>
+          </div>
+          <div class="msg-text">
+            <span class="mention">@Jan Kwiatkowski</span> pokoje 301–305 gotowe po check-oucie.
+            Pok. 303 wymaga wymiany ręczników premium — zamówić u dostawcy?
+          </div>
+          <div class="msg-task">
+            <button class="task-cb" role="checkbox" aria-checked="false" aria-label="Oznacz zadanie jako wykonane"></button>
+            <span class="task-label">Zamówić ręczniki premium do pok. 303 (50 szt.)</span>
+            <span class="task-assignee">→ Jan K.</span>
+          </div>
+        </div>
+        <div class="msg-actions">
+          <button class="act-btn" title="Reakcja"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+          <button class="act-btn" title="Odpowiedz"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button class="act-btn" title="Przypnij"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 4v6l-2 4v2h10v-2l-2-4V4M12 16v5M8 4h8"/></svg></button>
+          <button class="act-btn" title="Wiecej"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        </div>
+      </div>
+
+      <!-- MSG 4 — XLS file -->
+      <div class="msg">
+        <div class="msg-av av-indigo">JK</div>
+        <div class="msg-body">
+          <div class="msg-head">
+            <span class="msg-author">Jan Kwiatkowski</span>
+            <span class="msg-time">09:41</span>
+          </div>
+          <div class="msg-text">
+            Aktualna lista gości VIP na dziś — proszę o double-check przy check-in:
+          </div>
+          <div class="msg-attach">
+            <div class="attach-file">
+              <div class="file-ic xls">XLS</div>
+              <div>
+                <div class="file-nm">vip-guests-2026-02-18.xlsx</div>
+                <div class="file-sz">148 KB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="msg-actions">
+          <button class="act-btn" title="Reakcja"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+          <button class="act-btn" title="Odpowiedz"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button class="act-btn" title="Przypnij"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 4v6l-2 4v2h10v-2l-2-4V4M12 16v5M8 4h8"/></svg></button>
+          <button class="act-btn" title="Wiecej"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        </div>
+      </div>
+
+      <!-- MSG 5 — continuation (no avatar) -->
+      <div class="msg-cont">
+        <span class="cont-time">09:42</span>
+        <div class="msg-body">
+          <div class="msg-text">
+            <span class="mention">@Maria</span> tak, zamów ręczniki. Budżet OK. 👍
+          </div>
+        </div>
+        <div class="msg-actions">
+          <button class="act-btn" title="Reakcja"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg></button>
+          <button class="act-btn" title="Odpowiedz"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></button>
+          <button class="act-btn" title="Przypnij"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 4v6l-2 4v2h10v-2l-2-4V4M12 16v5M8 4h8"/></svg></button>
+          <button class="act-btn" title="Wiecej"><svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TYPING -->
+    <div class="typing">
+      <div class="dots"><span></span><span></span><span></span></div>
+      Anna Kowalska pisze...
+    </div>
+
+    <!-- INPUT -->
+    <div class="chat-input-wrap">
+      <div class="input-box">
+        <label for="chatInput" class="sr-only">Napisz wiadomość</label>
+        <textarea id="chatInput" class="input-textarea" placeholder="Napisz wiadomość w #ogólny..." rows="1"></textarea>
+        <div class="input-bar">
+          <div class="input-tools">
+            <div class="attach-wrap">
+              <button class="tool-btn" id="attachFileBtn" title="Załącz plik" aria-label="Załącz plik" aria-haspopup="true">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+              </button>
+              <div class="attach-dropdown" id="attachDropdown" role="menu">
+                <button class="attach-opt" role="menuitem">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                  Z komputera
+                </button>
+                <button class="attach-opt" id="crmDocsOpenBtn" role="menuitem">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  Z dokumentów CRM
+                </button>
+              </div>
+            </div>
+            <button class="tool-btn" title="Zdjęcie">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            </button>
+            <button class="tool-btn" title="Emoji">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01"/></svg>
+            </button>
+            <button class="tool-btn" id="gifToggleBtn" title="GIF / Memy" aria-label="Wyślij GIF lub mem">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/><text x="12" y="15" text-anchor="middle" fill="currentColor" font-size="8" font-weight="800" font-family="Inter, sans-serif">GIF</text></svg>
+            </button>
+            <button class="tool-btn" title="@Mention">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 006 0v-1a10 10 0 10-3.92 7.94"/></svg>
+            </button>
+            <button class="tool-btn" title="Utwórz zadanie">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            </button>
+            <button class="tool-btn" title="Wiadomość głosowa">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+            </button>
+          </div>
+          <button class="send-btn" title="Wyślij wiadomość" aria-label="Wyślij wiadomość">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ GIF PICKER ═══════════ -->
+    <div class="gif-picker" id="gifPicker" role="dialog" aria-label="Wybierz GIF">
+      <div class="gif-header">
+        <span style="font-size:13px;font-weight:700;color:var(--pa-text)">GIF / Memy</span>
+        <button class="gif-close" id="gifCloseBtn" aria-label="Zamknij GIF picker">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="gif-search-wrap">
+        <input type="text" id="gifSearchInput" class="gif-search" placeholder="Szukaj GIF-ów..." aria-label="Szukaj GIF-ów" />
+      </div>
+      <div class="gif-cats" role="tablist" aria-label="Kategorie GIF">
+        <button class="gif-cat active" role="tab" aria-selected="true" data-cat="trending">Trending</button>
+        <button class="gif-cat" role="tab" aria-selected="false" data-cat="reakcje">Reakcje</button>
+        <button class="gif-cat" role="tab" aria-selected="false" data-cat="praca">Praca</button>
+        <button class="gif-cat" role="tab" aria-selected="false" data-cat="hotel">Humor hotelowy</button>
+      </div>
+      <div class="gif-grid" role="listbox" aria-label="Dostępne GIF-y">
+        <div class="gif-item" role="option" tabindex="0" data-gif="thumbs-up" style="background:linear-gradient(135deg,#fef3c7,#fde68a)">
+          <span class="gif-placeholder">👍</span>
+          <span class="gif-label">Thumbs Up</span>
+        </div>
+        <div class="gif-item" role="option" tabindex="0" data-gif="applause" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe)">
+          <span class="gif-placeholder">👏</span>
+          <span class="gif-label">Brawo!</span>
+        </div>
+        <div class="gif-item" role="option" tabindex="0" data-gif="deal-with-it" style="background:linear-gradient(135deg,#f3e8ff,#e9d5ff)">
+          <span class="gif-placeholder">😎</span>
+          <span class="gif-label">Deal With It</span>
+        </div>
+        <div class="gif-item" role="option" tabindex="0" data-gif="mind-blown" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8)">
+          <span class="gif-placeholder">🤯</span>
+          <span class="gif-label">Mind Blown</span>
+        </div>
+        <div class="gif-item" role="option" tabindex="0" data-gif="facepalm" style="background:linear-gradient(135deg,#fed7aa,#fdba74)">
+          <span class="gif-placeholder">🤦</span>
+          <span class="gif-label">Facepalm</span>
+        </div>
+        <div class="gif-item" role="option" tabindex="0" data-gif="dancing" style="background:linear-gradient(135deg,#bbf7d0,#86efac)">
+          <span class="gif-placeholder">💃</span>
+          <span class="gif-label">Dance!</span>
+        </div>
+        <div class="gif-item" role="option" tabindex="0" data-gif="hotel-check-in" style="background:linear-gradient(135deg,#e0e7ff,#c7d2fe)">
+          <span class="gif-placeholder">🏨</span>
+          <span class="gif-label">Check-in Time</span>
+        </div>
+        <div class="gif-item" role="option" tabindex="0" data-gif="coffee" style="background:linear-gradient(135deg,#fef9c3,#fef08a)">
+          <span class="gif-placeholder">☕</span>
+          <span class="gif-label">Kawa!</span>
+        </div>
+        <div class="gif-item" role="option" tabindex="0" data-gif="celebration" style="background:linear-gradient(135deg,#ccfbf1,#99f6e4)">
+          <span class="gif-placeholder">🎉</span>
+          <span class="gif-label">Celebration</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ CRM DOCUMENTS MODAL ═══════════ -->
+    <div class="crm-docs-modal" id="crmDocsModal" role="dialog" aria-modal="true" aria-label="Dokumenty CRM">
+      <div class="crm-docs-panel">
+        <div class="crm-docs-header">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--pa-text)">Dokumenty CRM</div>
+            <div style="font-size:11px;color:var(--pa-text-muted);margin-top:2px">Wybierz dokumenty do załączenia</div>
+          </div>
+          <button class="crm-docs-close" id="crmDocsCloseBtn" aria-label="Zamknij dokumenty CRM">
+            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="crm-docs-search-wrap">
+          <input type="text" class="crm-docs-search" placeholder="Szukaj dokumentów..." aria-label="Szukaj dokumentów CRM" />
+        </div>
+        <div class="crm-docs-list">
+          <label class="crm-doc-row">
+            <input type="checkbox" class="crm-doc-check" data-doc="umowa-konf-2026" />
+            <div class="crm-doc-icon pdf">PDF</div>
+            <div class="crm-doc-info">
+              <div class="crm-doc-name">Umowa-konferencja-Królewska-2026.pdf</div>
+              <div class="crm-doc-meta">
+                <span class="crm-doc-size">2.4 MB</span>
+                <span>Deal: Konferencja ABC Corp</span>
+              </div>
+            </div>
+          </label>
+          <label class="crm-doc-row">
+            <input type="checkbox" class="crm-doc-check" data-doc="cennik-sal-q1" />
+            <div class="crm-doc-icon xls">XLS</div>
+            <div class="crm-doc-info">
+              <div class="crm-doc-name">Cennik-sal-Q1-2026.xlsx</div>
+              <div class="crm-doc-meta">
+                <span class="crm-doc-size">148 KB</span>
+                <span>Ogólny</span>
+              </div>
+            </div>
+          </label>
+          <label class="crm-doc-row">
+            <input type="checkbox" class="crm-doc-check" data-doc="oferta-wesele-maj" />
+            <div class="crm-doc-icon pdf">PDF</div>
+            <div class="crm-doc-info">
+              <div class="crm-doc-name">Oferta-wesele-Kowalski-maj-2026.pdf</div>
+              <div class="crm-doc-meta">
+                <span class="crm-doc-size">1.8 MB</span>
+                <span>Deal: Wesele Kowalski</span>
+              </div>
+            </div>
+          </label>
+          <label class="crm-doc-row">
+            <input type="checkbox" class="crm-doc-check" data-doc="menu-wielkanocne" />
+            <div class="crm-doc-icon doc">DOC</div>
+            <div class="crm-doc-info">
+              <div class="crm-doc-name">Menu-wielkanocne-2026.docx</div>
+              <div class="crm-doc-meta">
+                <span class="crm-doc-size">340 KB</span>
+                <span>F&B</span>
+              </div>
+            </div>
+          </label>
+          <label class="crm-doc-row">
+            <input type="checkbox" class="crm-doc-check" data-doc="raport-oblozenosc-styczen" />
+            <div class="crm-doc-icon xls">XLS</div>
+            <div class="crm-doc-info">
+              <div class="crm-doc-name">Raport-obłożeność-styczeń-2026.xlsx</div>
+              <div class="crm-doc-meta">
+                <span class="crm-doc-size">95 KB</span>
+                <span>Revenue</span>
+              </div>
+            </div>
+          </label>
+          <label class="crm-doc-row">
+            <input type="checkbox" class="crm-doc-check" data-doc="faktura-dostawca-reczniki" />
+            <div class="crm-doc-icon pdf">PDF</div>
+            <div class="crm-doc-info">
+              <div class="crm-doc-name">FV-2026-02-001-Ręczniki-Premium.pdf</div>
+              <div class="crm-doc-meta">
+                <span class="crm-doc-size">520 KB</span>
+                <span>Kontakt: TextilPro Sp. z o.o.</span>
+              </div>
+            </div>
+          </label>
+        </div>
+        <div class="crm-docs-footer">
+          <span class="crm-attach-info">Wybrano: <strong id="crmAttachCount">0</strong> dokumentów</span>
+          <button class="crm-attach-btn" id="crmAttachSubmit" disabled>Załącz wybrane</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ CALL OVERLAY ═══════════ -->
+    <div class="call-overlay" id="callOverlay" role="dialog" aria-modal="true" aria-label="Połączenie w toku">
+      <div class="call-avatar" id="callAv">AK</div>
+      <div class="call-name" id="callName">Anna Kowalska</div>
+      <div class="call-status" id="callStatus">Łączenie...</div>
+      <div class="call-timer" id="callTimer">00:00</div>
+      <div class="call-controls">
+        <button class="call-ctrl-btn" data-toggle="mute" aria-label="Wycisz mikrofon">
+          <div class="ctrl-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"/></svg>
+          </div>
+          <span class="ctrl-label">Mikrofon</span>
+        </button>
+        <button class="call-ctrl-btn" data-toggle="camera" aria-label="Włącz/wyłącz kamerę">
+          <div class="ctrl-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+          </div>
+          <span class="ctrl-label">Kamera</span>
+        </button>
+        <button class="call-ctrl-btn" data-toggle="screen" aria-label="Udostępnij ekran">
+          <div class="ctrl-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <span class="ctrl-label">Ekran</span>
+        </button>
+        <button class="call-end-btn" id="endCallBtn" aria-label="Zakończ połączenie">
+          <div class="ctrl-icon">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+          </div>
+          <span class="ctrl-label">Rozłącz</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+</div>
+
+<script>
+  // ═══════════ DOM REFS ═══════════
+  const toggle = document.getElementById('chatToggle');
+  const backdrop = document.getElementById('chatBackdrop');
+  const closeBtn = document.getElementById('chatClose');
+  const badge = toggle.querySelector('.badge');
+  const chatModal = document.querySelector('.chat-modal');
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.querySelector('.send-btn');
+  const messagesArea = document.querySelector('.messages-area');
+  const chatHeaderName = document.querySelector('.chat-h-name');
+  const chatHeaderHash = document.querySelector('.chat-h-hash');
+  const chatHeaderDesc = document.querySelector('.chat-h-desc');
+
+  let unreadCount = 3;
+  let currentRole = 'gm'; // track current role for message avatars
+
+  // Channel display names & member counts
+  const channelMeta = {
+    'ogolny': { name: 'ogólny', members: 24, type: 'channel' },
+    'ogloszenia': { name: 'ogłoszenia', members: 24, type: 'channel' },
+    'usterki': { name: 'usterki', members: 18, type: 'channel' },
+    'recepcja': { name: 'recepcja', members: 6, type: 'channel' },
+    'fb': { name: 'kuchnia-restauracja', members: 8, type: 'channel' },
+    'housekeeping': { name: 'housekeeping', members: 10, type: 'channel' },
+    'sprzedaz': { name: 'sprzedaż', members: 4, type: 'channel' },
+    'spa': { name: 'spa-wellness', members: 5, type: 'channel' },
+    'konserwacja': { name: 'konserwacja', members: 3, type: 'channel' },
+    'eventy': { name: 'eventy', members: 4, type: 'channel' },
+    'dm-anna': { name: 'Anna Kowalska', members: null, type: 'dm' },
+    'dm-tomek': { name: 'Tomek Nowak', members: null, type: 'dm' },
+    'dm-maria': { name: 'Maria Wiśniewska', members: null, type: 'dm' },
+    'dm-pawel': { name: 'Paweł Zieliński', members: null, type: 'dm' },
+  };
+
+  // ═══════════ CHAT OPEN/CLOSE ═══════════
+  function openChat() {
+    backdrop.classList.add('open');
+    toggle.classList.add('chat-active');
+    toggle.setAttribute('aria-expanded', 'true');
+    unreadCount = 0;
+    updateBadge();
+    // [H-6] Scroll to bottom on open
+    requestAnimationFrame(() => {
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+    });
+    // [C-1] Focus first focusable element in modal
+    requestAnimationFrame(() => {
+      const firstFocusable = chatModal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (firstFocusable) firstFocusable.focus();
+    });
+  }
+
+  function closeChat() {
+    backdrop.classList.remove('open');
+    toggle.classList.remove('chat-active');
+    toggle.setAttribute('aria-expanded', 'false');
+    updateBadge();
+    // [M-3] Return focus to trigger element
+    toggle.focus();
+  }
+
+  function updateBadge() {
+    if (!badge) return;
+    if (unreadCount > 0) {
+      badge.textContent = unreadCount;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  toggle.addEventListener('click', () => {
+    if (backdrop.classList.contains('open')) closeChat();
+    else openChat();
+  });
+  closeBtn.addEventListener('click', closeChat);
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) closeChat();
+  });
+
+  // ═══════════ [C-1] FOCUS TRAP ═══════════
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && backdrop.classList.contains('open')) {
+      // Close any open popups first, then close chat
+      if (gifPicker && gifPicker.classList.contains('open')) {
+        closeGifPicker();
+        return;
+      }
+      if (crmModal && crmModal.classList.contains('open')) {
+        closeCrmModal();
+        return;
+      }
+      if (callOverlay && callOverlay.classList.contains('active')) {
+        endCall();
+        return;
+      }
+      closeChat();
+      return;
+    }
+
+    // Focus trap: only when modal is open
+    if (e.key === 'Tab' && backdrop.classList.contains('open')) {
+      const focusableEls = chatModal.querySelectorAll(
+        'button:not([disabled]):not([style*="display: none"]):not(.dept-hidden *), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]):not(.dept-hidden)'
+      );
+      const visibleFocusable = Array.from(focusableEls).filter(el => {
+        if (el.offsetParent === null) return false;
+        if (el.closest('.dept-hidden')) return false;
+        // [C-1 v3] Skip elements inside hidden popups (opacity:0 still has offsetParent)
+        if (el.closest('.gif-picker:not(.open)')) return false;
+        if (el.closest('.crm-docs-modal:not(.open)')) return false;
+        if (el.closest('.call-overlay:not(.active)')) return false;
+        return true;
+      });
+      if (visibleFocusable.length === 0) return;
+
+      const firstEl = visibleFocusable[0];
+      const lastEl = visibleFocusable[visibleFocusable.length - 1];
+
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl.focus();
+        }
+      }
+    }
+  });
+
+  // ═══════════ [C-2] CHANNEL SELECTION + HEADER UPDATE ═══════════
+  function selectChannel(item) {
+    document.querySelectorAll('.ch-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+
+    const channelId = item.dataset.channel;
+    const meta = channelMeta[channelId];
+    if (!meta) return;
+
+    if (meta.type === 'dm') {
+      chatHeaderHash.textContent = '';
+      chatHeaderName.textContent = meta.name;
+      chatHeaderDesc.textContent = 'Wiadomość prywatna';
+      chatInput.placeholder = 'Napisz wiadomość do ' + meta.name + '...';
+    } else {
+      chatHeaderHash.textContent = '#';
+      chatHeaderName.textContent = meta.name;
+      chatHeaderDesc.textContent = meta.members + ' członków';
+      chatInput.placeholder = 'Napisz wiadomość w #' + meta.name + '...';
+    }
+  }
+
+  document.querySelectorAll('.ch-item').forEach(item => {
+    item.addEventListener('click', () => selectChannel(item));
+    // [H-5] Keyboard support for ch-item
+    item.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        selectChannel(item);
+      }
+    });
+  });
+
+  // ═══════════ [C-3 / Feature 1] SEND MESSAGE ═══════════
+  function getCurrentUser() {
+    if (currentRole === 'gm') {
+      return { name: 'Anna Kowalska', initials: 'AK', color: 'av-violet', tag: 'Manager', tagClass: 'mgr' };
+    }
+    return { name: 'Tomek Nowak', initials: 'TN', color: 'av-emerald', tag: 'Recepcja', tagClass: 'rec' };
+  }
+
+  function getTimeNow() {
+    const now = new Date();
+    return String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  }
+
+  function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    const user = getCurrentUser();
+    const time = getTimeNow();
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'msg';
+    msgEl.innerHTML =
+      '<div class="msg-av ' + user.color + '">' + user.initials + '</div>' +
+      '<div class="msg-body">' +
+        '<div class="msg-head">' +
+          '<span class="msg-author">' + escapeHtml(user.name) + '</span>' +
+          '<span class="msg-tag ' + user.tagClass + '">' + escapeHtml(user.tag) + '</span>' +
+          '<span class="msg-time">' + time + '</span>' +
+        '</div>' +
+        '<div class="msg-text">' + escapeHtml(text) + '</div>' +
+      '</div>';
+
+    messagesArea.appendChild(msgEl);
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+    chatInput.focus();
+    // [M-2 v3] Prevent double-send
+    sendBtn.disabled = true;
+    setTimeout(() => { sendBtn.disabled = false; }, 300);
+  }
+
+  // [H-1] Escape HTML to prevent XSS
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Send on Enter (Shift+Enter = new line)
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Send button click
+  sendBtn.addEventListener('click', sendMessage);
+
+  // [M-5] Auto-resize textarea
+  chatInput.addEventListener('input', () => {
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+  });
+
+  // ═══════════ ROLE SWITCHER ═══════════
+  const EMPLOYEE_DEPT = 'recepcja';
+  const roleInfo = document.getElementById('roleInfo');
+  const userName = document.getElementById('userName');
+  const userRole = document.getElementById('userRole');
+  const userAv = document.querySelector('#userProfile .my-av');
+  const sectionLabel = document.querySelector('#deptSection .section-label span');
+
+  // [H-1 + M-1 v3] Use DOMParser instead of innerHTML for SVG
+  function setRoleIndicator(svgPath, text, className) {
+    roleInfo.className = 'role-indicator ' + className;
+    roleInfo.textContent = '';
+    const svgMarkup = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">' + svgPath + '</svg>';
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgMarkup, 'image/svg+xml');
+    const svg = doc.documentElement;
+    roleInfo.appendChild(document.adoptNode(svg));
+    roleInfo.appendChild(document.createTextNode(' ' + text));
+  }
+
+  function applyRole(role) {
+    currentRole = role;
+    const deptChannels = document.querySelectorAll('.dept-ch');
+
+    if (role === 'gm') {
+      deptChannels.forEach(ch => ch.classList.remove('dept-hidden'));
+      sectionLabel.textContent = 'Działy';
+      setRoleIndicator(
+        '<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>',
+        'Widzisz wszystkie działy',
+        'gm'
+      );
+      userName.textContent = 'Anna Kowalska';
+      userRole.textContent = 'General Manager';
+      userAv.textContent = 'AK';
+      userAv.className = 'my-av av-violet';
+    } else {
+      deptChannels.forEach(ch => {
+        if (ch.dataset.dept === EMPLOYEE_DEPT) {
+          ch.classList.remove('dept-hidden');
+        } else {
+          ch.classList.add('dept-hidden');
+        }
+      });
+      sectionLabel.textContent = 'Mój dział';
+      setRoleIndicator(
+        '<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+        'Dział: Recepcja',
+        'emp'
+      );
+      userName.textContent = 'Tomek Nowak';
+      userRole.textContent = 'Recepcjonista';
+      userAv.textContent = 'TN';
+      userAv.className = 'my-av av-emerald';
+    }
+  }
+
+  // [H-7] Role switcher with aria-pressed
+  document.querySelectorAll('.role-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.role-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-pressed', 'false');
+      });
+      btn.classList.add('active');
+      btn.setAttribute('aria-pressed', 'true');
+      applyRole(btn.dataset.role);
+    });
+  });
+
+  // ═══════════ GIF PICKER (Feature 2) ═══════════
+  const gifPicker = document.getElementById('gifPicker');
+  const gifToggleBtn = document.getElementById('gifToggleBtn');
+  const gifSearchInput = document.getElementById('gifSearchInput');
+
+  function openGifPicker() {
+    gifPicker.classList.add('open');
+    gifToggleBtn.classList.add('active-tool');
+    requestAnimationFrame(() => gifSearchInput.focus());
+  }
+
+  function closeGifPicker() {
+    gifPicker.classList.remove('open');
+    gifToggleBtn.classList.remove('active-tool');
+  }
+
+  if (gifToggleBtn) {
+    gifToggleBtn.addEventListener('click', () => {
+      if (gifPicker.classList.contains('open')) closeGifPicker();
+      else openGifPicker();
+    });
+  }
+
+  // [C-2 v3] GIF close button event listener
+  const gifCloseBtn = document.getElementById('gifCloseBtn');
+  if (gifCloseBtn) gifCloseBtn.addEventListener('click', closeGifPicker);
+
+  // [M-4 v3] Close GIF picker on outside click
+  document.addEventListener('click', (e) => {
+    if (gifPicker && gifPicker.classList.contains('open') &&
+        !gifPicker.contains(e.target) && e.target !== gifToggleBtn && !gifToggleBtn.contains(e.target)) {
+      closeGifPicker();
+    }
+  });
+
+  // GIF category tabs
+  document.querySelectorAll('.gif-cat').forEach(cat => {
+    cat.addEventListener('click', () => {
+      // [H-3 v3] Update both class and aria-selected
+      document.querySelectorAll('.gif-cat').forEach(c => {
+        c.classList.remove('active');
+        c.setAttribute('aria-selected', 'false');
+      });
+      cat.classList.add('active');
+      cat.setAttribute('aria-selected', 'true');
+    });
+  });
+
+  // GIF item click + keyboard — send as message
+  function sendGif(item) {
+    const user = getCurrentUser();
+    const time = getTimeNow();
+    const gifLabel = item.querySelector('.gif-label').textContent;
+
+    const msgEl = document.createElement('div');
+    msgEl.className = 'msg';
+    msgEl.innerHTML =
+      '<div class="msg-av ' + user.color + '">' + user.initials + '</div>' +
+      '<div class="msg-body">' +
+        '<div class="msg-head">' +
+          '<span class="msg-author">' + escapeHtml(user.name) + '</span>' +
+          '<span class="msg-tag ' + user.tagClass + '">' + escapeHtml(user.tag) + '</span>' +
+          '<span class="msg-time">' + time + '</span>' +
+        '</div>' +
+        '<div class="msg-text"><div class="sent-gif">' + escapeHtml(gifLabel) + '</div></div>' +
+      '</div>';
+
+    messagesArea.appendChild(msgEl);
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+    closeGifPicker();
+  }
+
+  document.querySelectorAll('.gif-item').forEach(item => {
+    item.addEventListener('click', () => sendGif(item));
+    // [H-5 v3] Keyboard support for gif items
+    item.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        sendGif(item);
+      }
+    });
+  });
+
+  // ═══════════ CRM DOCUMENTS MODAL (Feature 3) ═══════════
+  const crmModal = document.getElementById('crmDocsModal');
+  const attachBtn = document.getElementById('attachFileBtn');
+  const attachDropdown = document.getElementById('attachDropdown');
+
+  if (attachBtn) {
+    attachBtn.addEventListener('click', () => {
+      if (attachDropdown.classList.contains('open')) {
+        attachDropdown.classList.remove('open');
+      } else {
+        attachDropdown.classList.add('open');
+      }
+    });
+  }
+
+  // Close dropdown on outside click
+  document.addEventListener('click', (e) => {
+    if (attachDropdown && !attachBtn.contains(e.target) && !attachDropdown.contains(e.target)) {
+      attachDropdown.classList.remove('open');
+    }
+  });
+
+  function openCrmModal() {
+    if (attachDropdown) attachDropdown.classList.remove('open');
+    crmModal.classList.add('open');
+  }
+
+  function closeCrmModal() {
+    crmModal.classList.remove('open');
+    // Uncheck all
+    crmModal.querySelectorAll('.crm-doc-check').forEach(cb => {
+      cb.checked = false;
+    });
+    updateAttachCount();
+  }
+
+  const crmDocsOpenBtn = document.getElementById('crmDocsOpenBtn');
+  if (crmDocsOpenBtn) crmDocsOpenBtn.addEventListener('click', openCrmModal);
+
+  const crmDocsCloseBtn = document.getElementById('crmDocsCloseBtn');
+  if (crmDocsCloseBtn) crmDocsCloseBtn.addEventListener('click', closeCrmModal);
+
+  // [H-4 v3] Close modal on backdrop click
+  if (crmModal) {
+    crmModal.addEventListener('click', (e) => {
+      if (e.target === crmModal) closeCrmModal();
+    });
+  }
+
+  // CRM doc selection
+  function updateAttachCount() {
+    const checked = crmModal ? crmModal.querySelectorAll('.crm-doc-check:checked').length : 0;
+    const countEl = document.getElementById('crmAttachCount');
+    const submitBtn = document.getElementById('crmAttachSubmit');
+    // [H-2 v3] Show plain number matching "Wybrano: N dokumentów" format
+    if (countEl) countEl.textContent = String(checked);
+    if (submitBtn) submitBtn.disabled = checked === 0;
+  }
+
+  if (crmModal) {
+    crmModal.querySelectorAll('.crm-doc-check').forEach(cb => {
+      cb.addEventListener('change', updateAttachCount);
+    });
+  }
+
+  const crmAttachSubmitBtn = document.getElementById('crmAttachSubmit');
+  if (crmAttachSubmitBtn) {
+    crmAttachSubmitBtn.addEventListener('click', () => {
+      const checked = crmModal.querySelectorAll('.crm-doc-check:checked');
+      if (checked.length === 0) return;
+
+      const user = getCurrentUser();
+      const time = getTimeNow();
+
+      let attachHtml = '';
+      checked.forEach(cb => {
+        const row = cb.closest('.crm-doc-row');
+        const name = row.querySelector('.crm-doc-name').textContent;
+        const size = row.querySelector('.crm-doc-size').textContent;
+        // [H-1 v3] Read type from icon class, not data attribute
+        const iconEl = row.querySelector('.crm-doc-icon');
+        const type = iconEl.classList.contains('pdf') ? 'pdf' : iconEl.classList.contains('xls') ? 'xls' : 'doc';
+        attachHtml += '<div class="attach-file"><div class="file-ic ' + type + '">' + type.toUpperCase() + '</div><div><div class="file-nm">' + escapeHtml(name) + '</div><div class="file-sz">' + escapeHtml(size) + '</div></div></div>';
+      });
+
+      const msgEl = document.createElement('div');
+      msgEl.className = 'msg';
+      msgEl.innerHTML =
+        '<div class="msg-av ' + user.color + '">' + user.initials + '</div>' +
+        '<div class="msg-body">' +
+          '<div class="msg-head">' +
+            '<span class="msg-author">' + escapeHtml(user.name) + '</span>' +
+            '<span class="msg-tag ' + user.tagClass + '">' + escapeHtml(user.tag) + '</span>' +
+            '<span class="msg-time">' + time + '</span>' +
+          '</div>' +
+          '<div class="msg-text">Załączono dokumenty z CRM:</div>' +
+          '<div class="msg-attach">' + attachHtml + '</div>' +
+        '</div>';
+
+      messagesArea.appendChild(msgEl);
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+      closeCrmModal();
+    });
+  }
+
+  // ═══════════ AUDIO/VIDEO CALL (Feature 4) ═══════════
+  const callOverlay = document.getElementById('callOverlay');
+  const callTimerEl = document.getElementById('callTimer');
+  const callStatusEl = document.getElementById('callStatus');
+  const callNameEl = document.getElementById('callName');
+  const callAvEl = document.getElementById('callAv');
+  let callInterval = null;
+  let callSeconds = 0;
+
+  function startCall(type) {
+    if (!callOverlay) return;
+    callOverlay.classList.add('active');
+    callOverlay.dataset.type = type;
+    callSeconds = 0;
+    callStatusEl.textContent = 'Łączenie...';
+    callTimerEl.textContent = '00:00';
+
+    // Use current channel name
+    const activeChannel = document.querySelector('.ch-item.active');
+    const channelId = activeChannel ? activeChannel.dataset.channel : 'ogolny';
+    const meta = channelMeta[channelId];
+    if (meta) {
+      callNameEl.textContent = meta.type === 'dm' ? meta.name : '#' + meta.name;
+    }
+
+    // Simulate connection after 1.5s
+    setTimeout(() => {
+      if (!callOverlay.classList.contains('active')) return;
+      callStatusEl.textContent = type === 'video' ? 'Połączenie wideo' : 'Połączenie audio';
+      callInterval = setInterval(() => {
+        callSeconds++;
+        const min = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+        const sec = String(callSeconds % 60).padStart(2, '0');
+        callTimerEl.textContent = min + ':' + sec;
+      }, 1000);
+    }, 1500);
+  }
+
+  function endCall() {
+    if (!callOverlay) return;
+    callOverlay.classList.remove('active');
+    if (callInterval) {
+      clearInterval(callInterval);
+      callInterval = null;
+    }
+  }
+
+  // Call buttons in header
+  const audioCallBtn = document.getElementById('audioCallBtn');
+  const videoCallBtn = document.getElementById('videoCallBtn');
+  if (audioCallBtn) audioCallBtn.addEventListener('click', () => startCall('audio'));
+  if (videoCallBtn) videoCallBtn.addEventListener('click', () => startCall('video'));
+
+  const endCallBtn = document.getElementById('endCallBtn');
+  if (endCallBtn) endCallBtn.addEventListener('click', endCall);
+
+  // Call control toggles (mute, camera, screen share)
+  document.querySelectorAll('.call-ctrl-btn[data-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('active');
+      const icon = btn.querySelector('.ctrl-label');
+      if (btn.dataset.toggle === 'mute') {
+        icon.textContent = btn.classList.contains('active') ? 'Wyciszono' : 'Mikrofon';
+      } else if (btn.dataset.toggle === 'camera') {
+        icon.textContent = btn.classList.contains('active') ? 'Kamera wył.' : 'Kamera';
+      } else if (btn.dataset.toggle === 'screen') {
+        icon.textContent = btn.classList.contains('active') ? 'Udostępnianie...' : 'Ekran';
+      }
+    });
+  });
+
+  // Initialize GM view
+  applyRole('gm');
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+email,imię,nazwisko,firma
+jan.test@example.com,Jan,Testowy,TestFirma Sp. z o.o.
+anna.test@example.com,Anna,Kowalska,Hotel Plaza
+invalid-email,Piotr,Błędny,BrakMaila
+marek.test@example.com,Marek,Nowak,
+,Brak,Emaila,FirmaX
+katarzyna.test@example.com,Katarzyna,Wiśniewska,Restauracja Złota
