@@ -20,3 +20,36 @@ backups/
 
 # Playwright MCP artifacts
 .playwright-mcp/
+.vercel
+.env*.local
+
+# Session artifacts (screenshots, test snapshots, reports)
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.csv
+*.p12
+
+# Claude session markdown snapshots (ds-*, crm-*, smoke-*, etc.)
+*-snapshot.md
+*-report.md
+*-test*.md
+*-retest*.md
+*-smoke*.md
+after-*.md
+crm-*.md
+ds-*.md
+i18n-*.md
+newsletter-*.md
+zen-*.md
+
+# Test HTML previews
+ds-templates-preview.html
+
+# Claude settings (local)
+.claude/settings.json
+
+# Docs (research reports — not source code)
+docs/
