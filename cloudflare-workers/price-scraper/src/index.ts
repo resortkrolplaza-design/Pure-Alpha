@@ -12,6 +12,7 @@
 // ============================================================================
 
 import { scrapeProfitroomPrices } from "./engines/profitroom";
+import { scrapeGenericPrices } from "./engines/generic";
 import type { ScrapeParams } from "./engines/types";
 
 interface Env {
@@ -20,7 +21,7 @@ interface Env {
 }
 
 // Supported booking engines
-const SUPPORTED_ENGINES = ["PROFITROOM"] as const;
+const SUPPORTED_ENGINES = ["PROFITROOM", "GENERIC"] as const;
 type EngineType = (typeof SUPPORTED_ENGINES)[number];
 
 function isValidEngine(engine: string): engine is EngineType {
@@ -194,6 +195,10 @@ export default {
       switch (params.engine) {
         case "PROFITROOM": {
           const result = await scrapeProfitroomPrices(env.BROWSER, params);
+          return Response.json(result);
+        }
+        case "GENERIC": {
+          const result = await scrapeGenericPrices(env.BROWSER, params);
           return Response.json(result);
         }
         default:

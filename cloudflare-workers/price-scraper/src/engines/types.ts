@@ -24,4 +24,7 @@ export interface ScrapeResult {
   error?: string;
   durationMs: number;
   engine: string;
+  // GPT fallback: when DOM heuristics fail, return page text for server-side GPT extraction
+  needsGptExtraction?: boolean;
+  pageText?: string;
 }
