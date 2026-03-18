@@ -680,12 +680,65 @@ export async function scrapeGenericPrices(
     await dismissCookies(page);
     await delay(1500);
 
-    // ── STEP 3: Scroll for lazy-loaded content ────────────────────────
+    // ── STEP 3: Discover known booking engines BEFORE price extraction ──
+    // CRITICAL: If a known engine (Profitroom) is detected, re-dispatch
+    // immediately. Main page widgets show PACKAGE prices (not base room
+    // rates), while the specialized engine gets actual room rates via
+    // datepicker. Base room rate is the SSOT for price comparison.
+    const discovery = await discoverBookingEngine(page);
+
+    if (discovery?.engine === "PROFITROOM" && discovery.siteKey) {
+      const hotelMeta = await extractHotelMeta(page);
+      return {
+        success: false,
+        detectedEngine: "PROFITROOM",
+        resolvedBookingUrl: `https://booking.profitroom.com/pl/${discovery.siteKey}/home`,
+        error: "Detected Profitroom engine — re-dispatch to PROFITROOM",
+        durationMs: Date.now() - start,
+        engine: "GENERIC",
+        hotelMeta,
+      };
+    }
+
+    // 3b. Other booking engine → navigate to booking page with dates
+    if (discovery?.url) {
+      const bookingUrl = appendDateParams(
+        discovery.url,
+        params.checkIn,
+        params.checkOut,
+        params.adults,
+      );
+
+      try {
+        await page.goto(bookingUrl, { waitUntil: "networkidle2", timeout: 15000 });
+        await dismissCookies(page);
+        await delay(2000);
+        await scrollPage(page);
+
+        const hasPricesBooking = await checkForPriceElements(page);
+        if (hasPricesBooking) {
+          const rawRooms = await extractRoomsFromDOM(page);
+          const rooms = parseRooms(rawRooms, params);
+          if (rooms.length > 0) {
+            const hotelMeta = await extractHotelMeta(page);
+            return {
+              success: true,
+              rooms,
+              durationMs: Date.now() - start,
+              engine: "GENERIC",
+              hotelMeta,
+            };
+          }
+        }
+      } catch {
+        // Navigation to booking page failed — continue to price extraction
+      }
+    }
+
+    // ── STEP 4: No known engine → extract prices from main page ───────
     await scrollPage(page);
 
-    // ── STEP 4: Try extracting prices from main page ──────────────────
-    let hasPrices = await checkForPriceElements(page);
-
+    const hasPrices = await checkForPriceElements(page);
     if (hasPrices) {
       const rawRooms = await extractRoomsFromDOM(page);
       const rooms = parseRooms(rawRooms, params);
@@ -701,60 +754,7 @@ export async function scrapeGenericPrices(
       }
     }
 
-    // ── STEP 5: No prices on main page → discover booking page ────────
-    const discovery = await discoverBookingEngine(page);
-
-    // 5a. Profitroom detected → return for re-dispatch to PROFITROOM engine
-    if (discovery?.engine === "PROFITROOM" && discovery.siteKey) {
-      const hotelMeta = await extractHotelMeta(page);
-      return {
-        success: false,
-        detectedEngine: "PROFITROOM",
-        resolvedBookingUrl: `https://booking.profitroom.com/pl/${discovery.siteKey}/home`,
-        error: "Detected Profitroom engine — re-dispatch to PROFITROOM",
-        durationMs: Date.now() - start,
-        engine: "GENERIC",
-        hotelMeta,
-      };
-    }
-
-    // 5b. Other booking engine → navigate to booking page with dates
-    if (discovery?.url) {
-      const bookingUrl = appendDateParams(
-        discovery.url,
-        params.checkIn,
-        params.checkOut,
-        params.adults,
-      );
-
-      try {
-        await page.goto(bookingUrl, { waitUntil: "networkidle2", timeout: 15000 });
-        await dismissCookies(page);
-        await delay(2000);
-        await scrollPage(page);
-
-        // Re-try price extraction on booking page
-        hasPrices = await checkForPriceElements(page);
-        if (hasPrices) {
-          const rawRooms = await extractRoomsFromDOM(page);
-          const rooms = parseRooms(rawRooms, params);
-          if (rooms.length > 0) {
-            const hotelMeta = await extractHotelMeta(page);
-            return {
-              success: true,
-              rooms,
-              durationMs: Date.now() - start,
-              engine: "GENERIC",
-              hotelMeta,
-            };
-          }
-        }
-      } catch {
-        // Navigation to booking page failed — continue to GPT fallback
-      }
-    }
-
-    // ── STEP 6: GPT fallback with current page text ───────────────────
+    // ── STEP 5: GPT fallback with current page text ───────────────────
     const hotelMeta = await extractHotelMeta(page);
     const pageText = await page.evaluate(() => {
       return (document.body?.innerText || "").substring(0, 15000);
