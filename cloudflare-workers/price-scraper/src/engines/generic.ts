@@ -40,6 +40,12 @@ const NAME_SELECTORS = [
   "[class*='nazwa']", "h2", "h3", "h4",
 ];
 
+const DESC_SELECTORS = [
+  "[class*='desc']", "[class*='info']", "[class*='detail']",
+  "[class*='feature']", "[class*='include']", "[class*='opis']",
+  "p", "ul",
+];
+
 // ── Price thresholds ──────────────────────────────────────────────────────
 
 const MIN_PRICE_PLN = 50;
@@ -308,10 +314,10 @@ async function checkForPriceElements(page: puppeteer.Page): Promise<boolean> {
 
 async function extractRoomsFromDOM(
   page: puppeteer.Page,
-): Promise<Array<{ name: string; priceText: string; contextText: string }>> {
+): Promise<Array<{ name: string; priceText: string; contextText: string; description: string }>> {
   return page.evaluate(
-    (roomSels: string[], nameSels: string[], priceSels: string[]) => {
-      const results: Array<{ name: string; priceText: string; contextText: string }> = [];
+    (roomSels: string[], nameSels: string[], priceSels: string[], descSels: string[]) => {
+      const results: Array<{ name: string; priceText: string; contextText: string; description: string }> = [];
 
       // Strategy 1: Find room cards with name + price
       for (const roomSel of roomSels) {
@@ -349,8 +355,33 @@ async function extractRoomsFromDOM(
               contextText = (card.textContent || "").trim().substring(0, 300);
             }
 
+            // Extract description (card text minus name and price)
+            let description = "";
+            for (const ds of descSels) {
+              try {
+                const descEl = card.querySelector(ds);
+                if (descEl?.textContent?.trim()) {
+                  const text = descEl.textContent.trim();
+                  if (text !== name && text !== priceText && text.length > 10) {
+                    description = text.substring(0, 500);
+                    break;
+                  }
+                }
+              } catch { /* skip */ }
+            }
+            if (!description) {
+              // Fallback: card text minus name and price
+              const cardText = (card.textContent || "").trim();
+              const cleaned = cardText
+                .replace(name, "").replace(priceText, "")
+                .replace(/\s+/g, " ").trim();
+              if (cleaned.length > 15) {
+                description = cleaned.substring(0, 500);
+              }
+            }
+
             if (name && priceText) {
-              results.push({ name, priceText, contextText });
+              results.push({ name, priceText, contextText, description });
             }
           });
         } catch { /* skip invalid selector */ }
@@ -388,7 +419,8 @@ async function extractRoomsFromDOM(
                   .trim()
                   .substring(0, 200);
               }
-              results.push({ name, priceText, contextText });
+              const description = contextText.replace(name, "").replace(priceText, "").replace(/\s+/g, " ").trim().substring(0, 500);
+              results.push({ name, priceText, contextText, description });
             });
           } catch { /* skip */ }
           if (results.length > 0) break;
@@ -400,13 +432,14 @@ async function extractRoomsFromDOM(
     ROOM_SELECTORS,
     NAME_SELECTORS,
     PRICE_SELECTORS,
+    DESC_SELECTORS,
   );
 }
 
 // ── Parse raw room data → RoomResult[] ────────────────────────────────────
 
 function parseRooms(
-  rawRooms: Array<{ name: string; priceText: string; contextText: string }>,
+  rawRooms: Array<{ name: string; priceText: string; contextText: string; description: string }>,
   params: ScrapeParams,
 ): RoomResult[] {
   const rooms: RoomResult[] = [];
@@ -459,6 +492,7 @@ function parseRooms(
       currency,
       occupancy: params.adults,
       originalPriceText: raw.priceText,
+      description: raw.description || undefined,
       isPerNight,
       isPerPerson,
       nights,

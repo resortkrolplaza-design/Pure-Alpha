@@ -17,6 +17,7 @@ export interface RoomResult {
   mealPlan?: string;
   occupancy: number;
   originalPriceText?: string;
+  description?: string; // package description (what's included)
   isPerNight?: boolean; // true = confirmed per-night, false = total stay, undefined = unknown
   isPerPerson?: boolean; // true = price is per person (needs ×adults for per-room)
   nights?: number; // number of nights the price covers (for normalization)
