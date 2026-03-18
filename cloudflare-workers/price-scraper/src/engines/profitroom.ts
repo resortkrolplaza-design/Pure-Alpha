@@ -151,6 +151,24 @@ async function navigateToMonth(
 const MIN_ROOM_PRICE_PLN = 50;
 const MIN_ROOM_PRICE_EUR = 10;
 
+// Per-person detection patterns
+const PER_PERSON_PATTERNS = [
+  /\/\s*os\.?\s*\/\s*noc/i,    // /os./noc
+  /\/\s*osob[aęy]/i,           // /osoba, /osobę
+  /\/\s*os\b/i,                // /os
+  /os\.\s*\/\s*noc/i,          // os./noc
+  /\/\s*person/i,              // /person
+  /per\s*person/i,             // per person
+  /za\s*osob[ęy]/i,           // za osobę
+];
+
+function isPerPersonPrice(priceText: string): boolean {
+  for (const p of PER_PERSON_PATTERNS) {
+    if (p.test(priceText)) return true;
+  }
+  return false;
+}
+
 function isReasonablePrice(price: number, currency: string): boolean {
   if (currency === "PLN") return price >= MIN_ROOM_PRICE_PLN;
   if (currency === "EUR") return price >= MIN_ROOM_PRICE_EUR;
@@ -333,12 +351,20 @@ export async function scrapeProfitroomPrices(
       if (seen.has(key)) continue;
       seen.add(key);
 
+      const perPerson = isPerPersonPrice(raw.priceText);
+      const normalizedPrice = perPerson && params.adults > 1
+        ? Math.round(price * params.adults * 100) / 100
+        : price;
+
       rooms.push({
         roomName: raw.name,
-        price,
+        price: normalizedPrice,
         currency,
         occupancy: params.adults,
         originalPriceText: raw.priceText,
+        isPerNight: true, // Profitroom always shows per-night prices
+        isPerPerson: perPerson || undefined,
+        nights: params.nights,
       });
     }
 

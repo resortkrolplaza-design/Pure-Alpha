@@ -7,6 +7,7 @@ export interface ScrapeParams {
   checkIn: string; // "YYYY-MM-DD"
   checkOut: string; // "YYYY-MM-DD"
   adults: number;
+  nights: number; // calculated from checkIn/checkOut
 }
 
 export interface RoomResult {
@@ -16,6 +17,9 @@ export interface RoomResult {
   mealPlan?: string;
   occupancy: number;
   originalPriceText?: string;
+  isPerNight?: boolean; // true = confirmed per-night, false = total stay, undefined = unknown
+  isPerPerson?: boolean; // true = price is per person (needs ×adults for per-room)
+  nights?: number; // number of nights the price covers (for normalization)
 }
 
 export interface ScrapeResult {
@@ -27,4 +31,7 @@ export interface ScrapeResult {
   // GPT fallback: when DOM heuristics fail, return page text for server-side GPT extraction
   needsGptExtraction?: boolean;
   pageText?: string;
+  // Engine detection: GENERIC discovered a known engine → caller should re-dispatch
+  detectedEngine?: string;
+  resolvedBookingUrl?: string;
 }

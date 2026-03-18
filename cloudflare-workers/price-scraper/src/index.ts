@@ -125,6 +125,7 @@ function validateScrapeRequest(
       checkOut: checkOut as string,
       engine: resolvedEngine,
       adults: typeof adults === "number" && adults > 0 ? adults : 2,
+      nights,
     },
   };
 }
@@ -199,6 +200,16 @@ export default {
         }
         case "GENERIC": {
           const result = await scrapeGenericPrices(env.BROWSER, params);
+
+          // Re-dispatch: GENERIC detected a known engine (e.g. Profitroom)
+          if (!result.success && result.detectedEngine === "PROFITROOM" && result.resolvedBookingUrl) {
+            const profitroomResult = await scrapeProfitroomPrices(env.BROWSER, {
+              ...params,
+              hotelUrl: result.resolvedBookingUrl,
+            });
+            return Response.json(profitroomResult);
+          }
+
           return Response.json(result);
         }
         default:
