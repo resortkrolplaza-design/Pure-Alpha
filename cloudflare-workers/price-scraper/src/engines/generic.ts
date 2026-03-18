@@ -11,7 +11,7 @@
 // ============================================================================
 
 import puppeteer from "@cloudflare/puppeteer";
-import type { ScrapeParams, RoomResult, ScrapeResult } from "./types";
+import type { ScrapeParams, RoomResult, ScrapeResult, HotelMeta } from "./types";
 import { parsePrice, detectCurrency } from "../utils/price-parser";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -469,6 +469,88 @@ function parseRooms(
   return rooms;
 }
 
+// ── Hotel metadata extraction ────────────────────────────────────────────
+
+async function extractHotelMeta(page: puppeteer.Page): Promise<HotelMeta> {
+  try {
+    return await page.evaluate(() => {
+      const meta: {
+        description?: string;
+        ogImage?: string;
+        languages?: string[];
+        rating?: number;
+        ratingCount?: number;
+      } = {};
+
+      // ── Description ──────────────────────────────────────────
+      const ogDesc = document.querySelector('meta[property="og:description"]');
+      const metaDesc = document.querySelector('meta[name="description"]');
+      const descContent =
+        (ogDesc as HTMLMetaElement)?.content ||
+        (metaDesc as HTMLMetaElement)?.content;
+      if (descContent?.trim()) {
+        meta.description = descContent.trim().substring(0, 500);
+      }
+
+      // ── OG Image ─────────────────────────────────────────────
+      const ogImage = document.querySelector('meta[property="og:image"]');
+      const ogImageContent = (ogImage as HTMLMetaElement)?.content;
+      if (ogImageContent?.trim()) {
+        meta.ogImage = ogImageContent.trim();
+      }
+
+      // ── Languages ────────────────────────────────────────────
+      const langs = new Set<string>();
+      const docLang = document.documentElement.lang;
+      if (docLang) {
+        langs.add(docLang.split("-")[0].toLowerCase());
+      }
+      const hreflangs = document.querySelectorAll('link[rel="alternate"][hreflang]');
+      hreflangs.forEach((link) => {
+        const hl = link.getAttribute("hreflang");
+        if (hl && hl !== "x-default") {
+          langs.add(hl.split("-")[0].toLowerCase());
+        }
+      });
+      if (langs.size > 0) {
+        meta.languages = Array.from(langs).sort();
+      }
+
+      // ── Rating from JSON-LD ──────────────────────────────────
+      const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
+      ldScripts.forEach((script) => {
+        try {
+          const data = JSON.parse(script.textContent || "");
+          const items = Array.isArray(data) ? data : [data];
+          for (const item of items) {
+            const type = item["@type"];
+            if (
+              (type === "Hotel" || type === "LodgingBusiness" || type === "LocalBusiness") &&
+              item.aggregateRating
+            ) {
+              const ar = item.aggregateRating;
+              const rVal = parseFloat(ar.ratingValue);
+              const rCount = parseInt(ar.reviewCount || ar.ratingCount, 10);
+              if (!isNaN(rVal) && rVal > 0 && rVal <= 5) {
+                meta.rating = rVal;
+              }
+              if (!isNaN(rCount) && rCount > 0) {
+                meta.ratingCount = rCount;
+              }
+            }
+          }
+        } catch {
+          /* invalid JSON-LD */
+        }
+      });
+
+      return meta;
+    });
+  } catch {
+    return {};
+  }
+}
+
 // ── MAIN FUNCTION ─────────────────────────────────────────────────────────
 
 export async function scrapeGenericPrices(
@@ -523,11 +605,13 @@ export async function scrapeGenericPrices(
       const rawRooms = await extractRoomsFromDOM(page);
       const rooms = parseRooms(rawRooms, params);
       if (rooms.length > 0) {
+        const hotelMeta = await extractHotelMeta(page);
         return {
           success: true,
           rooms,
           durationMs: Date.now() - start,
           engine: "GENERIC",
+          hotelMeta,
         };
       }
     }
@@ -537,6 +621,7 @@ export async function scrapeGenericPrices(
 
     // 5a. Profitroom detected → return for re-dispatch to PROFITROOM engine
     if (discovery?.engine === "PROFITROOM" && discovery.siteKey) {
+      const hotelMeta = await extractHotelMeta(page);
       return {
         success: false,
         detectedEngine: "PROFITROOM",
@@ -544,6 +629,7 @@ export async function scrapeGenericPrices(
         error: "Detected Profitroom engine — re-dispatch to PROFITROOM",
         durationMs: Date.now() - start,
         engine: "GENERIC",
+        hotelMeta,
       };
     }
 
@@ -568,11 +654,13 @@ export async function scrapeGenericPrices(
           const rawRooms = await extractRoomsFromDOM(page);
           const rooms = parseRooms(rawRooms, params);
           if (rooms.length > 0) {
+            const hotelMeta = await extractHotelMeta(page);
             return {
               success: true,
               rooms,
               durationMs: Date.now() - start,
               engine: "GENERIC",
+              hotelMeta,
             };
           }
         }
@@ -582,6 +670,7 @@ export async function scrapeGenericPrices(
     }
 
     // ── STEP 6: GPT fallback with current page text ───────────────────
+    const hotelMeta = await extractHotelMeta(page);
     const pageText = await page.evaluate(() => {
       return (document.body?.innerText || "").substring(0, 15000);
     });
@@ -593,6 +682,7 @@ export async function scrapeGenericPrices(
       error: "No prices found in DOM — returning page text for GPT extraction",
       durationMs: Date.now() - start,
       engine: "GENERIC",
+      hotelMeta,
     };
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Unknown error";

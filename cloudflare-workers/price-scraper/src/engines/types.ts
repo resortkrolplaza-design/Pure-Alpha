@@ -22,6 +22,14 @@ export interface RoomResult {
   nights?: number; // number of nights the price covers (for normalization)
 }
 
+export interface HotelMeta {
+  description?: string;    // meta description or og:description
+  ogImage?: string;        // og:image URL
+  languages?: string[];    // ["pl", "en", "de", "ru"]
+  rating?: number;         // Google/schema.org rating (e.g. 4.7)
+  ratingCount?: number;    // number of reviews
+}
+
 export interface ScrapeResult {
   success: boolean;
   rooms?: RoomResult[];
@@ -34,4 +42,6 @@ export interface ScrapeResult {
   // Engine detection: GENERIC discovered a known engine → caller should re-dispatch
   detectedEngine?: string;
   resolvedBookingUrl?: string;
+  // Hotel metadata extracted from the same page load
+  hotelMeta?: HotelMeta;
 }

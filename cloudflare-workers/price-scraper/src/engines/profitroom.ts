@@ -11,7 +11,7 @@
 // ============================================================================
 
 import puppeteer from "@cloudflare/puppeteer";
-import type { ScrapeParams, RoomResult, ScrapeResult } from "./types";
+import type { ScrapeParams, RoomResult, ScrapeResult, HotelMeta } from "./types";
 import { parsePrice, detectCurrency } from "../utils/price-parser";
 
 // P0-3 FIX: @cloudflare/puppeteer may not have page.waitForTimeout()
@@ -173,6 +173,98 @@ function isReasonablePrice(price: number, currency: string): boolean {
   if (currency === "PLN") return price >= MIN_ROOM_PRICE_PLN;
   if (currency === "EUR") return price >= MIN_ROOM_PRICE_EUR;
   return price >= MIN_ROOM_PRICE_EUR;
+}
+
+// ── Hotel metadata extraction (Profitroom booking pages) ──────────────────
+
+async function extractProfitroomMeta(page: puppeteer.Page): Promise<HotelMeta> {
+  try {
+    return await page.evaluate(() => {
+      const meta: {
+        description?: string;
+        ogImage?: string;
+        languages?: string[];
+        rating?: number;
+        ratingCount?: number;
+      } = {};
+
+      // ── Description ──────────────────────────────────────────
+      const ogDesc = document.querySelector('meta[property="og:description"]');
+      const metaDesc = document.querySelector('meta[name="description"]');
+      const descContent =
+        (ogDesc as HTMLMetaElement)?.content ||
+        (metaDesc as HTMLMetaElement)?.content;
+      if (descContent?.trim()) {
+        meta.description = descContent.trim().substring(0, 500);
+      }
+
+      // ── OG Image ─────────────────────────────────────────────
+      const ogImage = document.querySelector('meta[property="og:image"]');
+      const ogImageContent = (ogImage as HTMLMetaElement)?.content;
+      if (ogImageContent?.trim()) {
+        meta.ogImage = ogImageContent.trim();
+      }
+
+      // ── Languages (Profitroom URL path lang detection) ───────
+      const langs = new Set<string>();
+      const docLang = document.documentElement.lang;
+      if (docLang) {
+        langs.add(docLang.split("-")[0].toLowerCase());
+      }
+      // Profitroom uses /pl/, /en/, /de/ in URLs
+      const hreflangs = document.querySelectorAll('link[rel="alternate"][hreflang]');
+      hreflangs.forEach((link) => {
+        const hl = link.getAttribute("hreflang");
+        if (hl && hl !== "x-default") {
+          langs.add(hl.split("-")[0].toLowerCase());
+        }
+      });
+      // Also check for language switcher links common in Profitroom
+      const langLinks = document.querySelectorAll('a[href*="/en/"], a[href*="/de/"], a[href*="/ru/"], a[href*="/pl/"]');
+      langLinks.forEach((link) => {
+        const href = (link as HTMLAnchorElement).href;
+        const match = href.match(/\/([a-z]{2})\//);
+        if (match) {
+          langs.add(match[1]);
+        }
+      });
+      if (langs.size > 0) {
+        meta.languages = Array.from(langs).sort();
+      }
+
+      // ── Rating from JSON-LD ──────────────────────────────────
+      const ldScripts = document.querySelectorAll('script[type="application/ld+json"]');
+      ldScripts.forEach((script) => {
+        try {
+          const data = JSON.parse(script.textContent || "");
+          const items = Array.isArray(data) ? data : [data];
+          for (const item of items) {
+            const type = item["@type"];
+            if (
+              (type === "Hotel" || type === "LodgingBusiness" || type === "LocalBusiness") &&
+              item.aggregateRating
+            ) {
+              const ar = item.aggregateRating;
+              const rVal = parseFloat(ar.ratingValue);
+              const rCount = parseInt(ar.reviewCount || ar.ratingCount, 10);
+              if (!isNaN(rVal) && rVal > 0 && rVal <= 5) {
+                meta.rating = rVal;
+              }
+              if (!isNaN(rCount) && rCount > 0) {
+                meta.ratingCount = rCount;
+              }
+            }
+          }
+        } catch {
+          /* invalid JSON-LD */
+        }
+      });
+
+      return meta;
+    });
+  } catch {
+    return {};
+  }
 }
 
 export async function scrapeProfitroomPrices(
@@ -371,12 +463,16 @@ export async function scrapeProfitroomPrices(
     // Sort by price ascending
     rooms.sort((a, b) => a.price - b.price);
 
+    // Extract hotel metadata from the already-loaded page
+    const hotelMeta = await extractProfitroomMeta(page);
+
     return {
       success: rooms.length > 0,
       rooms: rooms.length > 0 ? rooms : undefined,
       error: rooms.length === 0 ? "No valid prices found in DOM" : undefined,
       durationMs: Date.now() - start,
       engine: "PROFITROOM",
+      hotelMeta,
     };
   } catch (error) {
     // P1-6 FIX: Don't leak internal paths/stack traces
