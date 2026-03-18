@@ -77,6 +77,10 @@ function detectPriceType(contextText: string): "per-night" | "total" | "unknown"
 
 // ── Per-person detection ──────────────────────────────────────────────────
 
+// Per-person detection patterns.
+// NOTE: Profitroom genuinely shows per-person prices — e.g. "760 PLN/person"
+// means 760 PLN per person, so 2 adults = 1520 PLN per room. The ×2
+// normalization in parseRooms() is CORRECT for these cases.
 const PER_PERSON_PATTERNS = [
   /\/\s*os\.?\s*\/\s*noc/i,    // /os./noc, /os/noc
   /\/\s*osob[aęy]/i,           // /osoba, /osobę, /osoby
@@ -387,6 +391,21 @@ async function extractRoomsFromDOM(
         } catch { /* skip invalid selector */ }
       }
 
+      // Bug 1 fix: dedup Strategy 1 results by normalized name
+      // Multiple ROOM_SELECTORS can match the same card (e.g. [class*='offer'] and [class*='card'])
+      if (results.length > 0) {
+        const deduped: typeof results = [];
+        const seenNames = new Set<string>();
+        for (const r of results) {
+          const normKey = r.name.toLowerCase().replace(/\s+/g, " ").trim() + "|" + r.priceText;
+          if (!seenNames.has(normKey)) {
+            seenNames.add(normKey);
+            deduped.push(r);
+          }
+        }
+        return deduped;
+      }
+
       // Strategy 2: Standalone prices without room cards
       if (results.length === 0) {
         for (const ps of priceSels) {
@@ -436,6 +455,33 @@ async function extractRoomsFromDOM(
   );
 }
 
+// ── Name sanitization (strip price text from room names) ─────────────────
+
+function sanitizeRoomName(name: string): string {
+  return name
+    // "from PLN 912 /person/night" or "from 135 EUR /night"
+    .replace(/\bfrom\s+[A-Z]{3}\s+[\d.,\s]+\/[^\s]*/gi, "")
+    // "od 135 zł /osoba/noc" or "od 912 PLN"
+    .replace(/\bod\s+[\d.,\s]+(?:z[łl]|PLN|EUR|CZK|USD|GBP)\b[^A-Za-zĄ-Żą-ż]*/gi, "")
+    // Standalone price patterns like "PLN 912", "135 zł", "EUR 50"
+    .replace(/\b(?:PLN|EUR|CZK|USD|GBP)\s+[\d.,]+/gi, "")
+    .replace(/[\d.,]+\s*(?:z[łl]|PLN|EUR|CZK|USD|GBP)\b/gi, "")
+    // Per-person/night suffixes left over: "/osoba/noc", "/person/night", "/os./noc"
+    .replace(/\/\s*(?:osob[aęy]|os\.?|person)\s*\/\s*(?:noc|night|nacht)/gi, "")
+    .replace(/\/\s*(?:noc|night|nacht)/gi, "")
+    // Collapse whitespace
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Normalize a room name for dedup comparison:
+ * lowercase, strip price-like patterns, collapse whitespace.
+ */
+function normalizeNameForDedup(name: string): string {
+  return sanitizeRoomName(name).toLowerCase().replace(/\s+/g, " ").trim();
+}
+
 // ── Parse raw room data → RoomResult[] ────────────────────────────────────
 
 function parseRooms(
@@ -453,9 +499,14 @@ function parseRooms(
     const minPrice = currency === "PLN" ? MIN_PRICE_PLN : MIN_PRICE_EUR;
     if (rawPrice < minPrice) continue;
 
-    const key = `${raw.name}|${rawPrice}`;
+    // Bug 1+3 fix: normalize name for dedup (strips price text, lowercases)
+    const normalizedName = normalizeNameForDedup(raw.name);
+    const key = `${normalizedName}|${rawPrice}`;
     if (seen.has(key)) continue;
     seen.add(key);
+
+    // Bug 3 fix: sanitize the displayed room name (strip price-like text)
+    raw.name = sanitizeRoomName(raw.name) || raw.name;
 
     const priceType = detectPriceType(raw.contextText);
     const isPerPerson = detectPerPerson(raw.priceText) || detectPerPerson(raw.contextText);
