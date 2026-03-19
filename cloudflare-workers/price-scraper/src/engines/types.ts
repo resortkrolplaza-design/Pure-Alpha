@@ -8,6 +8,7 @@ export interface ScrapeParams {
   checkOut: string; // "YYYY-MM-DD"
   adults: number;
   nights: number; // calculated from checkIn/checkOut
+  profitroomSiteKey?: string; // Profitroom siteKey (discovered by GENERIC or passed from DB)
 }
 
 export interface RoomResult {
@@ -42,7 +43,7 @@ export interface ScrapeResult {
   pageText?: string;
   // Engine detection: GENERIC discovered a known engine → caller should re-dispatch
   detectedEngine?: string;
-  resolvedBookingUrl?: string;
+  profitroomSiteKey?: string;
   // Hotel metadata extracted from the same page load
   hotelMeta?: HotelMeta;
 }

@@ -162,10 +162,12 @@ async function discoverBookingEngine(page: puppeteer.Page): Promise<EngineDiscov
 
     // ── 1. Profitroom in page source ──────────────────────────────────
     const profitroomPatterns = [
+      /checkout\.profitroom\.com\/\w+\/([a-zA-Z0-9]+)/,
       /upperbooking\.com\/\w+\/booking\/start\/([a-zA-Z0-9]+)/,
       /booking\.profitroom\.com\/\w+\/([a-zA-Z0-9]+)/,
-      /siteKey=([a-zA-Z0-9]+)/,
+      /r\.profitroom\.pl\/([a-zA-Z0-9]+)\//,
       /wa-uploads\.profitroom\.com\/([a-zA-Z0-9]+)\//,
+      /profitroom\.com.*siteKey=([a-zA-Z0-9]+)/,
     ];
     for (const p of profitroomPatterns) {
       const match = html.match(p);
@@ -692,8 +694,8 @@ export async function scrapeGenericPrices(
       return {
         success: false,
         detectedEngine: "PROFITROOM",
-        resolvedBookingUrl: `https://booking.profitroom.com/pl/${discovery.siteKey}/home`,
-        error: "Detected Profitroom engine — re-dispatch to PROFITROOM",
+        profitroomSiteKey: discovery.siteKey,
+        error: "Detected Profitroom engine — re-dispatch to PROFITROOM API",
         durationMs: Date.now() - start,
         engine: "GENERIC",
         hotelMeta,

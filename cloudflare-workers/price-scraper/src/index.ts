@@ -81,7 +81,7 @@ function isBlockedUrl(urlStr: string): string | null {
 function validateScrapeRequest(
   body: Record<string, unknown>,
 ): { params: ScrapeParams & { engine: EngineType }; error?: never } | { params?: never; error: string } {
-  const { hotelUrl, checkIn, checkOut, engine, adults } = body;
+  const { hotelUrl, checkIn, checkOut, engine, adults, profitroomSiteKey } = body;
 
   if (!hotelUrl || typeof hotelUrl !== "string") {
     return { error: "hotelUrl is required" };
@@ -126,6 +126,9 @@ function validateScrapeRequest(
       engine: resolvedEngine,
       adults: typeof adults === "number" && adults > 0 ? adults : 2,
       nights,
+      profitroomSiteKey: typeof profitroomSiteKey === "string" && /^[a-zA-Z0-9]+$/.test(profitroomSiteKey)
+        ? profitroomSiteKey
+        : undefined,
     },
   };
 }
@@ -190,24 +193,28 @@ export default {
         );
       }
 
-      const { params } = validation;
+      const params = validation.params!;
 
       // Route to engine strategy
       switch (params.engine) {
         case "PROFITROOM": {
+          // Profitroom engine uses direct REST API — no browser needed
           const result = await scrapeProfitroomPrices(env.BROWSER, params);
           return Response.json(result);
         }
         case "GENERIC": {
           const result = await scrapeGenericPrices(env.BROWSER, params);
 
-          // Re-dispatch: GENERIC detected a known engine (e.g. Profitroom)
-          if (!result.success && result.detectedEngine === "PROFITROOM" && result.resolvedBookingUrl) {
+          // Re-dispatch: GENERIC detected Profitroom → use direct API
+          if (!result.success && result.detectedEngine === "PROFITROOM" && result.profitroomSiteKey) {
             const profitroomResult = await scrapeProfitroomPrices(env.BROWSER, {
               ...params,
-              hotelUrl: result.resolvedBookingUrl,
+              profitroomSiteKey: result.profitroomSiteKey,
             });
-            return Response.json(profitroomResult);
+            return Response.json({
+              ...profitroomResult,
+              hotelMeta: profitroomResult.hotelMeta || result.hotelMeta,
+            });
           }
 
           return Response.json(result);
