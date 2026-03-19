@@ -11,7 +11,7 @@
 // Auth: Bearer token (shared secret with Pure Alpha backend)
 // ============================================================================
 
-import { scrapeProfitroomPrices } from "./engines/profitroom";
+import { scrapeProfitroomPrices, scrapeProfitroomFull } from "./engines/profitroom";
 import { scrapeGenericPrices } from "./engines/generic";
 import type { ScrapeParams } from "./engines/types";
 
@@ -81,7 +81,7 @@ function isBlockedUrl(urlStr: string): string | null {
 function validateScrapeRequest(
   body: Record<string, unknown>,
 ): { params: ScrapeParams & { engine: EngineType }; error?: never } | { params?: never; error: string } {
-  const { hotelUrl, checkIn, checkOut, engine, adults, profitroomSiteKey } = body;
+  const { hotelUrl, checkIn, checkOut, engine, adults, profitroomSiteKey, mode, calendarDays } = body;
 
   if (!hotelUrl || typeof hotelUrl !== "string") {
     return { error: "hotelUrl is required" };
@@ -128,6 +128,10 @@ function validateScrapeRequest(
       nights,
       profitroomSiteKey: typeof profitroomSiteKey === "string" && /^[a-zA-Z0-9]+$/.test(profitroomSiteKey)
         ? profitroomSiteKey
+        : undefined,
+      mode: mode === "full" ? "full" : "prices",
+      calendarDays: typeof calendarDays === "number" && calendarDays > 0 && calendarDays <= 365
+        ? calendarDays
         : undefined,
     },
   };
@@ -199,7 +203,10 @@ export default {
       switch (params.engine) {
         case "PROFITROOM": {
           // Profitroom engine uses direct REST API — no browser needed
-          const result = await scrapeProfitroomPrices(env.BROWSER, params);
+          const scrapeFn = params.mode === "full"
+            ? scrapeProfitroomFull
+            : scrapeProfitroomPrices;
+          const result = await scrapeFn(env.BROWSER, params);
           return Response.json(result);
         }
         case "GENERIC": {

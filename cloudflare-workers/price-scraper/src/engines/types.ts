@@ -9,6 +9,8 @@ export interface ScrapeParams {
   adults: number;
   nights: number; // calculated from checkIn/checkOut
   profitroomSiteKey?: string; // Profitroom siteKey (discovered by GENERIC or passed from DB)
+  mode?: "prices" | "full"; // 'prices' = current behavior, 'full' = all data
+  calendarDays?: number; // days ahead for calendar (default 90)
 }
 
 export interface RoomResult {
@@ -32,6 +34,35 @@ export interface HotelMeta {
   ratingCount?: number;    // number of reviews
 }
 
+export interface CalendarPrice {
+  date: string;
+  minPrice: number;
+  currency: string;
+  offerId?: number;
+  roomId?: number;
+}
+
+export interface ProfitroomOffer {
+  offerId: number;
+  name: string;
+  mealPlanType?: number;
+  minPrice?: number;
+  currency?: string;
+  validFrom?: string;
+  validTo?: string;
+  minNights?: number;
+  isBestseller?: boolean;
+}
+
+export interface ProfitroomHotelDetails {
+  checkIn?: string;
+  checkOut?: string;
+  name?: string;
+  city?: string;
+  lat?: number;
+  lng?: number;
+}
+
 export interface ScrapeResult {
   success: boolean;
   rooms?: RoomResult[];
@@ -46,4 +77,10 @@ export interface ScrapeResult {
   profitroomSiteKey?: string;
   // Hotel metadata extracted from the same page load
   hotelMeta?: HotelMeta;
+  // Profitroom full-mode data
+  calendarPrices?: CalendarPrice[];
+  unavailableDays?: string[];
+  offers?: ProfitroomOffer[];
+  hotelDetails?: ProfitroomHotelDetails;
+  exchangeRates?: Record<string, number>;
 }
