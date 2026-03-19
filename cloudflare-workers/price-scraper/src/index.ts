@@ -221,6 +221,7 @@ export default {
             return Response.json({
               ...profitroomResult,
               hotelMeta: profitroomResult.hotelMeta || result.hotelMeta,
+              profitroomSiteKey: result.profitroomSiteKey,
             });
           }
 
