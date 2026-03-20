@@ -28,6 +28,7 @@ import type {
   CalendarPrice,
   ProfitroomOffer,
   ProfitroomHotelDetails,
+  ProfitroomRoomDetail,
 } from "./types";
 
 // ── Profitroom API types ──────────────────────────────────────────────────
@@ -60,6 +61,17 @@ interface ProfitroomRoom {
   id: number;
   gallery?: {
     title?: string;
+    images?: Array<{ url?: string }>;
+  };
+  translations?: Array<{
+    locale: string;
+    messages: Array<{ fieldName: string; value: string }>;
+  }>;
+  attributes?: {
+    area?: number;
+    maxOccupancy?: number;
+    bedsConfiguration?: Record<string, unknown>;
+    facilities?: number[];
   };
 }
 
@@ -70,6 +82,42 @@ const API_TIMEOUT_MS = 10_000;
 const MIN_PRICE_PLN = 50;
 const MIN_PRICE_EUR = 10;
 const SITE_KEY_RE = /^[a-zA-Z0-9]+$/;
+
+// ── Shared: extract cheapest price from availability groups (SSOT) ────────
+
+function cheapestFromGroups(
+  groups: ProfitroomAvailabilityGroup[],
+): {
+  minPrice: number;
+  currency: string;
+  offerId?: number;
+  roomId?: number;
+  originalPrice?: number;
+  recentLowestPrice?: number;
+} | null {
+  let minPrice = Infinity;
+  let currency = "PLN";
+  let offerId: number | undefined;
+  let roomId: number | undefined;
+  let originalPrice: number | undefined;
+  let recentLowestPrice: number | undefined;
+  for (const g of groups) {
+    for (const { proposal } of g.proposals) {
+      const minAllowed = proposal.price.currency === "PLN" ? MIN_PRICE_PLN : MIN_PRICE_EUR;
+      if (proposal.price.amount >= minAllowed && proposal.price.amount < minPrice) {
+        minPrice = proposal.price.amount;
+        currency = proposal.price.currency;
+        offerId = proposal.OfferID;
+        roomId = proposal.RoomID;
+        originalPrice = proposal.originalPrice?.amount ?? undefined;
+        recentLowestPrice = proposal.recentLowestPrice?.amount ?? undefined;
+      }
+    }
+  }
+  return minPrice < Infinity
+    ? { minPrice, currency, offerId, roomId, originalPrice, recentLowestPrice }
+    : null;
+}
 
 // ── API helpers ───────────────────────────────────────────────────────────
 
@@ -107,12 +155,13 @@ async function fetchProfitroomApi<T>(
   }
 }
 
-// ── Room name resolution ──────────────────────────────────────────────────
+// ── Room details resolution ───────────────────────────────────────────────
 
-async function fetchRoomNames(
+async function fetchRoomDetails(
   siteKey: string,
-): Promise<Map<number, string>> {
-  const roomMap = new Map<number, string>();
+): Promise<{ nameMap: Map<number, string>; details: ProfitroomRoomDetail[] }> {
+  const nameMap = new Map<number, string>();
+  const details: ProfitroomRoomDetail[] = [];
   try {
     const rooms = await fetchProfitroomApi<ProfitroomRoom[]>(
       siteKey,
@@ -120,13 +169,29 @@ async function fetchRoomNames(
       { lang: "pl" },
     );
     for (const room of rooms) {
-      const name = room.gallery?.title?.replace(/^Gallery for:\s*/i, "") || `Pokój #${room.id}`;
-      roomMap.set(room.id, name);
+      // Resolve name: gallery.title → Polish translation → fallback
+      let name = room.gallery?.title?.replace(/^Gallery for:\s*/i, "") || "";
+      if (!name && room.translations) {
+        const plTrans = room.translations.find((t) => t.locale === "pl");
+        const nameMsg = plTrans?.messages?.find((m) => m.fieldName === "name");
+        name = nameMsg?.value || "";
+      }
+      if (!name) name = `Pokój #${room.id}`;
+
+      nameMap.set(room.id, name);
+      details.push({
+        roomId: room.id,
+        name,
+        area: room.attributes?.area ?? undefined,
+        maxOccupancy: room.attributes?.maxOccupancy ?? undefined,
+        beds: room.attributes?.bedsConfiguration ?? undefined,
+        imageUrl: room.gallery?.images?.[0]?.url ?? undefined,
+      });
     }
   } catch {
-    // Room names are nice-to-have, not critical
+    // Room details are nice-to-have, not critical
   }
-  return roomMap;
+  return { nameMap, details };
 }
 
 // ── Calendar prices ──────────────────────────────────────────────────────
@@ -136,6 +201,8 @@ interface ProfitroomCalendarPrice {
   currency: string;
   offerId: number;
   roomId: number;
+  originalPrice?: { amount: number; currency: string } | null;
+  recentLowestPrice?: { amount: number; currency: string } | null;
 }
 
 async function fetchCalendarPrices(
@@ -157,6 +224,8 @@ async function fetchCalendarPrices(
       currency: entry.currency,
       offerId: entry.offerId ?? undefined,
       roomId: entry.roomId ?? undefined,
+      originalPrice: entry.originalPrice?.amount ?? undefined,
+      recentLowestPrice: entry.recentLowestPrice?.amount ?? undefined,
     }));
   } catch (err) {
     console.error("[PriceScraper] fetchCalendarPrices failed:", err instanceof Error ? err.message : err);
@@ -219,10 +288,20 @@ async function fetchOffers(siteKey: string): Promise<ProfitroomOffer[] | null> {
     return raw.map((offer) => {
       // Resolve name: gallery.title (strip prefix) → translation → fallback
       let name = offer.gallery?.title?.replace(/^Gallery for:\s*/i, "") || "";
-      if (!name && offer.translations) {
+      let description: string | undefined;
+
+      if (offer.translations) {
         const plTrans = offer.translations.find((t) => t.locale === "pl");
-        const nameMsg = plTrans?.messages?.find((m) => m.fieldName === "name");
-        name = nameMsg?.value || "";
+        if (plTrans) {
+          if (!name) {
+            const nameMsg = plTrans.messages?.find((m) => m.fieldName === "name");
+            name = nameMsg?.value || "";
+          }
+          // Extract description + intro for full package content
+          const introMsg = plTrans.messages?.find((m) => m.fieldName === "intro");
+          const descMsg = plTrans.messages?.find((m) => m.fieldName === "description");
+          description = [introMsg?.value, descMsg?.value].filter(Boolean).join("\n\n") || undefined;
+        }
       }
       if (!name) name = `Oferta #${offer.id}`;
 
@@ -243,6 +322,7 @@ async function fetchOffers(siteKey: string): Promise<ProfitroomOffer[] | null> {
       return {
         offerId: offer.id,
         name,
+        description,
         mealPlanType,
         validFrom,
         validTo,
@@ -374,14 +454,15 @@ export async function scrapeProfitroomPrices(
       lang: "pl",
     };
 
-    const [availability, roomNames] = await Promise.all([
+    const [availability, roomData] = await Promise.all([
       fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
         siteKey,
         "availability",
         availabilityParams,
       ),
-      fetchRoomNames(siteKey),
+      fetchRoomDetails(siteKey),
     ]);
+    const roomNames = roomData.nameMap;
 
     if (!availability || availability.length === 0) {
       return {
@@ -519,7 +600,7 @@ export async function scrapeProfitroomFull(
 
     const settled = await Promise.allSettled([
       /* 0 */ fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(siteKey, "availability", availabilityParams),
-      /* 1 */ fetchRoomNames(siteKey),
+      /* 1 */ fetchRoomDetails(siteKey),
       /* 2 */ fetchCalendarPrices(siteKey, calendarFrom, calendarTo),
       /* 3 */ fetchUnavailableDays(siteKey, calendarFrom, calendarTo),
       /* 4 */ fetchOffers(siteKey),
@@ -530,9 +611,56 @@ export async function scrapeProfitroomFull(
 
     // ── Unpack settled results ────────────────────────────────────────
     const availability = settled[0].status === "fulfilled" ? settled[0].value : null;
-    const roomNames = settled[1].status === "fulfilled" ? settled[1].value : new Map<number, string>();
-    const calendarPrices = settled[2].status === "fulfilled" ? settled[2].value : null;
+    const roomData = settled[1].status === "fulfilled"
+      ? settled[1].value
+      : { nameMap: new Map<number, string>(), details: [] as ProfitroomRoomDetail[] };
+    const roomNames = roomData.nameMap;
+    const roomDetails = roomData.details;
+    let calendarPrices = settled[2].status === "fulfilled" ? settled[2].value : null;
     const unavailableDays = settled[3].status === "fulfilled" ? settled[3].value : null;
+
+    // Fallback: if calendar/prices endpoint is missing (404 for some hotels),
+    // build calendar prices from per-day availability API calls (SSOT: cheapestFromGroups)
+    if (!calendarPrices && siteKey) {
+      try {
+        const daysToFetch = Math.min(calendarDays, 90);
+        const startDate = new Date(); // Start from today (not tomorrow)
+
+        const days = Array.from({ length: daysToFetch }, (_, i) => {
+          const ci = new Date(startDate);
+          ci.setUTCDate(ci.getUTCDate() + i);
+          const co = new Date(ci);
+          co.setUTCDate(co.getUTCDate() + 1);
+          return { checkIn: formatDate(ci), checkOut: formatDate(co) };
+        });
+
+        const fallback: CalendarPrice[] = [];
+        for (let b = 0; b < days.length; b += 5) {
+          const results = await Promise.allSettled(
+            days.slice(b, b + 5).map(({ checkIn, checkOut }) =>
+              fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
+                siteKey, "availability",
+                { checkIn, checkOut, "occupancy[0][adults]": "2", lang: "pl" },
+              ).then((groups) => {
+                if (!groups?.length) return null;
+                const cheapest = cheapestFromGroups(groups);
+                return cheapest ? { date: checkIn, ...cheapest } : null;
+              }),
+            ),
+          );
+          for (const r of results) {
+            if (r.status === "fulfilled" && r.value) fallback.push(r.value);
+          }
+        }
+
+        if (fallback.length > 0) {
+          calendarPrices = fallback;
+          console.log(`[PriceScraper] calendar/prices fallback: ${fallback.length} days via availability for ${siteKey}`);
+        }
+      } catch (err) {
+        console.error("[PriceScraper] calendar/prices fallback failed:", err instanceof Error ? err.message : err);
+      }
+    }
     const offers = settled[4].status === "fulfilled" ? settled[4].value : null;
     const bestsellerIds = settled[5].status === "fulfilled" ? settled[5].value : null;
     const hotelDetails = settled[6].status === "fulfilled" ? settled[6].value : null;
@@ -618,6 +746,7 @@ export async function scrapeProfitroomFull(
       offers: enrichedOffers,
       hotelDetails: hotelDetails ?? undefined,
       exchangeRates: exchangeRates ?? undefined,
+      roomDetails: roomDetails.length > 0 ? roomDetails : undefined,
     };
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Unknown error";

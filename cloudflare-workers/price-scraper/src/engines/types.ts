@@ -40,11 +40,14 @@ export interface CalendarPrice {
   currency: string;
   offerId?: number;
   roomId?: number;
+  originalPrice?: number;
+  recentLowestPrice?: number;
 }
 
 export interface ProfitroomOffer {
   offerId: number;
   name: string;
+  description?: string;
   mealPlanType?: number;
   minPrice?: number;
   currency?: string;
@@ -52,6 +55,15 @@ export interface ProfitroomOffer {
   validTo?: string;
   minNights?: number;
   isBestseller?: boolean;
+}
+
+export interface ProfitroomRoomDetail {
+  roomId: number;
+  name: string;
+  area?: number;
+  maxOccupancy?: number;
+  beds?: Record<string, unknown>;
+  imageUrl?: string;
 }
 
 export interface ProfitroomHotelDetails {
@@ -83,4 +95,5 @@ export interface ScrapeResult {
   offers?: ProfitroomOffer[];
   hotelDetails?: ProfitroomHotelDetails;
   exchangeRates?: Record<string, number>;
+  roomDetails?: ProfitroomRoomDetail[];
 }
