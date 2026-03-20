@@ -60,9 +60,11 @@ export interface ProfitroomOffer {
 export interface ProfitroomRoomDetail {
   roomId: number;
   name: string;
-  area?: number;
-  maxOccupancy?: number;
-  beds?: Record<string, unknown>;
+  description?: string;
+  bedsDescription?: string;
+  area?: string;           // "28-30 m²" or "28 m²"
+  maxOccupancy?: number;   // people + extraBeds
+  facilities?: string[];   // ["wifi", "airConditioning", "balcony"]
   imageUrl?: string;
 }
 

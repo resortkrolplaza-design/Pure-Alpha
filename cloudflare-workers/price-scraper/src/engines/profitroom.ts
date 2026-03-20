@@ -61,17 +61,24 @@ interface ProfitroomRoom {
   id: number;
   gallery?: {
     title?: string;
-    images?: Array<{ url?: string }>;
+    featured?: { fileName?: string };
+    images?: Array<{ fileName?: string }>;
   };
   translations?: Array<{
     locale: string;
     messages: Array<{ fieldName: string; value: string }>;
   }>;
   attributes?: {
-    area?: number;
-    maxOccupancy?: number;
-    bedsConfiguration?: Record<string, unknown>;
-    facilities?: number[];
+    area?: { from?: number; to?: number; unit?: string } | null;
+    maxOccupancy?: { people?: number; extraBeds?: number | null } | null;
+    bedsConfiguration?: {
+      total?: number | null;
+      singleBeds?: number | null;
+      doubleBeds?: number | null;
+      foldingBeds?: number | null;
+      splitBeds?: number | null;
+    } | null;
+    facilities?: Record<string, number> | null;
   };
 }
 
@@ -168,24 +175,64 @@ async function fetchRoomDetails(
       "rooms",
       { lang: "pl" },
     );
+    const IMG_BASE = "https://r.profitroom.com/thumb/1200x0/";
+
     for (const room of rooms) {
       // Resolve name: gallery.title → Polish translation → fallback
       let name = room.gallery?.title?.replace(/^Gallery for:\s*/i, "") || "";
-      if (!name && room.translations) {
+      let description: string | undefined;
+      let bedsDescription: string | undefined;
+
+      if (room.translations) {
         const plTrans = room.translations.find((t) => t.locale === "pl");
-        const nameMsg = plTrans?.messages?.find((m) => m.fieldName === "name");
-        name = nameMsg?.value || "";
+        if (plTrans) {
+          if (!name) {
+            const nameMsg = plTrans.messages?.find((m) => m.fieldName === "name");
+            name = nameMsg?.value || "";
+          }
+          const descMsg = plTrans.messages?.find((m) => m.fieldName === "description");
+          description = descMsg?.value || undefined;
+          const bedsMsg = plTrans.messages?.find((m) => m.fieldName === "bedsDescription");
+          bedsDescription = bedsMsg?.value || undefined;
+        }
       }
       if (!name) name = `Pokój #${room.id}`;
+
+      // area: { from: 28, to: 30, unit: "m²" } → "28-30 m²" or "28 m²"
+      const areaObj = room.attributes?.area;
+      let area: string | undefined;
+      if (areaObj?.from) {
+        area = areaObj.from === areaObj.to
+          ? `${areaObj.from} ${areaObj.unit || "m²"}`
+          : `${areaObj.from}-${areaObj.to} ${areaObj.unit || "m²"}`;
+      }
+
+      // maxOccupancy: { people: 2, extraBeds: 2 } → 4
+      const maxOcc = room.attributes?.maxOccupancy;
+      const maxOccupancy = maxOcc?.people
+        ? (maxOcc.people + (maxOcc.extraBeds ?? 0))
+        : undefined;
+
+      // facilities: { wifi: 1, airConditioning: 1, balcony: 0 } → ["wifi", "airConditioning"]
+      const rawFacilities = room.attributes?.facilities;
+      const facilities = rawFacilities
+        ? Object.entries(rawFacilities).filter(([, v]) => v === 1).map(([k]) => k)
+        : undefined;
+
+      // Image: fileName → full URL via Profitroom CDN
+      const imgFile = room.gallery?.featured?.fileName || room.gallery?.images?.[0]?.fileName;
+      const imageUrl = imgFile ? `${IMG_BASE}${imgFile}` : undefined;
 
       nameMap.set(room.id, name);
       details.push({
         roomId: room.id,
         name,
-        area: room.attributes?.area ?? undefined,
-        maxOccupancy: room.attributes?.maxOccupancy ?? undefined,
-        beds: room.attributes?.bedsConfiguration ?? undefined,
-        imageUrl: room.gallery?.images?.[0]?.url ?? undefined,
+        description,
+        bedsDescription,
+        area,
+        maxOccupancy,
+        facilities,
+        imageUrl,
       });
     }
   } catch {
