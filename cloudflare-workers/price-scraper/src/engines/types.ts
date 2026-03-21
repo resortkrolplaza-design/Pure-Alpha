@@ -42,6 +42,9 @@ export interface CalendarPrice {
   roomId?: number;
   originalPrice?: number;
   recentLowestPrice?: number;
+  discountType?: string;
+  discountName?: string;
+  roomCount?: number;
 }
 
 export interface ProfitroomOffer {
@@ -55,6 +58,7 @@ export interface ProfitroomOffer {
   validTo?: string;
   minNights?: number;
   isBestseller?: boolean;
+  imageUrl?: string;
 }
 
 export interface ProfitroomRoomDetail {
@@ -66,6 +70,14 @@ export interface ProfitroomRoomDetail {
   maxOccupancy?: number;   // people + extraBeds
   facilities?: string[];   // ["wifi", "airConditioning", "balcony"]
   imageUrl?: string;
+  images?: string[];       // full gallery URLs
+  bedsConfiguration?: {
+    total?: number | null;
+    singleBeds?: number | null;
+    doubleBeds?: number | null;
+    foldingBeds?: number | null;
+    splitBeds?: number | null;
+  };
 }
 
 export interface ProfitroomHotelDetails {
@@ -75,6 +87,12 @@ export interface ProfitroomHotelDetails {
   city?: string;
   lat?: number;
   lng?: number;
+  description?: string;
+  policies?: {
+    animalsAllowed?: boolean;
+    childrenFreeAge?: number;
+    maxAdvanceDays?: number;
+  };
 }
 
 export interface ScrapeResult {

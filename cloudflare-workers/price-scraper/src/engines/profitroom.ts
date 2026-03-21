@@ -101,6 +101,9 @@ function cheapestFromGroups(
   roomId?: number;
   originalPrice?: number;
   recentLowestPrice?: number;
+  discountType?: string;
+  discountName?: string;
+  roomCount?: number;
 } | null {
   let minPrice = Infinity;
   let currency = "PLN";
@@ -108,8 +111,12 @@ function cheapestFromGroups(
   let roomId: number | undefined;
   let originalPrice: number | undefined;
   let recentLowestPrice: number | undefined;
+  let discountType: string | undefined;
+  let discountName: string | undefined;
+  let roomCount: number | undefined;
   for (const g of groups) {
-    for (const { proposal } of g.proposals) {
+    for (const p of g.proposals) {
+      const { proposal } = p;
       const minAllowed = proposal.price.currency === "PLN" ? MIN_PRICE_PLN : MIN_PRICE_EUR;
       if (proposal.price.amount >= minAllowed && proposal.price.amount < minPrice) {
         minPrice = proposal.price.amount;
@@ -118,11 +125,21 @@ function cheapestFromGroups(
         roomId = proposal.RoomID;
         originalPrice = proposal.originalPrice?.amount ?? undefined;
         recentLowestPrice = proposal.recentLowestPrice?.amount ?? undefined;
+        roomCount = p.roomCount ?? undefined;
+        // Extract first discount detail
+        const d = proposal.discounts?.[0] as Record<string, unknown> | undefined;
+        if (d) {
+          discountType = typeof d.type === "string" ? d.type : undefined;
+          discountName = typeof d.name === "string" ? d.name : undefined;
+        } else {
+          discountType = undefined;
+          discountName = undefined;
+        }
       }
     }
   }
   return minPrice < Infinity
-    ? { minPrice, currency, offerId, roomId, originalPrice, recentLowestPrice }
+    ? { minPrice, currency, offerId, roomId, originalPrice, recentLowestPrice, discountType, discountName, roomCount }
     : null;
 }
 
@@ -223,6 +240,23 @@ async function fetchRoomDetails(
       const imgFile = room.gallery?.featured?.fileName || room.gallery?.images?.[0]?.fileName;
       const imageUrl = imgFile ? `${IMG_BASE}${imgFile}` : undefined;
 
+      // Full image gallery (up to 6 images)
+      const images: string[] = [];
+      if (room.gallery?.featured?.fileName) {
+        images.push(`${IMG_BASE}${room.gallery.featured.fileName}`);
+      }
+      if (room.gallery?.images) {
+        for (const img of room.gallery.images) {
+          if (img.fileName && images.length < 6) {
+            const url = `${IMG_BASE}${img.fileName}`;
+            if (!images.includes(url)) images.push(url);
+          }
+        }
+      }
+
+      // Structured beds configuration
+      const bedsConfiguration = room.attributes?.bedsConfiguration ?? undefined;
+
       nameMap.set(room.id, name);
       details.push({
         roomId: room.id,
@@ -233,6 +267,8 @@ async function fetchRoomDetails(
         maxOccupancy,
         facilities,
         imageUrl,
+        images: images.length > 0 ? images : undefined,
+        bedsConfiguration: bedsConfiguration ?? undefined,
       });
     }
   } catch {
@@ -309,7 +345,11 @@ interface ProfitroomOfferTranslation {
 
 interface ProfitroomOfferRaw {
   id: number;
-  gallery?: { title?: string };
+  gallery?: {
+    title?: string;
+    featured?: { fileName?: string };
+    images?: Array<{ fileName?: string }>;
+  };
   translations?: ProfitroomOfferTranslation[];
   attributes?: {
     mealPlanType?: number;
@@ -366,6 +406,11 @@ async function fetchOffers(siteKey: string): Promise<ProfitroomOffer[] | null> {
         offer.attributes?.minimumNights ??
         undefined;
 
+      // Extract offer cover image from gallery
+      const IMG_BASE_OFFER = "https://r.profitroom.com/thumb/800x0/";
+      const offerImgFile = offer.gallery?.featured?.fileName || offer.gallery?.images?.[0]?.fileName;
+      const imageUrl = offerImgFile ? `${IMG_BASE_OFFER}${offerImgFile}` : undefined;
+
       return {
         offerId: offer.id,
         name,
@@ -374,6 +419,7 @@ async function fetchOffers(siteKey: string): Promise<ProfitroomOffer[] | null> {
         validFrom,
         validTo,
         minNights,
+        imageUrl,
       };
     });
   } catch (err) {
@@ -426,19 +472,32 @@ async function fetchHotelDetails(siteKey: string): Promise<ProfitroomHotelDetail
     const checkOut = raw.config?.["Hotel.CheckoutBefore"] ?? undefined;
 
     let name: string | undefined;
+    let description: string | undefined;
     if (raw.translations) {
       const plTrans = raw.translations.find((t) => t.locale === "pl");
       const nameMsg = plTrans?.messages?.find((m) => m.fieldName === "name");
       name = nameMsg?.value || undefined;
+      const descMsg = plTrans?.messages?.find((m) => m.fieldName === "description");
+      description = descMsg?.value || undefined;
     }
+
+    // Extract hotel policies from config
+    const cfg = raw.config;
+    const policies = cfg ? {
+      animalsAllowed: cfg["Hotel.Animals"] === "1" ? true : cfg["Hotel.Animals"] === "0" ? false : undefined,
+      childrenFreeAge: cfg["Children.FreeAge"] ? parseInt(cfg["Children.FreeAge"], 10) : undefined,
+      maxAdvanceDays: cfg["Booking.MaxDaysAdvance"] ? parseInt(cfg["Booking.MaxDaysAdvance"], 10) : undefined,
+    } : undefined;
 
     return {
       checkIn,
       checkOut,
       name,
+      description,
       city: raw.address?.city ?? undefined,
       lat: raw.address?.coordinates?.lat ?? undefined,
       lng: raw.address?.coordinates?.lng ?? undefined,
+      policies: policies && Object.values(policies).some((v) => v !== undefined) ? policies : undefined,
     };
   } catch (err) {
     console.error("[PriceScraper] fetchHotelDetails failed:", err instanceof Error ? err.message : err);
