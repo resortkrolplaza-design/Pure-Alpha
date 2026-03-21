@@ -44,6 +44,7 @@ export interface CalendarPrice {
   recentLowestPrice?: number;
   discountType?: string;
   discountName?: string;
+  discountAmount?: number;
   roomCount?: number;
 }
 

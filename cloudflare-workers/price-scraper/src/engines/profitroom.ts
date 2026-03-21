@@ -89,6 +89,7 @@ const API_TIMEOUT_MS = 10_000;
 const MIN_PRICE_PLN = 50;
 const MIN_PRICE_EUR = 10;
 const SITE_KEY_RE = /^[a-zA-Z0-9]+$/;
+const IMG_BASE_OFFER = "https://r.profitroom.com/thumb/800x0/";
 
 // ── Shared: extract cheapest price from availability groups (SSOT) ────────
 
@@ -103,6 +104,7 @@ function cheapestFromGroups(
   recentLowestPrice?: number;
   discountType?: string;
   discountName?: string;
+  discountAmount?: number;
   roomCount?: number;
 } | null {
   let minPrice = Infinity;
@@ -113,6 +115,7 @@ function cheapestFromGroups(
   let recentLowestPrice: number | undefined;
   let discountType: string | undefined;
   let discountName: string | undefined;
+  let discountAmount: number | undefined;
   let roomCount: number | undefined;
   for (const g of groups) {
     for (const p of g.proposals) {
@@ -131,15 +134,17 @@ function cheapestFromGroups(
         if (d) {
           discountType = typeof d.type === "string" ? d.type : undefined;
           discountName = typeof d.name === "string" ? d.name : undefined;
+          discountAmount = typeof d.amount === "number" ? d.amount : undefined;
         } else {
           discountType = undefined;
           discountName = undefined;
+          discountAmount = undefined;
         }
       }
     }
   }
   return minPrice < Infinity
-    ? { minPrice, currency, offerId, roomId, originalPrice, recentLowestPrice, discountType, discountName, roomCount }
+    ? { minPrice, currency, offerId, roomId, originalPrice, recentLowestPrice, discountType, discountName, discountAmount, roomCount }
     : null;
 }
 
@@ -407,7 +412,6 @@ async function fetchOffers(siteKey: string): Promise<ProfitroomOffer[] | null> {
         undefined;
 
       // Extract offer cover image from gallery
-      const IMG_BASE_OFFER = "https://r.profitroom.com/thumb/800x0/";
       const offerImgFile = offer.gallery?.featured?.fileName || offer.gallery?.images?.[0]?.fileName;
       const imageUrl = offerImgFile ? `${IMG_BASE_OFFER}${offerImgFile}` : undefined;
 
@@ -832,13 +836,38 @@ export async function scrapeProfitroomFull(
       rooms.sort((a, b) => a.price - b.price);
     }
 
-    // ── Cross-reference bestseller IDs with offers ────────────────────
+    // ── Cross-reference bestseller IDs + minPrice from availability ───
     const bestsellerSet = bestsellerIds ? new Set(bestsellerIds) : null;
+
+    // Build per-offer cheapest price from availability proposals
+    const offerMinPrice = new Map<number, { price: number; currency: string }>();
+    if (availability) {
+      for (const group of availability) {
+        for (const { proposal } of group.proposals) {
+          const existing = offerMinPrice.get(proposal.OfferID);
+          const perNight = params.nights > 0
+            ? Math.round((proposal.price.amount / params.nights) * 100) / 100
+            : proposal.price.amount;
+          if (!existing || perNight < existing.price) {
+            offerMinPrice.set(proposal.OfferID, {
+              price: perNight,
+              currency: proposal.price.currency,
+            });
+          }
+        }
+      }
+    }
+
     const enrichedOffers = offers
-      ? offers.map((offer) => ({
-          ...offer,
-          isBestseller: bestsellerSet?.has(offer.offerId) ?? false,
-        }))
+      ? offers.map((offer) => {
+          const priceData = offerMinPrice.get(offer.offerId);
+          return {
+            ...offer,
+            isBestseller: bestsellerSet?.has(offer.offerId) ?? false,
+            minPrice: priceData?.price ?? offer.minPrice,
+            currency: priceData?.currency ?? offer.currency,
+          };
+        })
       : undefined;
 
     // ── Build comprehensive result ────────────────────────────────────
