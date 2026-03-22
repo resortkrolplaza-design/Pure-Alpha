@@ -818,10 +818,10 @@ export async function scrapeProfitroomFull(
         });
 
         const fallback: CalendarPrice[] = [];
-        for (let b = 0; b < days.length; b += 10) {
-          if (b > 0) await new Promise((r) => setTimeout(r, 300));
+        for (let b = 0; b < days.length; b += 15) {
+          if (b > 0) await new Promise((r) => setTimeout(r, 200));
           const results = await Promise.allSettled(
-            days.slice(b, b + 10).map(({ checkIn, checkOut }) =>
+            days.slice(b, b + 15).map(({ checkIn, checkOut }) =>
               fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
                 siteKey, "availability",
                 { checkIn, checkOut, "occupancy[0][adults]": "2", lang: "pl" },
