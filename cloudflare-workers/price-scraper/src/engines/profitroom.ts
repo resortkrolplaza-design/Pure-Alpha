@@ -174,6 +174,20 @@ function cheapestFromGroups(
     : null;
 }
 
+// ── Rate limiting ─────────────────────────────────────────────────────────
+// Minimum 200ms between Profitroom API calls to avoid IP bans.
+const API_MIN_INTERVAL_MS = 200;
+let lastApiCallAt = 0;
+
+async function throttle(): Promise<void> {
+  const now = Date.now();
+  const elapsed = now - lastApiCallAt;
+  if (elapsed < API_MIN_INTERVAL_MS) {
+    await new Promise((r) => setTimeout(r, API_MIN_INTERVAL_MS - elapsed));
+  }
+  lastApiCallAt = Date.now();
+}
+
 // ── API helpers ───────────────────────────────────────────────────────────
 
 async function fetchProfitroomApi<T>(
@@ -181,6 +195,8 @@ async function fetchProfitroomApi<T>(
   endpoint: string,
   params?: Record<string, string>,
 ): Promise<T> {
+  await throttle();
+
   const url = new URL(`${API_BASE}/${siteKey}/${endpoint}`);
   if (params) {
     for (const [k, v] of Object.entries(params)) {
@@ -770,6 +786,7 @@ export async function scrapeProfitroomFull(
 
         const fallback: CalendarPrice[] = [];
         for (let b = 0; b < days.length; b += 5) {
+          if (b > 0) await new Promise((r) => setTimeout(r, 500));
           const results = await Promise.allSettled(
             days.slice(b, b + 5).map(({ checkIn, checkOut }) =>
               fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
