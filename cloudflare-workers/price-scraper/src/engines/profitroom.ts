@@ -767,6 +767,7 @@ export async function scrapeProfitroomFull(
     const roomNames = roomData.nameMap;
     const roomDetails = roomData.details;
     let calendarPrices = settled[2].status === "fulfilled" ? settled[2].value : null;
+    const calendarPricesSupported = calendarPrices !== null;
     const unavailableDays = settled[3].status === "fulfilled" ? settled[3].value : null;
 
     // Fallback: if calendar/prices endpoint is missing (404 for some hotels),
@@ -930,6 +931,7 @@ export async function scrapeProfitroomFull(
       durationMs: Date.now() - start,
       engine: "PROFITROOM",
       calendarPrices: calendarPrices ?? undefined,
+      calendarPricesSupported,
       unavailableDays: unavailableDays ?? undefined,
       offers: enrichedOffers,
       hotelDetails: hotelDetails ?? undefined,

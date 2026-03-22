@@ -112,6 +112,7 @@ export interface ScrapeResult {
   hotelMeta?: HotelMeta;
   // Profitroom full-mode data
   calendarPrices?: CalendarPrice[];
+  calendarPricesSupported?: boolean;
   unavailableDays?: string[];
   offers?: ProfitroomOffer[];
   hotelDetails?: ProfitroomHotelDetails;
