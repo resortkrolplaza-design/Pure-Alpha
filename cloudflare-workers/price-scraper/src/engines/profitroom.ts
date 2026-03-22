@@ -717,6 +717,37 @@ function formatDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+// ============================================================================
+// OFFERS-ONLY MODE — lightweight fetch (1 API call instead of 8)
+// Used by SEO Blog AI for topic recommendations
+// ============================================================================
+
+export async function scrapeProfitroomOffers(
+  _browserBinding: Fetcher,
+  params: ScrapeParams,
+): Promise<ScrapeResult> {
+  const start = Date.now();
+
+  const siteKey = params.profitroomSiteKey;
+  if (!siteKey || !SITE_KEY_RE.test(siteKey)) {
+    return {
+      success: false,
+      error: "Valid Profitroom siteKey is required (alphanumeric)",
+      durationMs: Date.now() - start,
+      engine: "PROFITROOM",
+    };
+  }
+
+  const offers = await fetchOffers(siteKey);
+
+  return {
+    success: true,
+    offers: offers ?? [],
+    durationMs: Date.now() - start,
+    engine: "PROFITROOM",
+  };
+}
+
 export async function scrapeProfitroomFull(
   _browserBinding: Fetcher, // kept for interface compat — NOT USED
   params: ScrapeParams,

@@ -11,7 +11,7 @@
 // Auth: Bearer token (shared secret with Pure Alpha backend)
 // ============================================================================
 
-import { scrapeProfitroomPrices, scrapeProfitroomFull } from "./engines/profitroom";
+import { scrapeProfitroomPrices, scrapeProfitroomFull, scrapeProfitroomOffers } from "./engines/profitroom";
 import { scrapeGenericPrices } from "./engines/generic";
 import type { ScrapeParams } from "./engines/types";
 
@@ -129,7 +129,7 @@ function validateScrapeRequest(
       profitroomSiteKey: typeof profitroomSiteKey === "string" && /^[a-zA-Z0-9._-]+$/.test(profitroomSiteKey)
         ? profitroomSiteKey
         : undefined,
-      mode: mode === "full" ? "full" : "prices",
+      mode: mode === "full" ? "full" : mode === "offers" ? "offers" : "prices",
       calendarDays: typeof calendarDays === "number" && calendarDays > 0 && calendarDays <= 365
         ? calendarDays
         : undefined,
@@ -205,7 +205,9 @@ export default {
           // Profitroom engine uses direct REST API — no browser needed
           const scrapeFn = params.mode === "full"
             ? scrapeProfitroomFull
-            : scrapeProfitroomPrices;
+            : params.mode === "offers"
+              ? scrapeProfitroomOffers
+              : scrapeProfitroomPrices;
           const result = await scrapeFn(env.BROWSER, params);
           return Response.json(result);
         }

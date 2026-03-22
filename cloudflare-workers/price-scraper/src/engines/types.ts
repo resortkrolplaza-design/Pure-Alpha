@@ -9,7 +9,7 @@ export interface ScrapeParams {
   adults: number;
   nights: number; // calculated from checkIn/checkOut
   profitroomSiteKey?: string; // Profitroom siteKey (discovered by GENERIC or passed from DB)
-  mode?: "prices" | "full"; // 'prices' = current behavior, 'full' = all data
+  mode?: "prices" | "full" | "offers"; // 'prices' = rooms, 'full' = all data, 'offers' = offers only
   calendarDays?: number; // days ahead for calendar (default 90)
 }
 
