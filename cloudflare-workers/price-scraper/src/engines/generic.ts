@@ -162,12 +162,15 @@ async function discoverBookingEngine(page: puppeteer.Page): Promise<EngineDiscov
 
     // ── 1. Profitroom in page source ──────────────────────────────────
     const profitroomPatterns = [
-      /checkout\.profitroom\.com\/\w+\/([a-zA-Z0-9]+)/,
-      /upperbooking\.com\/\w+\/booking\/start\/([a-zA-Z0-9]+)/,
-      /booking\.profitroom\.com\/\w+\/([a-zA-Z0-9]+)/,
-      /r\.profitroom\.pl\/([a-zA-Z0-9]+)\//,
-      /wa-uploads\.profitroom\.com\/([a-zA-Z0-9]+)\//,
-      /profitroom\.com.*siteKey=([a-zA-Z0-9]+)/,
+      /checkout\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
+      /upperbooking\.com\/\w+\/booking\/start\/([a-zA-Z0-9._-]+)/,
+      /upperbooking\.com\/([a-zA-Z0-9._-]+)\/Booking\.js/,
+      /upperbooking\.com.*[?&]site=([a-zA-Z0-9._-]+)/,
+      /booking\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
+      /r\.profitroom\.pl\/([a-zA-Z0-9._-]+)\//,
+      /wa-uploads\.profitroom\.com\/([a-zA-Z0-9._-]+)\//,
+      /u\.profitroom\.(?:com|pl)\/([a-zA-Z0-9._-]+)\//,
+      /profitroom\.com.*siteKey=([a-zA-Z0-9._-]+)/,
     ];
     for (const p of profitroomPatterns) {
       const match = html.match(p);
@@ -180,7 +183,7 @@ async function discoverBookingEngine(page: puppeteer.Page): Promise<EngineDiscov
       const src = iframe.src || iframe.getAttribute("data-src") || "";
       if (src.includes("profitroom") || src.includes("upperbooking")) {
         const match = src.match(
-          /(?:booking\.profitroom\.com|upperbooking\.com)\/\w+\/(?:booking\/start\/)?([a-zA-Z0-9]+)/,
+          /(?:booking\.profitroom\.com|upperbooking\.com)\/\w+\/(?:booking\/start\/)?([a-zA-Z0-9._-]+)/,
         );
         if (match?.[1]) return { engine: "PROFITROOM" as const, siteKey: match[1] };
       }
@@ -198,7 +201,7 @@ async function discoverBookingEngine(page: puppeteer.Page): Promise<EngineDiscov
     for (const link of profLinks) {
       const href = (link as HTMLAnchorElement).href;
       const match = href.match(
-        /(?:booking\.profitroom\.com|upperbooking\.com)\/\w+\/(?:booking\/start\/)?([a-zA-Z0-9]+)/,
+        /(?:booking\.profitroom\.com|upperbooking\.com)\/\w+\/(?:booking\/start\/)?([a-zA-Z0-9._-]+)/,
       );
       if (match?.[1]) return { engine: "PROFITROOM" as const, siteKey: match[1] };
     }

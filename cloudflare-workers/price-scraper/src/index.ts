@@ -126,7 +126,7 @@ function validateScrapeRequest(
       engine: resolvedEngine,
       adults: typeof adults === "number" && adults > 0 ? adults : 2,
       nights,
-      profitroomSiteKey: typeof profitroomSiteKey === "string" && /^[a-zA-Z0-9]+$/.test(profitroomSiteKey)
+      profitroomSiteKey: typeof profitroomSiteKey === "string" && /^[a-zA-Z0-9._-]+$/.test(profitroomSiteKey)
         ? profitroomSiteKey
         : undefined,
       mode: mode === "full" ? "full" : "prices",

@@ -88,7 +88,7 @@ const API_BASE = "https://booking.profitroom.com/api";
 const API_TIMEOUT_MS = 10_000;
 const MIN_PRICE_PLN = 50;
 const MIN_PRICE_EUR = 10;
-const SITE_KEY_RE = /^[a-zA-Z0-9]+$/;
+const SITE_KEY_RE = /^[a-zA-Z0-9._-]+$/;
 const IMG_CDN = "https://r.profitroom.com";
 
 function offerImageUrl(siteKey: string, fileName: string): string {
