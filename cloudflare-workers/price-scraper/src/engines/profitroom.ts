@@ -89,7 +89,15 @@ const API_TIMEOUT_MS = 10_000;
 const MIN_PRICE_PLN = 50;
 const MIN_PRICE_EUR = 10;
 const SITE_KEY_RE = /^[a-zA-Z0-9]+$/;
-const IMG_BASE_OFFER = "https://r.profitroom.com/thumb/800x0/";
+const IMG_CDN = "https://r.profitroom.com";
+
+function offerImageUrl(siteKey: string, fileName: string): string {
+  return `${IMG_CDN}/${siteKey}/images/offers/thumbs/800x0/${fileName}`;
+}
+
+function roomImageUrl(siteKey: string, fileName: string): string {
+  return `${IMG_CDN}/${siteKey}/images/rooms/thumbs/1200x0/${fileName}`;
+}
 
 // ── Shared: extract cheapest price from availability groups (SSOT) ────────
 
@@ -117,9 +125,27 @@ function cheapestFromGroups(
   let discountName: string | undefined;
   let discountAmount: number | undefined;
   let roomCount: number | undefined;
+  // Track the first currency seen — only compare within the same currency.
+  // Mixed-currency proposals (rare) are filtered to the majority currency.
+  const currencyCounts = new Map<string, number>();
+  for (const g of groups) {
+    for (const p of g.proposals) {
+      const cur = p.proposal.price.currency;
+      currencyCounts.set(cur, (currencyCounts.get(cur) || 0) + 1);
+    }
+  }
+  // Use the most common currency (or first)
+  let primaryCurrency = "PLN";
+  let maxCount = 0;
+  for (const [cur, count] of currencyCounts) {
+    if (count > maxCount) { primaryCurrency = cur; maxCount = count; }
+  }
+
   for (const g of groups) {
     for (const p of g.proposals) {
       const { proposal } = p;
+      // Only compare proposals in the same (primary) currency
+      if (proposal.price.currency !== primaryCurrency) continue;
       const minAllowed = proposal.price.currency === "PLN" ? MIN_PRICE_PLN : MIN_PRICE_EUR;
       if (proposal.price.amount >= minAllowed && proposal.price.amount < minPrice) {
         minPrice = proposal.price.amount;
@@ -197,8 +223,6 @@ async function fetchRoomDetails(
       "rooms",
       { lang: "pl" },
     );
-    const IMG_BASE = "https://r.profitroom.com/thumb/1200x0/";
-
     for (const room of rooms) {
       // Resolve name: gallery.title → Polish translation → fallback
       let name = room.gallery?.title?.replace(/^Gallery for:\s*/i, "") || "";
@@ -241,19 +265,19 @@ async function fetchRoomDetails(
         ? Object.entries(rawFacilities).filter(([, v]) => v === 1).map(([k]) => k)
         : undefined;
 
-      // Image: fileName → full URL via Profitroom CDN
+      // Image: fileName → full URL via Profitroom CDN (correct path: /{siteKey}/images/rooms/thumbs/{WxH}/{fileName})
       const imgFile = room.gallery?.featured?.fileName || room.gallery?.images?.[0]?.fileName;
-      const imageUrl = imgFile ? `${IMG_BASE}${imgFile}` : undefined;
+      const imageUrl = imgFile ? roomImageUrl(siteKey, imgFile) : undefined;
 
       // Full image gallery (up to 6 images)
       const images: string[] = [];
       if (room.gallery?.featured?.fileName) {
-        images.push(`${IMG_BASE}${room.gallery.featured.fileName}`);
+        images.push(roomImageUrl(siteKey, room.gallery.featured.fileName));
       }
       if (room.gallery?.images) {
         for (const img of room.gallery.images) {
           if (img.fileName && images.length < 6) {
-            const url = `${IMG_BASE}${img.fileName}`;
+            const url = roomImageUrl(siteKey, img.fileName);
             if (!images.includes(url)) images.push(url);
           }
         }
@@ -411,9 +435,9 @@ async function fetchOffers(siteKey: string): Promise<ProfitroomOffer[] | null> {
         offer.attributes?.minimumNights ??
         undefined;
 
-      // Extract offer cover image from gallery
+      // Extract offer cover image from gallery (correct path: /{siteKey}/images/offers/thumbs/{WxH}/{fileName})
       const offerImgFile = offer.gallery?.featured?.fileName || offer.gallery?.images?.[0]?.fileName;
-      const imageUrl = offerImgFile ? `${IMG_BASE_OFFER}${offerImgFile}` : undefined;
+      const imageUrl = offerImgFile ? offerImageUrl(siteKey, offerImgFile) : undefined;
 
       return {
         offerId: offer.id,
@@ -839,8 +863,9 @@ export async function scrapeProfitroomFull(
     // ── Cross-reference bestseller IDs + minPrice from availability ───
     const bestsellerSet = bestsellerIds ? new Set(bestsellerIds) : null;
 
-    // Build per-offer cheapest price from availability proposals
+    // Build per-offer cheapest price: availability proposals + calendar prices fallback
     const offerMinPrice = new Map<number, { price: number; currency: string }>();
+    // Source 1: today's availability proposals (most accurate for current dates)
     if (availability) {
       for (const group of availability) {
         for (const { proposal } of group.proposals) {
@@ -854,6 +879,17 @@ export async function scrapeProfitroomFull(
               currency: proposal.price.currency,
             });
           }
+        }
+      }
+    }
+    // Source 2: calendar prices (90d) — fill gaps only for offers without availability data
+    if (calendarPrices) {
+      for (const cp of calendarPrices) {
+        if (cp.offerId != null && !offerMinPrice.has(cp.offerId)) {
+          offerMinPrice.set(cp.offerId, {
+            price: cp.minPrice,
+            currency: cp.currency,
+          });
         }
       }
     }
