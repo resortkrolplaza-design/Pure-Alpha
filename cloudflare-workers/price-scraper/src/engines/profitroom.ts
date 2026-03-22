@@ -194,8 +194,9 @@ async function fetchProfitroomApi<T>(
   siteKey: string,
   endpoint: string,
   params?: Record<string, string>,
+  skipThrottle = false,
 ): Promise<T> {
-  await throttle();
+  if (!skipThrottle) await throttle();
 
   const url = new URL(`${API_BASE}/${siteKey}/${endpoint}`);
   if (params) {
@@ -786,13 +787,14 @@ export async function scrapeProfitroomFull(
         });
 
         const fallback: CalendarPrice[] = [];
-        for (let b = 0; b < days.length; b += 5) {
-          if (b > 0) await new Promise((r) => setTimeout(r, 500));
+        for (let b = 0; b < days.length; b += 10) {
+          if (b > 0) await new Promise((r) => setTimeout(r, 300));
           const results = await Promise.allSettled(
-            days.slice(b, b + 5).map(({ checkIn, checkOut }) =>
+            days.slice(b, b + 10).map(({ checkIn, checkOut }) =>
               fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
                 siteKey, "availability",
                 { checkIn, checkOut, "occupancy[0][adults]": "2", lang: "pl" },
+                true, // skipThrottle — batch + delay is the rate limit
               ).then((groups) => {
                 if (!groups?.length) return null;
                 const cheapest = cheapestFromGroups(groups);
