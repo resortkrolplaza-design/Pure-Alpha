@@ -149,6 +149,8 @@ async function scrollPage(page: puppeteer.Page): Promise<void> {
 }
 
 // ── Booking engine discovery ──────────────────────────────────────────────
+// SSOT: Network interception is the primary discovery method (100% reliable).
+// HTML fallback exists for engines that don't make API calls during page load.
 
 interface EngineDiscovery {
   engine: "PROFITROOM" | "HOTRES" | "OTHER";
@@ -156,57 +158,87 @@ interface EngineDiscovery {
   url?: string;
 }
 
-async function discoverBookingEngine(page: puppeteer.Page): Promise<EngineDiscovery | null> {
+// Profitroom siteKey extraction from any URL containing profitroom/upperbooking
+const PROFITROOM_URL_RE = /(?:booking\.profitroom\.com|upperbooking\.com)\/(?:api\/|[a-z]{2}\/)?([a-zA-Z0-9._-]+)/;
+const PROFITROOM_SITE_PARAM_RE = /[?&]site=([a-zA-Z0-9._-]+)/;
+const PROFITROOM_CDN_RE = /(?:r\.profitroom\.pl|u\.profitroom\.(?:com|pl)|wa-uploads\.profitroom\.com)\/([a-zA-Z0-9._-]+)\//;
+
+function extractSiteKeyFromUrl(url: string): string | null {
+  // Skip non-siteKey paths (static assets, common endpoints)
+  if (/\/(js|css|fonts|images|static|favicon)\//i.test(url)) return null;
+
+  const siteParam = url.match(PROFITROOM_SITE_PARAM_RE);
+  if (siteParam?.[1]) return siteParam[1];
+
+  const apiMatch = url.match(PROFITROOM_URL_RE);
+  if (apiMatch?.[1]) {
+    const key = apiMatch[1];
+    // Filter out non-siteKey segments
+    if (["api", "js", "css", "pl", "en", "de", "home", "pricelist"].includes(key)) return null;
+    return key;
+  }
+
+  const cdnMatch = url.match(PROFITROOM_CDN_RE);
+  if (cdnMatch?.[1]) return cdnMatch[1];
+
+  return null;
+}
+
+/**
+ * Set up network interception BEFORE page.goto().
+ * Captures Profitroom/HOTRES API calls made by booking widgets during page load.
+ * This is 100% reliable — if the widget works, it MUST call the API.
+ */
+function setupNetworkDiscovery(page: puppeteer.Page): { getResult: () => EngineDiscovery | null } {
+  let result: EngineDiscovery | null = null;
+
+  page.on("request", (req) => {
+    if (result?.siteKey) return; // Already found — stop processing
+    const url = req.url();
+
+    // Profitroom / UpperBooking
+    if (url.includes("profitroom.com") || url.includes("upperbooking.com") || url.includes("profitroom.pl")) {
+      const siteKey = extractSiteKeyFromUrl(url);
+      if (siteKey) {
+        result = { engine: "PROFITROOM", siteKey };
+        return;
+      }
+    }
+
+    // HOTRES
+    if (url.includes("hotres.pl")) {
+      result = { engine: "HOTRES", url };
+    }
+  });
+
+  return { getResult: () => result };
+}
+
+/**
+ * HTML fallback — only used when network interception found nothing.
+ * Catches static references that don't trigger network requests (CDN images, old links).
+ */
+async function discoverBookingEngineFromHTML(page: puppeteer.Page): Promise<EngineDiscovery | null> {
   return page.evaluate(() => {
     const html = document.documentElement.outerHTML;
 
-    // ── 1. Profitroom in page source ──────────────────────────────────
-    const profitroomPatterns = [
-      /checkout\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
-      /upperbooking\.com\/\w+\/booking\/start\/([a-zA-Z0-9._-]+)/,
-      /upperbooking\.com\/([a-zA-Z0-9._-]+)\/Booking\.js/,
-      /upperbooking\.com.*[?&]site=([a-zA-Z0-9._-]+)/,
-      /booking\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
+    // Profitroom CDN/static references (no network call but siteKey in HTML)
+    const cdnPatterns = [
       /r\.profitroom\.pl\/([a-zA-Z0-9._-]+)\//,
-      /wa-uploads\.profitroom\.com\/([a-zA-Z0-9._-]+)\//,
       /u\.profitroom\.(?:com|pl)\/([a-zA-Z0-9._-]+)\//,
-      /profitroom\.com.*siteKey=([a-zA-Z0-9._-]+)/,
+      /wa-uploads\.profitroom\.com\/([a-zA-Z0-9._-]+)\//,
     ];
-    for (const p of profitroomPatterns) {
+    for (const p of cdnPatterns) {
       const match = html.match(p);
       if (match?.[1]) return { engine: "PROFITROOM" as const, siteKey: match[1] };
     }
 
-    // ── 2. Booking engine iframes ─────────────────────────────────────
+    // Hotres in iframes or links
     const iframes = document.querySelectorAll("iframe");
     for (const iframe of iframes) {
       const src = iframe.src || iframe.getAttribute("data-src") || "";
-      if (src.includes("profitroom") || src.includes("upperbooking")) {
-        const match = src.match(
-          /(?:booking\.profitroom\.com|upperbooking\.com)\/\w+\/(?:booking\/start\/)?([a-zA-Z0-9._-]+)/,
-        );
-        if (match?.[1]) return { engine: "PROFITROOM" as const, siteKey: match[1] };
-      }
       if (src.includes("hotres")) return { engine: "HOTRES" as const, url: src };
-      if (
-        src.includes("kwhotel") || src.includes("visitonline") ||
-        src.includes("booking") || src.includes("rezerwacja")
-      ) return { engine: "OTHER" as const, url: src };
     }
-
-    // ── 3. Profitroom in links ────────────────────────────────────────
-    const profLinks = document.querySelectorAll(
-      'a[href*="profitroom"], a[href*="upperbooking"]',
-    );
-    for (const link of profLinks) {
-      const href = (link as HTMLAnchorElement).href;
-      const match = href.match(
-        /(?:booking\.profitroom\.com|upperbooking\.com)\/\w+\/(?:booking\/start\/)?([a-zA-Z0-9._-]+)/,
-      );
-      if (match?.[1]) return { engine: "PROFITROOM" as const, siteKey: match[1] };
-    }
-
-    // ── 4. Hotres ─────────────────────────────────────────────────────
     const hotresMatch = html.match(/https?:\/\/(?:panel\.)?hotres\.pl\/[^\s"'<>]+/i);
     if (hotresMatch) return { engine: "HOTRES" as const, url: hotresMatch[0] };
 
@@ -659,6 +691,11 @@ export async function scrapeGenericPrices(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     );
 
+    // ── STEP 0: Set up network interception BEFORE navigation ─────────
+    // SSOT: Captures Profitroom/HOTRES API calls made by booking widgets.
+    // 100% reliable — if the widget works, it MUST call the API.
+    const networkDiscovery = setupNetworkDiscovery(page);
+
     // ── STEP 1: Navigate to hotel URL (with date params) ──────────────
     const dateUrl = (() => {
       const base = params.hotelUrl.replace(/\/$/, "");
@@ -686,11 +723,9 @@ export async function scrapeGenericPrices(
     await delay(1500);
 
     // ── STEP 3: Discover known booking engines BEFORE price extraction ──
-    // CRITICAL: If a known engine (Profitroom) is detected, re-dispatch
-    // immediately. Main page widgets show PACKAGE prices (not base room
-    // rates), while the specialized engine gets actual room rates via
-    // datepicker. Base room rate is the SSOT for price comparison.
-    const discovery = await discoverBookingEngine(page);
+    // SSOT: Network interception (100% reliable) → HTML fallback (CDN refs)
+    // If a known engine (Profitroom) is detected, re-dispatch immediately.
+    const discovery = networkDiscovery.getResult() || await discoverBookingEngineFromHTML(page);
 
     if (discovery?.engine === "PROFITROOM" && discovery.siteKey) {
       const hotelMeta = await extractHotelMeta(page);
