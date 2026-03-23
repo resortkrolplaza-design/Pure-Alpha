@@ -806,11 +806,14 @@ export async function scrapeProfitroomFull(
 
     // Fallback: if calendar/prices endpoint is missing (404 for some hotels),
     // build calendar prices from per-day availability API calls (SSOT: cheapestFromGroups)
+    // TIME BUDGET: CF Worker has 30s wall-clock limit. 8 parallel calls above took ~10s.
+    // Fallback must finish within remaining time budget (~18s safety margin).
     if (!calendarPrices && siteKey) {
       try {
-        // Fallback: cap at 30 days (90 days with per-day calls → timeout for some hotels)
+        const FALLBACK_TIME_BUDGET_MS = 18_000; // 18s max for fallback
+        const fallbackStart = Date.now();
         const daysToFetch = Math.min(calendarDays, 30);
-        const startDate = new Date(); // Start from today (not tomorrow)
+        const startDate = new Date();
 
         const days = Array.from({ length: daysToFetch }, (_, i) => {
           const ci = new Date(startDate);
@@ -820,12 +823,15 @@ export async function scrapeProfitroomFull(
           return { checkIn: formatDate(ci), checkOut: formatDate(co) };
         });
 
-        // Batch 5 + 500ms delay — conservative to avoid Profitroom per-siteKey rate limiting
-        // (batch 15 caused "operation aborted" timeouts for some hotels like dunebeachresort)
         const FALLBACK_BATCH = 5;
-        const FALLBACK_DELAY = 500;
+        const FALLBACK_DELAY = 300;
         const fallback: CalendarPrice[] = [];
         for (let b = 0; b < days.length; b += FALLBACK_BATCH) {
+          // Time budget check — stop before hitting CF Worker limit
+          if (Date.now() - fallbackStart > FALLBACK_TIME_BUDGET_MS) {
+            console.log(`[PriceScraper] calendar fallback time budget exceeded after ${fallback.length} days for ${siteKey}`);
+            break;
+          }
           if (b > 0) await new Promise((r) => setTimeout(r, FALLBACK_DELAY));
           const results = await Promise.allSettled(
             days.slice(b, b + FALLBACK_BATCH).map(({ checkIn, checkOut }) =>
