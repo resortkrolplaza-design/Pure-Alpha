@@ -1000,7 +1000,10 @@ export async function scrapeProfitroomCalendarFallback(
       return formatDate(ci);
     }).filter(d => !unavailableSet.has(d));
 
-    let stayNights = 2;
+    // Hotels have variable min-stay: off-season 1n, shoulder 2n, summer 3n, peak 5n
+    const STAY_LADDER = [2, 3, 5];
+    let stayIdx = 0;
+    let stayNights = STAY_LADDER[0];
     const calendarPrices: CalendarPrice[] = [];
     let consecutiveEmptyBatches = 0;
 
@@ -1036,13 +1039,14 @@ export async function scrapeProfitroomCalendarFallback(
         }
       }
 
-      // If batch returned 0 results and we haven't tried 3-night yet, escalate
-      if (batchHits === 0 && stayNights < 3) {
+      // If batch returned 0 results, try next stay length in ladder
+      if (batchHits === 0 && stayIdx < STAY_LADDER.length - 1) {
         consecutiveEmptyBatches++;
         if (consecutiveEmptyBatches >= 2) {
-          stayNights = 3;
+          stayIdx++;
+          stayNights = STAY_LADDER[stayIdx];
           consecutiveEmptyBatches = 0;
-          b -= BATCH_SIZE; // retry this batch with 3-night
+          b -= BATCH_SIZE; // retry this batch
           console.log(`[PriceScraper] calendar-fallback escalating to ${stayNights}-night for ${siteKey}`);
         }
       } else {
