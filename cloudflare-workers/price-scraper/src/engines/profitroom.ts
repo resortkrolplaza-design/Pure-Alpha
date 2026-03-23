@@ -85,7 +85,8 @@ interface ProfitroomRoom {
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const API_BASE = "https://booking.profitroom.com/api";
-const API_TIMEOUT_MS = 10_000;
+// 15s per API call (some hotels like dunebeachresort are slow — 10s was too tight)
+const API_TIMEOUT_MS = 15_000;
 const MIN_PRICE_PLN = 50;
 const MIN_PRICE_EUR = 10;
 const SITE_KEY_RE = /^[a-zA-Z0-9._-]+$/;
