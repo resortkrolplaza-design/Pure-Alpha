@@ -980,7 +980,8 @@ export async function scrapeProfitroomCalendarFallback(
     const BATCH_SIZE = 5;
     const BATCH_DELAY = 300;
     const daysToFetch = params.calendarDays ?? 60;
-    const startDate = new Date();
+    // Use checkIn from params as start date (supports offset for multi-call loop)
+    const startDate = new Date(params.checkIn);
 
     // Fetch unavailable days first — skip them in fallback
     const calendarFrom = formatDate(startDate);
