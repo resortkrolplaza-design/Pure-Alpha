@@ -160,7 +160,8 @@ interface EngineDiscovery {
 
 // Profitroom siteKey extraction from any URL containing profitroom/upperbooking
 const PROFITROOM_URL_RE = /(?:booking\.profitroom\.com|upperbooking\.com)\/(?:api\/|[a-z]{2}\/)?([a-zA-Z0-9._-]+)/;
-const PROFITROOM_SITE_PARAM_RE = /[?&]site=([a-zA-Z0-9._-]+)/;
+// P1-13 FIX: check both site= AND siteKey= (Profitroom uses both)
+const PROFITROOM_SITE_PARAM_RE = /[?&](?:site|siteKey)=([a-zA-Z0-9._-]+)/;
 const PROFITROOM_CDN_RE = /(?:r\.profitroom\.pl|u\.profitroom\.(?:com|pl)|wa-uploads\.profitroom\.com)\/([a-zA-Z0-9._-]+)\//;
 
 function extractSiteKeyFromUrl(url: string): string | null {
@@ -222,15 +223,23 @@ async function discoverBookingEngineFromHTML(page: puppeteer.Page): Promise<Engi
   return page.evaluate(() => {
     const html = document.documentElement.outerHTML;
 
-    // Profitroom CDN/static references (no network call but siteKey in HTML)
+    // Profitroom patterns — synced with constants.ts PROFITROOM_SITEKEY_PATTERNS
+    // P1-10 FIX: added checkout, booking, upperbooking patterns (were missing)
     const cdnPatterns = [
       /r\.profitroom\.pl\/([a-zA-Z0-9._-]+)\//,
       /u\.profitroom\.(?:com|pl)\/([a-zA-Z0-9._-]+)\//,
       /wa-uploads\.profitroom\.com\/([a-zA-Z0-9._-]+)\//,
+      /checkout\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
+      /booking\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
+      /upperbooking\.com\/([a-zA-Z0-9._-]+)\/Booking\.js/,
+      /upperbooking\.com\/\w+\/booking\/start\/([a-zA-Z0-9._-]+)/,
+      /upperbooking\.com.*[?&]site=([a-zA-Z0-9._-]+)/,
+      /profitroom\.com.*[?&]siteKey=([a-zA-Z0-9._-]+)/,
     ];
+    const skipKeys = new Set(["api", "js", "css", "pl", "en", "de", "home", "pricelist", "fonts", "images", "static"]);
     for (const p of cdnPatterns) {
       const match = html.match(p);
-      if (match?.[1]) return { engine: "PROFITROOM" as const, siteKey: match[1] };
+      if (match?.[1] && !skipKeys.has(match[1])) return { engine: "PROFITROOM" as const, siteKey: match[1] };
     }
 
     // Hotres in iframes or links

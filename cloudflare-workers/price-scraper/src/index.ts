@@ -215,8 +215,12 @@ export default {
           const result = await scrapeGenericPrices(env.BROWSER, params);
 
           // Re-dispatch: GENERIC detected Profitroom → use direct API
+          // P1-1 FIX: honor original mode param (was always prices-only)
           if (!result.success && result.detectedEngine === "PROFITROOM" && result.profitroomSiteKey) {
-            const profitroomResult = await scrapeProfitroomPrices(env.BROWSER, {
+            const reDispatchFn = params.mode === "full"
+              ? scrapeProfitroomFull
+              : scrapeProfitroomPrices;
+            const profitroomResult = await reDispatchFn(env.BROWSER, {
               ...params,
               profitroomSiteKey: result.profitroomSiteKey,
             });

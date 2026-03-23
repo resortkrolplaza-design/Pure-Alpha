@@ -176,16 +176,18 @@ function cheapestFromGroups(
 
 // ── Rate limiting ─────────────────────────────────────────────────────────
 // Minimum 200ms between Profitroom API calls to avoid IP bans.
+// P1-8 FIX: per-siteKey throttle (module-level var was shared across concurrent isolate requests)
 const API_MIN_INTERVAL_MS = 200;
-let lastApiCallAt = 0;
+const throttleMap = new Map<string, number>();
 
-async function throttle(): Promise<void> {
+async function throttle(siteKey: string): Promise<void> {
   const now = Date.now();
-  const elapsed = now - lastApiCallAt;
+  const lastCall = throttleMap.get(siteKey) ?? 0;
+  const elapsed = now - lastCall;
   if (elapsed < API_MIN_INTERVAL_MS) {
     await new Promise((r) => setTimeout(r, API_MIN_INTERVAL_MS - elapsed));
   }
-  lastApiCallAt = Date.now();
+  throttleMap.set(siteKey, Date.now());
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────
@@ -196,7 +198,7 @@ async function fetchProfitroomApi<T>(
   params?: Record<string, string>,
   skipThrottle = false,
 ): Promise<T> {
-  if (!skipThrottle) await throttle();
+  if (!skipThrottle) await throttle(siteKey);
 
   const url = new URL(`${API_BASE}/${siteKey}/${endpoint}`);
   if (params) {
