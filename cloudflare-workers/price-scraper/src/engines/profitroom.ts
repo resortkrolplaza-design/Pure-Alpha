@@ -601,6 +601,8 @@ export async function scrapeProfitroomPrices(
 
   try {
     // ── 1. Fetch availability + room names in parallel ────────────────
+    // rooms is OPTIONAL (some hotels like dunebeachresort don't have /rooms endpoint)
+    // Use allSettled so rooms timeout doesn't block availability
     const availabilityParams: Record<string, string> = {
       checkIn: params.checkIn,
       checkOut: params.checkOut,
@@ -608,7 +610,7 @@ export async function scrapeProfitroomPrices(
       lang: "pl",
     };
 
-    const [availability, roomData] = await Promise.all([
+    const [availResult, roomResult] = await Promise.allSettled([
       fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
         siteKey,
         "availability",
@@ -616,6 +618,10 @@ export async function scrapeProfitroomPrices(
       ),
       fetchRoomDetails(siteKey),
     ]);
+    const availability = availResult.status === "fulfilled" ? availResult.value : null;
+    const roomData = roomResult.status === "fulfilled"
+      ? roomResult.value
+      : { nameMap: new Map<number, string>(), details: [] as ProfitroomRoomDetail[] };
     const roomNames = roomData.nameMap;
 
     if (!availability || availability.length === 0) {
