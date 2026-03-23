@@ -125,7 +125,6 @@ function cheapestFromGroups(
   let discountType: string | undefined;
   let discountName: string | undefined;
   let discountAmount: number | undefined;
-  let roomCount: number | undefined;
   // Track the first currency seen — only compare within the same currency.
   // Mixed-currency proposals (rare) are filtered to the majority currency.
   const currencyCounts = new Map<string, number>();
@@ -142,12 +141,18 @@ function cheapestFromGroups(
     if (count > maxCount) { primaryCurrency = cur; maxCount = count; }
   }
 
+  // Count total available rooms across ALL proposals (real availability indicator)
+  let totalRoomCount = 0;
+
   for (const g of groups) {
     for (const p of g.proposals) {
       const { proposal } = p;
       // Only compare proposals in the same (primary) currency
       if (proposal.price.currency !== primaryCurrency) continue;
       const minAllowed = proposal.price.currency === "PLN" ? MIN_PRICE_PLN : MIN_PRICE_EUR;
+
+      totalRoomCount += p.roomCount ?? 1;
+
       if (proposal.price.amount >= minAllowed && proposal.price.amount < minPrice) {
         minPrice = proposal.price.amount;
         currency = proposal.price.currency;
@@ -155,7 +160,6 @@ function cheapestFromGroups(
         roomId = proposal.RoomID;
         originalPrice = proposal.originalPrice?.amount ?? undefined;
         recentLowestPrice = proposal.recentLowestPrice?.amount ?? undefined;
-        roomCount = p.roomCount ?? undefined;
         // Extract first discount detail
         const d = proposal.discounts?.[0] as Record<string, unknown> | undefined;
         if (d) {
@@ -171,7 +175,7 @@ function cheapestFromGroups(
     }
   }
   return minPrice < Infinity
-    ? { minPrice, currency, offerId, roomId, originalPrice, recentLowestPrice, discountType, discountName, discountAmount, roomCount }
+    ? { minPrice, currency, offerId, roomId, originalPrice, recentLowestPrice, discountType, discountName, discountAmount, roomCount: totalRoomCount || undefined }
     : null;
 }
 
