@@ -992,38 +992,61 @@ export async function scrapeProfitroomCalendarFallback(
       if (unavailable) unavailableSet = new Set(unavailable);
     } catch { /* non-critical */ }
 
-    // Use 2-night stay — hotels with min 2-night restriction (summer season)
-    // return empty for 1-night queries. Per-night price is the same regardless.
-    const days = Array.from({ length: daysToFetch }, (_, i) => {
+    // Start with 2-night stay (handles min 2-night hotels).
+    // If entire batch returns 0 results, escalate to 3-night (high season min-stay).
+    const availableDays = Array.from({ length: daysToFetch }, (_, i) => {
       const ci = new Date(startDate);
       ci.setUTCDate(ci.getUTCDate() + i);
-      const co = new Date(ci);
-      co.setUTCDate(co.getUTCDate() + 2);
-      return { checkIn: formatDate(ci), checkOut: formatDate(co) };
-    }).filter(d => !unavailableSet.has(d.checkIn));
+      return formatDate(ci);
+    }).filter(d => !unavailableSet.has(d));
 
+    let stayNights = 2;
     const calendarPrices: CalendarPrice[] = [];
-    for (let b = 0; b < days.length; b += BATCH_SIZE) {
+    let consecutiveEmptyBatches = 0;
+
+    for (let b = 0; b < availableDays.length; b += BATCH_SIZE) {
       if (Date.now() - start > TIME_BUDGET_MS) {
         console.log(`[PriceScraper] calendar-fallback time budget hit after ${calendarPrices.length} days for ${siteKey}`);
         break;
       }
       if (b > 0) await new Promise((r) => setTimeout(r, BATCH_DELAY));
+
+      const batchDays = availableDays.slice(b, b + BATCH_SIZE);
       const results = await Promise.allSettled(
-        days.slice(b, b + BATCH_SIZE).map(({ checkIn, checkOut }) =>
-          fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
+        batchDays.map((checkIn) => {
+          const co = new Date(checkIn);
+          co.setUTCDate(co.getUTCDate() + stayNights);
+          return fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
             siteKey, "availability",
-            { checkIn, checkOut, "occupancy[0][adults]": "2", lang: "pl" },
+            { checkIn, checkOut: formatDate(co), "occupancy[0][adults]": "2", lang: "pl" },
             true,
           ).then((groups) => {
             if (!groups?.length) return null;
             const cheapest = cheapestFromGroups(groups);
             return cheapest ? { date: checkIn, ...cheapest } : null;
-          }),
-        ),
+          });
+        }),
       );
+
+      let batchHits = 0;
       for (const r of results) {
-        if (r.status === "fulfilled" && r.value) calendarPrices.push(r.value);
+        if (r.status === "fulfilled" && r.value) {
+          calendarPrices.push(r.value);
+          batchHits++;
+        }
+      }
+
+      // If batch returned 0 results and we haven't tried 3-night yet, escalate
+      if (batchHits === 0 && stayNights < 3) {
+        consecutiveEmptyBatches++;
+        if (consecutiveEmptyBatches >= 2) {
+          stayNights = 3;
+          consecutiveEmptyBatches = 0;
+          b -= BATCH_SIZE; // retry this batch with 3-night
+          console.log(`[PriceScraper] calendar-fallback escalating to ${stayNights}-night for ${siteKey}`);
+        }
+      } else {
+        consecutiveEmptyBatches = 0;
       }
     }
 
