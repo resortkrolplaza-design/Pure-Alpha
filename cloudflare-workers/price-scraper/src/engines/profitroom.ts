@@ -992,11 +992,13 @@ export async function scrapeProfitroomCalendarFallback(
       if (unavailable) unavailableSet = new Set(unavailable);
     } catch { /* non-critical */ }
 
+    // Use 2-night stay — hotels with min 2-night restriction (summer season)
+    // return empty for 1-night queries. Per-night price is the same regardless.
     const days = Array.from({ length: daysToFetch }, (_, i) => {
       const ci = new Date(startDate);
       ci.setUTCDate(ci.getUTCDate() + i);
       const co = new Date(ci);
-      co.setUTCDate(co.getUTCDate() + 1);
+      co.setUTCDate(co.getUTCDate() + 2);
       return { checkIn: formatDate(ci), checkOut: formatDate(co) };
     }).filter(d => !unavailableSet.has(d.checkIn));
 
