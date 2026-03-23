@@ -191,28 +191,42 @@ function extractSiteKeyFromUrl(url: string): string | null {
  * This is 100% reliable — if the widget works, it MUST call the API.
  */
 function setupNetworkDiscovery(page: puppeteer.Page): { getResult: () => EngineDiscovery | null } {
-  let result: EngineDiscovery | null = null;
+  // Collect ALL siteKeys with priority: API calls > CDN assets
+  // Multi-siteKey hotels (e.g. Dune Beach Resort) have different siteKeys for offers vs rooms
+  let apiSiteKey: string | null = null;   // from booking.profitroom.com/api/
+  let otherSiteKey: string | null = null; // from CDN or other profitroom URLs
+  let hotresResult: EngineDiscovery | null = null;
 
   page.on("request", (req) => {
-    if (result?.siteKey) return; // Already found — stop processing
     const url = req.url();
 
     // Profitroom / UpperBooking
     if (url.includes("profitroom.com") || url.includes("upperbooking.com") || url.includes("profitroom.pl")) {
       const siteKey = extractSiteKeyFromUrl(url);
       if (siteKey) {
-        result = { engine: "PROFITROOM", siteKey };
-        return;
+        // API calls (availability, offers, calendar) = high priority
+        if (url.includes("/api/") || url.includes("/pricelist/offers")) {
+          apiSiteKey = siteKey;
+        } else if (!otherSiteKey) {
+          otherSiteKey = siteKey;
+        }
       }
+      return;
     }
 
     // HOTRES
-    if (url.includes("hotres.pl")) {
-      result = { engine: "HOTRES", url };
+    if (url.includes("hotres.pl") && !hotresResult) {
+      hotresResult = { engine: "HOTRES", url };
     }
   });
 
-  return { getResult: () => result };
+  return {
+    getResult: () => {
+      const bestSiteKey = apiSiteKey || otherSiteKey;
+      if (bestSiteKey) return { engine: "PROFITROOM", siteKey: bestSiteKey };
+      return hotresResult;
+    },
+  };
 }
 
 /**
@@ -224,16 +238,17 @@ async function discoverBookingEngineFromHTML(page: puppeteer.Page): Promise<Engi
     const html = document.documentElement.outerHTML;
 
     // Profitroom patterns — synced with constants.ts PROFITROOM_SITEKEY_PATTERNS
-    // P1-10 FIX: added checkout, booking, upperbooking patterns (were missing)
+    // Priority: offers (prices) > checkout > booking generic > CDN assets
     const cdnPatterns = [
-      /r\.profitroom\.pl\/([a-zA-Z0-9._-]+)\//,
-      /u\.profitroom\.(?:com|pl)\/([a-zA-Z0-9._-]+)\//,
-      /wa-uploads\.profitroom\.com\/([a-zA-Z0-9._-]+)\//,
+      /booking\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)\/pricelist\/offers/,
       /checkout\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
-      /booking\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
       /upperbooking\.com\/([a-zA-Z0-9._-]+)\/Booking\.js/,
       /upperbooking\.com\/\w+\/booking\/start\/([a-zA-Z0-9._-]+)/,
       /upperbooking\.com.*[?&]site=([a-zA-Z0-9._-]+)/,
+      /booking\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
+      /r\.profitroom\.pl\/([a-zA-Z0-9._-]+)\//,
+      /wa-uploads\.profitroom\.com\/([a-zA-Z0-9._-]+)\//,
+      /u\.profitroom\.(?:com|pl)\/([a-zA-Z0-9._-]+)\//,
       /profitroom\.com.*[?&]siteKey=([a-zA-Z0-9._-]+)/,
     ];
     const skipKeys = new Set(["api", "js", "css", "pl", "en", "de", "home", "pricelist", "fonts", "images", "static"]);
