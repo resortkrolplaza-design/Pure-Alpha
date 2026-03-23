@@ -808,7 +808,8 @@ export async function scrapeProfitroomFull(
     // build calendar prices from per-day availability API calls (SSOT: cheapestFromGroups)
     if (!calendarPrices && siteKey) {
       try {
-        const daysToFetch = Math.min(calendarDays, 90);
+        // Fallback: cap at 30 days (90 days with per-day calls → timeout for some hotels)
+        const daysToFetch = Math.min(calendarDays, 30);
         const startDate = new Date(); // Start from today (not tomorrow)
 
         const days = Array.from({ length: daysToFetch }, (_, i) => {
@@ -819,11 +820,15 @@ export async function scrapeProfitroomFull(
           return { checkIn: formatDate(ci), checkOut: formatDate(co) };
         });
 
+        // Batch 5 + 500ms delay — conservative to avoid Profitroom per-siteKey rate limiting
+        // (batch 15 caused "operation aborted" timeouts for some hotels like dunebeachresort)
+        const FALLBACK_BATCH = 5;
+        const FALLBACK_DELAY = 500;
         const fallback: CalendarPrice[] = [];
-        for (let b = 0; b < days.length; b += 15) {
-          if (b > 0) await new Promise((r) => setTimeout(r, 200));
+        for (let b = 0; b < days.length; b += FALLBACK_BATCH) {
+          if (b > 0) await new Promise((r) => setTimeout(r, FALLBACK_DELAY));
           const results = await Promise.allSettled(
-            days.slice(b, b + 15).map(({ checkIn, checkOut }) =>
+            days.slice(b, b + FALLBACK_BATCH).map(({ checkIn, checkOut }) =>
               fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
                 siteKey, "availability",
                 { checkIn, checkOut, "occupancy[0][adults]": "2", lang: "pl" },
@@ -961,7 +966,8 @@ export async function scrapeProfitroomFull(
 
     // ── Build comprehensive result ────────────────────────────────────
     return {
-      success: rooms.length > 0 || !!calendarPrices || !!offers,
+      // Success if ANY data was fetched (not just rooms — calendar/offers/details count too)
+      success: rooms.length > 0 || !!calendarPrices || !!offers || !!hotelDetails || !!unavailableDays,
       rooms: rooms.length > 0 ? rooms : undefined,
       durationMs: Date.now() - start,
       engine: "PROFITROOM",
