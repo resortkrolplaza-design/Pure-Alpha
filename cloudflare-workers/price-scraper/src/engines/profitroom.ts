@@ -198,6 +198,7 @@ async function fetchProfitroomApi<T>(
   endpoint: string,
   params?: Record<string, string>,
   skipThrottle = false,
+  timeoutMs = API_TIMEOUT_MS,
 ): Promise<T> {
   if (!skipThrottle) await throttle(siteKey);
 
@@ -209,7 +210,7 @@ async function fetchProfitroomApi<T>(
   }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(url.toString(), {
@@ -232,6 +233,8 @@ async function fetchProfitroomApi<T>(
 
 // ── Room details resolution ───────────────────────────────────────────────
 
+// Rooms = cosmetic (names/details only, not prices). Short timeout so it doesn't
+// steal time budget from calendar fallback. 3s vs 15s default.
 async function fetchRoomDetails(
   siteKey: string,
 ): Promise<{ nameMap: Map<number, string>; details: ProfitroomRoomDetail[] }> {
@@ -242,6 +245,8 @@ async function fetchRoomDetails(
       siteKey,
       "rooms",
       { lang: "pl" },
+      false, // use throttle
+      3_000, // 3s timeout (cosmetic data, not worth 15s)
     );
     for (const room of rooms) {
       // Resolve name: gallery.title → Polish translation → fallback
@@ -817,10 +822,13 @@ export async function scrapeProfitroomFull(
     // Fallback must finish within remaining time budget (~18s safety margin).
     if (!calendarPrices && siteKey) {
       try {
-        const FALLBACK_TIME_BUDGET_MS = 18_000; // 18s max for fallback
+        const FALLBACK_TIME_BUDGET_MS = 24_000; // 24s (rooms now 3s, not 15s)
         const fallbackStart = Date.now();
-        const daysToFetch = Math.min(calendarDays, 30);
+        const daysToFetch = Math.min(calendarDays, 60); // up from 30 (more time budget)
         const startDate = new Date();
+
+        // Skip dates known to be unavailable (saves API calls)
+        const unavailableSet = new Set(unavailableDays ?? []);
 
         const days = Array.from({ length: daysToFetch }, (_, i) => {
           const ci = new Date(startDate);
@@ -828,7 +836,7 @@ export async function scrapeProfitroomFull(
           const co = new Date(ci);
           co.setUTCDate(co.getUTCDate() + 1);
           return { checkIn: formatDate(ci), checkOut: formatDate(co) };
-        });
+        }).filter(d => !unavailableSet.has(d.checkIn)); // skip sold-out dates
 
         const FALLBACK_BATCH = 5;
         const FALLBACK_DELAY = 300;
