@@ -11,7 +11,7 @@
 // Auth: Bearer token (shared secret with Pure Alpha backend)
 // ============================================================================
 
-import { scrapeProfitroomPrices, scrapeProfitroomFull, scrapeProfitroomOffers } from "./engines/profitroom";
+import { scrapeProfitroomPrices, scrapeProfitroomFull, scrapeProfitroomOffers, scrapeProfitroomCalendarFallback } from "./engines/profitroom";
 import { scrapeGenericPrices } from "./engines/generic";
 import type { ScrapeParams } from "./engines/types";
 
@@ -129,7 +129,7 @@ function validateScrapeRequest(
       profitroomSiteKey: typeof profitroomSiteKey === "string" && /^[a-zA-Z0-9._-]+$/.test(profitroomSiteKey)
         ? profitroomSiteKey
         : undefined,
-      mode: mode === "full" ? "full" : mode === "offers" ? "offers" : "prices",
+      mode: mode === "full" ? "full" : mode === "offers" ? "offers" : mode === "calendar-fallback" ? "calendar-fallback" : "prices",
       calendarDays: typeof calendarDays === "number" && calendarDays > 0 && calendarDays <= 365
         ? calendarDays
         : undefined,
@@ -207,7 +207,9 @@ export default {
             ? scrapeProfitroomFull
             : params.mode === "offers"
               ? scrapeProfitroomOffers
-              : scrapeProfitroomPrices;
+              : params.mode === "calendar-fallback"
+                ? scrapeProfitroomCalendarFallback
+                : scrapeProfitroomPrices;
           const result = await scrapeFn(env.BROWSER, params);
           return Response.json(result);
         }

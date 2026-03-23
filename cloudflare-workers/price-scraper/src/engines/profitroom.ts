@@ -816,64 +816,10 @@ export async function scrapeProfitroomFull(
     const calendarPricesSupported = calendarPrices !== null;
     const unavailableDays = settled[3].status === "fulfilled" ? settled[3].value : null;
 
-    // Fallback: if calendar/prices endpoint is missing (404 for some hotels),
-    // build calendar prices from per-day availability API calls (SSOT: cheapestFromGroups)
-    // TIME BUDGET: CF Worker has 30s wall-clock limit. 8 parallel calls above took ~10s.
-    // Fallback must finish within remaining time budget (~18s safety margin).
-    if (!calendarPrices && siteKey) {
-      try {
-        const FALLBACK_TIME_BUDGET_MS = 24_000; // 24s (rooms now 3s, not 15s)
-        const fallbackStart = Date.now();
-        const daysToFetch = Math.min(calendarDays, 60); // up from 30 (more time budget)
-        const startDate = new Date();
-
-        // Skip dates known to be unavailable (saves API calls)
-        const unavailableSet = new Set(unavailableDays ?? []);
-
-        const days = Array.from({ length: daysToFetch }, (_, i) => {
-          const ci = new Date(startDate);
-          ci.setUTCDate(ci.getUTCDate() + i);
-          const co = new Date(ci);
-          co.setUTCDate(co.getUTCDate() + 1);
-          return { checkIn: formatDate(ci), checkOut: formatDate(co) };
-        }).filter(d => !unavailableSet.has(d.checkIn)); // skip sold-out dates
-
-        const FALLBACK_BATCH = 5;
-        const FALLBACK_DELAY = 300;
-        const fallback: CalendarPrice[] = [];
-        for (let b = 0; b < days.length; b += FALLBACK_BATCH) {
-          // Time budget check — stop before hitting CF Worker limit
-          if (Date.now() - fallbackStart > FALLBACK_TIME_BUDGET_MS) {
-            console.log(`[PriceScraper] calendar fallback time budget exceeded after ${fallback.length} days for ${siteKey}`);
-            break;
-          }
-          if (b > 0) await new Promise((r) => setTimeout(r, FALLBACK_DELAY));
-          const results = await Promise.allSettled(
-            days.slice(b, b + FALLBACK_BATCH).map(({ checkIn, checkOut }) =>
-              fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
-                siteKey, "availability",
-                { checkIn, checkOut, "occupancy[0][adults]": "2", lang: "pl" },
-                true, // skipThrottle — batch + delay is the rate limit
-              ).then((groups) => {
-                if (!groups?.length) return null;
-                const cheapest = cheapestFromGroups(groups);
-                return cheapest ? { date: checkIn, ...cheapest } : null;
-              }),
-            ),
-          );
-          for (const r of results) {
-            if (r.status === "fulfilled" && r.value) fallback.push(r.value);
-          }
-        }
-
-        if (fallback.length > 0) {
-          calendarPrices = fallback;
-          console.log(`[PriceScraper] calendar/prices fallback: ${fallback.length} days via availability for ${siteKey}`);
-        }
-      } catch (err) {
-        console.error("[PriceScraper] calendar/prices fallback failed:", err instanceof Error ? err.message : err);
-      }
-    }
+    // NOTE: Calendar fallback (per-day availability for hotels without calendar/prices)
+    // has been MOVED to dedicated scrapeProfitroomCalendarFallback (Tier 3).
+    // Full mode no longer does fallback — keeps it fast for ALL hotels.
+    // Tier 3 is called separately by Next.js when calendarPricesSupported === false.
     const offers = settled[4].status === "fulfilled" ? settled[4].value : null;
     const bestsellerIds = settled[5].status === "fulfilled" ? settled[5].value : null;
     const hotelDetails = settled[6].status === "fulfilled" ? settled[6].value : null;
@@ -1008,6 +954,90 @@ export async function scrapeProfitroomFull(
     return {
       success: false,
       error: safeMessage,
+      durationMs: Date.now() - start,
+      engine: "PROFITROOM",
+    };
+  }
+}
+
+// ── TIER 3: Dedicated calendar fallback — full 30s budget ──────────────
+// For hotels WITHOUT calendar/prices endpoint (404). Fetches per-day
+// availability with the ENTIRE CF Worker time budget (no competing calls).
+// Called separately AFTER Tier 1+2 when calendarPricesSupported === false.
+
+export async function scrapeProfitroomCalendarFallback(
+  _browserBinding: Fetcher,
+  params: ScrapeParams,
+): Promise<ScrapeResult> {
+  const start = Date.now();
+  const siteKey = params.profitroomSiteKey;
+  if (!siteKey) {
+    return { success: false, error: "siteKey required", durationMs: 0, engine: "PROFITROOM" };
+  }
+
+  try {
+    const TIME_BUDGET_MS = 27_000; // 27s of 30s CF Worker limit
+    const BATCH_SIZE = 5;
+    const BATCH_DELAY = 300;
+    const daysToFetch = params.calendarDays ?? 60;
+    const startDate = new Date();
+
+    // Fetch unavailable days first — skip them in fallback
+    const calendarFrom = formatDate(startDate);
+    const calendarTo = formatDate(new Date(startDate.getTime() + daysToFetch * 86_400_000));
+    let unavailableSet = new Set<string>();
+    try {
+      const unavailable = await fetchUnavailableDays(siteKey, calendarFrom, calendarTo);
+      if (unavailable) unavailableSet = new Set(unavailable);
+    } catch { /* non-critical */ }
+
+    const days = Array.from({ length: daysToFetch }, (_, i) => {
+      const ci = new Date(startDate);
+      ci.setUTCDate(ci.getUTCDate() + i);
+      const co = new Date(ci);
+      co.setUTCDate(co.getUTCDate() + 1);
+      return { checkIn: formatDate(ci), checkOut: formatDate(co) };
+    }).filter(d => !unavailableSet.has(d.checkIn));
+
+    const calendarPrices: CalendarPrice[] = [];
+    for (let b = 0; b < days.length; b += BATCH_SIZE) {
+      if (Date.now() - start > TIME_BUDGET_MS) {
+        console.log(`[PriceScraper] calendar-fallback time budget hit after ${calendarPrices.length} days for ${siteKey}`);
+        break;
+      }
+      if (b > 0) await new Promise((r) => setTimeout(r, BATCH_DELAY));
+      const results = await Promise.allSettled(
+        days.slice(b, b + BATCH_SIZE).map(({ checkIn, checkOut }) =>
+          fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
+            siteKey, "availability",
+            { checkIn, checkOut, "occupancy[0][adults]": "2", lang: "pl" },
+            true,
+          ).then((groups) => {
+            if (!groups?.length) return null;
+            const cheapest = cheapestFromGroups(groups);
+            return cheapest ? { date: checkIn, ...cheapest } : null;
+          }),
+        ),
+      );
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) calendarPrices.push(r.value);
+      }
+    }
+
+    console.log(`[PriceScraper] calendar-fallback: ${calendarPrices.length}/${days.length} days for ${siteKey} in ${Date.now() - start}ms`);
+
+    return {
+      success: calendarPrices.length > 0,
+      durationMs: Date.now() - start,
+      engine: "PROFITROOM",
+      calendarPrices: calendarPrices.length > 0 ? calendarPrices : undefined,
+      calendarPricesSupported: false,
+      unavailableDays: unavailableSet.size > 0 ? [...unavailableSet] : undefined,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
       durationMs: Date.now() - start,
       engine: "PROFITROOM",
     };

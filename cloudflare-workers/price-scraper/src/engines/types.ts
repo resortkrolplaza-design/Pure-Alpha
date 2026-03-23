@@ -9,7 +9,7 @@ export interface ScrapeParams {
   adults: number;
   nights: number; // calculated from checkIn/checkOut
   profitroomSiteKey?: string; // Profitroom siteKey (discovered by GENERIC or passed from DB)
-  mode?: "prices" | "full" | "offers"; // 'prices' = rooms, 'full' = all data, 'offers' = offers only
+  mode?: "prices" | "full" | "offers" | "calendar-fallback"; // calendar-fallback = dedicated 30s for per-day availability
   calendarDays?: number; // days ahead for calendar (default 90)
 }
 
