@@ -1050,7 +1050,7 @@ export async function scrapeProfitroomCalendarFallback(
       }
     }
 
-    console.log(`[PriceScraper] calendar-fallback: ${calendarPrices.length}/${days.length} days for ${siteKey} in ${Date.now() - start}ms`);
+    console.log(`[PriceScraper] calendar-fallback: ${calendarPrices.length}/${availableDays.length} days for ${siteKey} in ${Date.now() - start}ms`);
 
     return {
       success: calendarPrices.length > 0,
