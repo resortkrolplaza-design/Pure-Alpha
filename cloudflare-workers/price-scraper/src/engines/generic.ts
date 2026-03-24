@@ -159,6 +159,8 @@ interface EngineDiscovery {
 }
 
 // Profitroom siteKey extraction from any URL containing profitroom/upperbooking
+// HIGHEST PRIORITY: tracking pixel — always contains canonical siteKey
+const PROFITROOM_TRACKING_RE = /trl\.upperbooking\.com\/tr\/pv\/([a-zA-Z0-9._-]+)/;
 const PROFITROOM_URL_RE = /(?:booking\.profitroom\.com|upperbooking\.com)\/(?:api\/|[a-z]{2}\/)?([a-zA-Z0-9._-]+)/;
 // P1-13 FIX: check both site= AND siteKey= (Profitroom uses both)
 const PROFITROOM_SITE_PARAM_RE = /[?&](?:site|siteKey)=([a-zA-Z0-9._-]+)/;
@@ -167,6 +169,10 @@ const PROFITROOM_CDN_RE = /(?:r\.profitroom\.pl|u\.profitroom\.(?:com|pl)|wa-upl
 function extractSiteKeyFromUrl(url: string): string | null {
   // Skip non-siteKey paths (static assets, common endpoints)
   if (/\/(js|css|fonts|images|static|favicon)\//i.test(url)) return null;
+
+  // Tracking pixel — highest priority, always canonical siteKey
+  const trackingMatch = url.match(PROFITROOM_TRACKING_RE);
+  if (trackingMatch?.[1]) return trackingMatch[1];
 
   const siteParam = url.match(PROFITROOM_SITE_PARAM_RE);
   if (siteParam?.[1]) return siteParam[1];
@@ -204,8 +210,8 @@ function setupNetworkDiscovery(page: puppeteer.Page): { getResult: () => EngineD
     if (url.includes("profitroom.com") || url.includes("upperbooking.com") || url.includes("profitroom.pl")) {
       const siteKey = extractSiteKeyFromUrl(url);
       if (siteKey) {
-        // API calls (availability, offers, calendar) = high priority
-        if (url.includes("/api/") || url.includes("/pricelist/offers")) {
+        // Tracking pixel + API calls = high priority (canonical siteKey)
+        if (url.includes("/tr/pv/") || url.includes("/api/") || url.includes("/pricelist/offers")) {
           apiSiteKey = siteKey;
         } else if (!otherSiteKey) {
           otherSiteKey = siteKey;
