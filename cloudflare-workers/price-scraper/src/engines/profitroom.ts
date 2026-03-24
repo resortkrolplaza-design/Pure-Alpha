@@ -235,6 +235,32 @@ async function fetchProfitroomApi<T>(
   }
 }
 
+/**
+ * Discover related siteKeys via Profitroom /api/{siteKey}/related-sites endpoint.
+ * Hotel groups (e.g. "saltic") have multiple siteKeys under one umbrella.
+ * The booking widget calls this endpoint to fetch rooms/offers from ALL related sites.
+ * When the detected siteKey returns no valid prices, one of its related sites likely has them.
+ */
+export async function discoverRelatedSiteKeys(
+  siteKey: string,
+): Promise<string[]> {
+  try {
+    const raw = await fetchProfitroomApi<Array<{ siteKey: string }>>(
+      siteKey, "related-sites", undefined, true, 5000,
+    );
+    if (!Array.isArray(raw)) return [];
+    const related = raw
+      .map((r) => r.siteKey)
+      .filter((k): k is string => typeof k === "string" && k !== siteKey && SITE_KEY_RE.test(k));
+    if (related.length > 0) {
+      console.log(`[Profitroom] related-sites for ${siteKey}: ${related.join(", ")}`);
+    }
+    return related;
+  } catch {
+    return [];
+  }
+}
+
 // ── Room details resolution ───────────────────────────────────────────────
 
 // Rooms = cosmetic (names/details only, not prices). Short timeout so it doesn't
@@ -634,6 +660,23 @@ export async function scrapeProfitroomPrices(
     const roomNames = roomData.nameMap;
 
     if (!availability || availability.length === 0) {
+      // Try related siteKeys (hotel groups like "saltic" → ["salticclubresort", "salticresortspaleba"])
+      const related = await discoverRelatedSiteKeys(siteKey);
+      for (const relKey of related) {
+        try {
+          const retryResult = await fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
+            relKey, "availability", availabilityParams,
+          );
+          if (retryResult && retryResult.length > 0) {
+            console.log(`[Profitroom] resolved ${siteKey} → ${relKey} via related-sites`);
+            return scrapeProfitroomPrices(_browserBinding, {
+              ...params,
+              profitroomSiteKey: relKey,
+            });
+          }
+        } catch { /* try next */ }
+      }
+
       return {
         success: false,
         error: "No availability data returned from Profitroom API",
@@ -676,6 +719,21 @@ export async function scrapeProfitroomPrices(
     }
 
     if (cheapestByRoom.size === 0) {
+      // Try related siteKeys — "saltic" has test prices, "salticresortspaleba" has real ones
+      const related = await discoverRelatedSiteKeys(siteKey);
+      for (const relKey of related) {
+        try {
+          const retryResult = await scrapeProfitroomPrices(_browserBinding, {
+            ...params,
+            profitroomSiteKey: relKey,
+          });
+          if (retryResult.success) {
+            console.log(`[Profitroom] resolved ${siteKey} → ${relKey} via related-sites (no valid prices)`);
+            return retryResult;
+          }
+        } catch { /* try next */ }
+      }
+
       return {
         success: false,
         error: "No valid room prices in availability response",
@@ -709,6 +767,7 @@ export async function scrapeProfitroomPrices(
     return {
       success: true,
       rooms,
+      profitroomSiteKey: siteKey, // canonical siteKey (may differ from input after redirect resolution)
       durationMs: Date.now() - start,
       engine: "PROFITROOM",
     };
