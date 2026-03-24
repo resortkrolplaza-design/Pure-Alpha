@@ -26,7 +26,7 @@ type EngineType = (typeof SUPPORTED_ENGINES)[number];
 
 // P3-2 FIX: Per-siteKey rate limiter (in-memory, resets on cold start — acceptable for CF Workers)
 const siteKeyRequestLog = new Map<string, number[]>();
-const RATE_LIMIT_MAX = 10; // max requests per siteKey per window
+const RATE_LIMIT_MAX = 20; // max requests per siteKey per window (1 sync = up to 10 calls)
 const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
 
 function checkSiteKeyRateLimit(siteKey: string): boolean {
