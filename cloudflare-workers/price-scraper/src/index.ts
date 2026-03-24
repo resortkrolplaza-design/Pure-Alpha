@@ -24,6 +24,24 @@ interface Env {
 const SUPPORTED_ENGINES = ["PROFITROOM", "GENERIC"] as const;
 type EngineType = (typeof SUPPORTED_ENGINES)[number];
 
+// P3-2 FIX: Per-siteKey rate limiter (in-memory, resets on cold start — acceptable for CF Workers)
+const siteKeyRequestLog = new Map<string, number[]>();
+const RATE_LIMIT_MAX = 10; // max requests per siteKey per window
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+
+function checkSiteKeyRateLimit(siteKey: string): boolean {
+  const now = Date.now();
+  const timestamps = siteKeyRequestLog.get(siteKey) || [];
+  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  if (recent.length >= RATE_LIMIT_MAX) {
+    siteKeyRequestLog.set(siteKey, recent);
+    return false; // rate limited
+  }
+  recent.push(now);
+  siteKeyRequestLog.set(siteKey, recent);
+  return true; // allowed
+}
+
 function isValidEngine(engine: string): engine is EngineType {
   return (SUPPORTED_ENGINES as readonly string[]).includes(engine);
 }
@@ -198,6 +216,16 @@ export default {
       }
 
       const params = validation.params!;
+
+      // P3-2 FIX: Per-siteKey rate limit (prevent Profitroom IP ban from burst requests)
+      if (params.profitroomSiteKey) {
+        if (!checkSiteKeyRateLimit(params.profitroomSiteKey)) {
+          return Response.json(
+            { success: false, error: `Rate limited: too many requests for siteKey "${params.profitroomSiteKey}"` },
+            { status: 429, headers: { "Retry-After": "60" } },
+          );
+        }
+      }
 
       // Route to engine strategy
       switch (params.engine) {
