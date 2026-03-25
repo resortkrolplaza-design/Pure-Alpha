@@ -1001,7 +1001,7 @@ export async function scrapeProfitroomFull(
 
     // ── Meal plan pricing: cheapest per-night price per mealPlanType ──
     // Cross-reference: offers (mealPlanType) × availability proposals (prices)
-    // mealPlanType: 18=śniadanie, 19=półpensja, 20=pełne wyżywienie
+    // mealPlanType: 18=room-only (bez wyżywienia), 19=B&B (ze śniadaniem), 20=HB (półpensja)
     let pricesByMealPlan: Record<string, MealPlanPrice> | undefined;
     if (offers && availability && availability.length > 0) {
       const offerMealPlan = new Map<number, { mealPlanType: number; name: string }>();

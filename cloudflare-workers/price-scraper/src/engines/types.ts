@@ -126,6 +126,6 @@ export interface ScrapeResult {
   hotelDetails?: ProfitroomHotelDetails;
   exchangeRates?: Record<string, number>;
   roomDetails?: ProfitroomRoomDetail[];
-  // Meal plan pricing: cheapest per-night price per mealPlanType (18=breakfast, 19=half-board, 20=full-board)
+  // Meal plan pricing: cheapest per-night price per mealPlanType (18=room-only, 19=breakfast, 20=half-board)
   pricesByMealPlan?: Record<string, MealPlanPrice>;
 }
