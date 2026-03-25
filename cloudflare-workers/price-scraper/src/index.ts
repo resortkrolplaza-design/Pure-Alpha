@@ -101,6 +101,33 @@ function validateScrapeRequest(
 ): { params: ScrapeParams & { engine: EngineType }; error?: never } | { params?: never; error: string } {
   const { hotelUrl, checkIn, checkOut, engine, adults, profitroomSiteKey, mode, calendarDays } = body;
 
+  const resolvedMode = mode === "full" ? "full" : mode === "offers" ? "offers" : mode === "calendar-fallback" ? "calendar-fallback" : "prices";
+
+  const resolvedEngine = (engine as string) || "PROFITROOM";
+  if (!isValidEngine(resolvedEngine)) {
+    return { error: `Unsupported engine: ${resolvedEngine}. Supported: ${SUPPORTED_ENGINES.join(", ")}` };
+  }
+
+  // Offers-only mode: skip date/URL validation (only needs profitroomSiteKey)
+  if (resolvedMode === "offers") {
+    if (!profitroomSiteKey || typeof profitroomSiteKey !== "string" || !/^[a-zA-Z0-9._-]+$/.test(profitroomSiteKey)) {
+      return { error: "profitroomSiteKey is required for offers mode" };
+    }
+    return {
+      params: {
+        hotelUrl: typeof hotelUrl === "string" ? hotelUrl : `https://booking.profitroom.com/pl/${profitroomSiteKey}`,
+        checkIn: "",
+        checkOut: "",
+        engine: resolvedEngine,
+        adults: 2,
+        nights: 1,
+        profitroomSiteKey: profitroomSiteKey as string,
+        mode: "offers",
+        calendarDays: undefined,
+      },
+    };
+  }
+
   if (!hotelUrl || typeof hotelUrl !== "string") {
     return { error: "hotelUrl is required" };
   }
@@ -125,11 +152,6 @@ function validateScrapeRequest(
     return { error: "Stay must be between 1 and 30 nights" };
   }
 
-  const resolvedEngine = (engine as string) || "PROFITROOM";
-  if (!isValidEngine(resolvedEngine)) {
-    return { error: `Unsupported engine: ${resolvedEngine}. Supported: ${SUPPORTED_ENGINES.join(", ")}` };
-  }
-
   // P0-1 FIX: SSRF validation
   const ssrfError = isBlockedUrl(hotelUrl as string);
   if (ssrfError) {
@@ -147,7 +169,7 @@ function validateScrapeRequest(
       profitroomSiteKey: typeof profitroomSiteKey === "string" && /^[a-zA-Z0-9._-]+$/.test(profitroomSiteKey)
         ? profitroomSiteKey
         : undefined,
-      mode: mode === "full" ? "full" : mode === "offers" ? "offers" : mode === "calendar-fallback" ? "calendar-fallback" : "prices",
+      mode: resolvedMode,
       calendarDays: typeof calendarDays === "number" && calendarDays > 0 && calendarDays <= 365
         ? calendarDays
         : undefined,

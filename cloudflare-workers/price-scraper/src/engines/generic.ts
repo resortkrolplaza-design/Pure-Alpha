@@ -133,6 +133,49 @@ async function dismissCookies(page: puppeteer.Page): Promise<void> {
   } catch { /* ignore */ }
 }
 
+// ── Click booking buttons to trigger widget init ─────────────────────────
+// Some hotels (e.g., WordPress with Profitroom) hide the booking widget
+// behind a "Wyświetl kalendarz" button — widget only makes API calls
+// (including tracking pixel) AFTER this button is clicked.
+
+async function clickBookingButtons(page: puppeteer.Page): Promise<boolean> {
+  try {
+    return await page.evaluate(() => {
+      // Ordered by specificity — most specific pattern checked against ALL elements first
+      const patterns = [
+        /profitroom/i,
+        /kalendarz/i,
+        /sprawdź.*dostępność/i,
+        /sprawdz.*dostepnosc/i,
+        /check.*availab/i,
+        /rezerwuj\b/i,
+        /zarezerwuj/i,
+        /book\s*(now|online|room)/i,
+      ];
+
+      const clickables = document.querySelectorAll<HTMLElement>(
+        'button, [role="button"], a, [onclick], [class*="btn"], [class*="cta"], [class*="booking"]'
+      );
+
+      // Iterate patterns first → elements second (most specific pattern wins)
+      for (const pattern of patterns) {
+        for (const el of clickables) {
+          const text = (el.textContent || "").trim();
+          if (text.length > 80 || text.length === 0) continue;
+          if (pattern.test(text)) {
+            console.log(`[BookingClick] Clicking: "${text.substring(0, 60)}"`);
+            el.click();
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+  } catch {
+    return false;
+  }
+}
+
 // ── Scroll page for lazy loading ──────────────────────────────────────────
 
 async function scrollPage(page: puppeteer.Page): Promise<void> {
@@ -164,7 +207,7 @@ const PROFITROOM_TRACKING_RE = /trl\.upperbooking\.com\/tr\/pv\/([a-zA-Z0-9._-]+
 const PROFITROOM_URL_RE = /(?:booking\.profitroom\.com|upperbooking\.com)\/(?:api\/|[a-z]{2}\/)?([a-zA-Z0-9._-]+)/;
 // P1-13 FIX: check both site= AND siteKey= (Profitroom uses both)
 const PROFITROOM_SITE_PARAM_RE = /[?&](?:site|siteKey)=([a-zA-Z0-9._-]+)/;
-const PROFITROOM_CDN_RE = /(?:r\.profitroom\.pl|u\.profitroom\.(?:com|pl)|wa-uploads\.profitroom\.com)\/([a-zA-Z0-9._-]+)\//;
+const PROFITROOM_CDN_RE = /(?:r\.profitroom\.(?:com|pl)|u\.profitroom\.(?:com|pl)|wa-uploads\.profitroom\.com)\/([a-zA-Z0-9._-]+)\//;
 
 function extractSiteKeyFromUrl(url: string): string | null {
   // Skip non-siteKey paths (static assets, common endpoints)
@@ -207,8 +250,9 @@ function setupNetworkDiscovery(page: puppeteer.Page): { getResult: () => EngineD
     const url = req.url();
 
     // Profitroom / UpperBooking
-    if (url.includes("profitroom.com") || url.includes("upperbooking.com") || url.includes("profitroom.pl")) {
+    if (url.includes("profitroom.com") || url.includes("upperbooking.com") || url.includes("profitroom.pl") || url.includes("profitroom.net")) {
       const siteKey = extractSiteKeyFromUrl(url);
+      console.log(`[NetworkDiscovery] Profitroom URL: ${url.substring(0, 120)} → siteKey=${siteKey}`);
       if (siteKey) {
         // Tracking pixel + API calls = high priority (canonical siteKey)
         if (url.includes("/tr/pv/") || url.includes("/api/") || url.includes("/pricelist/offers")) {
@@ -252,7 +296,7 @@ async function discoverBookingEngineFromHTML(page: puppeteer.Page): Promise<Engi
       /upperbooking\.com\/\w+\/booking\/start\/([a-zA-Z0-9._-]+)/,
       /upperbooking\.com.*[?&]site=([a-zA-Z0-9._-]+)/,
       /booking\.profitroom\.com\/\w+\/([a-zA-Z0-9._-]+)/,
-      /r\.profitroom\.pl\/([a-zA-Z0-9._-]+)\//,
+      /r\.profitroom\.(?:com|pl)\/([a-zA-Z0-9._-]+)\//,
       /wa-uploads\.profitroom\.com\/([a-zA-Z0-9._-]+)\//,
       /u\.profitroom\.(?:com|pl)\/([a-zA-Z0-9._-]+)\//,
       /profitroom\.com.*[?&]siteKey=([a-zA-Z0-9._-]+)/,
@@ -734,10 +778,14 @@ export async function scrapeGenericPrices(
     })();
 
     try {
-      await page.goto(dateUrl, { waitUntil: "networkidle2", timeout: 15000 });
+      const resp = await page.goto(dateUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+      // If server rejects date params (400/403/5xx), retry without them
+      if (!resp || resp.status() >= 400) {
+        await page.goto(params.hotelUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
+      }
     } catch {
       try {
-        await page.goto(params.hotelUrl, { waitUntil: "networkidle2", timeout: 15000 });
+        await page.goto(params.hotelUrl, { waitUntil: "domcontentloaded", timeout: 20000 });
       } catch {
         return {
           success: false,
@@ -747,10 +795,24 @@ export async function scrapeGenericPrices(
         };
       }
     }
+    // Wait for JS to initialize (widgets, tracking pixels, GTM)
+    await delay(2000);
 
     // ── STEP 2: Dismiss cookies + wait for rendering ──────────────────
     await dismissCookies(page);
     await delay(1500);
+
+    // ── STEP 2b: Trigger widget initialization if no engine discovered ──
+    // Some hotels (WordPress + Profitroom) hide the widget behind a button.
+    // Scroll first (lazy-load), then click booking buttons, wait for init.
+    if (!networkDiscovery.getResult()) {
+      await scrollPage(page);
+      const clicked = await clickBookingButtons(page);
+      if (clicked) {
+        console.log("[Generic] Clicked booking button, waiting for widget init...");
+        await delay(3000);
+      }
+    }
 
     // ── STEP 3: Discover known booking engines BEFORE price extraction ──
     // SSOT: Network interception (100% reliable) → HTML fallback (CDN refs)
