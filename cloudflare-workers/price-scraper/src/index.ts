@@ -113,9 +113,10 @@ function validateScrapeRequest(
     if (!profitroomSiteKey || typeof profitroomSiteKey !== "string" || !/^[a-zA-Z0-9._-]+$/.test(profitroomSiteKey)) {
       return { error: "profitroomSiteKey is required for offers mode" };
     }
+    // hotelUrl ignored by offers handler — always use canonical Profitroom URL
     return {
       params: {
-        hotelUrl: typeof hotelUrl === "string" ? hotelUrl : `https://booking.profitroom.com/pl/${profitroomSiteKey}`,
+        hotelUrl: `https://booking.profitroom.com/pl/${profitroomSiteKey}`,
         checkIn: "",
         checkOut: "",
         engine: resolvedEngine,
