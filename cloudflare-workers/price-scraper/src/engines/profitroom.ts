@@ -245,12 +245,12 @@ export async function discoverRelatedSiteKeys(
   siteKey: string,
 ): Promise<string[]> {
   try {
-    const raw = await fetchProfitroomApi<Array<{ siteKey: string }>>(
+    const raw = await fetchProfitroomApi<Array<{ key: string; siteKey?: string }>>(
       siteKey, "related-sites", undefined, true, 5000,
     );
     if (!Array.isArray(raw)) return [];
     const related = raw
-      .map((r) => r.siteKey)
+      .map((r) => r.key || r.siteKey)
       .filter((k): k is string => typeof k === "string" && k !== siteKey && SITE_KEY_RE.test(k));
     if (related.length > 0) {
       console.log(`[Profitroom] related-sites for ${siteKey}: ${related.join(", ")}`);
@@ -607,6 +607,10 @@ async function fetchExchangeRates(siteKey: string): Promise<Record<string, numbe
     const map: Record<string, number> = {};
     for (const entry of raw) {
       map[entry.to] = entry.rate;
+      // Add base currency with rate 1.0 (convention: base currency = 1)
+      if (!map[entry.from]) {
+        map[entry.from] = 1;
+      }
     }
     return map;
   } catch (err) {
@@ -1040,7 +1044,8 @@ export async function scrapeProfitroomCalendarFallback(
 
   try {
     const TIME_BUDGET_MS = 27_000; // 27s of 30s CF Worker limit
-    const BATCH_SIZE = 5;
+    // P1-4 FIX: reduced from 5→3 concurrent (throttled at 200ms each, less burst pressure)
+    const BATCH_SIZE = 3;
     const BATCH_DELAY = 300;
     const daysToFetch = params.calendarDays ?? 60;
     // Use checkIn from params as start date (supports offset for multi-call loop)
@@ -1064,7 +1069,7 @@ export async function scrapeProfitroomCalendarFallback(
     }).filter(d => !unavailableSet.has(d));
 
     // Hotels have variable min-stay: off-season 1n, shoulder 2n, summer 3n, peak 5n
-    const STAY_LADDER = [2, 3, 5];
+    const STAY_LADDER = [2, 3, 4, 5];
     let stayIdx = 0;
     let stayNights = STAY_LADDER[0];
     const calendarPrices: CalendarPrice[] = [];
@@ -1085,11 +1090,26 @@ export async function scrapeProfitroomCalendarFallback(
           return fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
             siteKey, "availability",
             { checkIn, checkOut: formatDate(co), "occupancy[0][adults]": "2", lang: "pl" },
-            true,
+            // P1-4 FIX: respect throttle (was skipThrottle=true → 5 concurrent unthrottled = IP ban risk)
           ).then((groups) => {
             if (!groups?.length) return null;
             const cheapest = cheapestFromGroups(groups);
-            return cheapest ? { date: checkIn, ...cheapest } : null;
+            if (!cheapest) return null;
+            // Normalize to per-night: Profitroom returns TOTAL STAY price
+            const perNight = Math.round((cheapest.minPrice / stayNights) * 100) / 100;
+            const origPerNight = cheapest.originalPrice
+              ? Math.round((cheapest.originalPrice / stayNights) * 100) / 100
+              : undefined;
+            const recentPerNight = cheapest.recentLowestPrice
+              ? Math.round((cheapest.recentLowestPrice / stayNights) * 100) / 100
+              : undefined;
+            return {
+              date: checkIn,
+              ...cheapest,
+              minPrice: perNight,
+              originalPrice: origPerNight,
+              recentLowestPrice: recentPerNight,
+            };
           });
         }),
       );
@@ -1102,18 +1122,13 @@ export async function scrapeProfitroomCalendarFallback(
         }
       }
 
-      // If batch returned 0 results, try next stay length in ladder
+      // If batch returned 0 results, escalate stay length immediately
+      // (don't wait for 2 consecutive — that loses 5 days of data)
       if (batchHits === 0 && stayIdx < STAY_LADDER.length - 1) {
-        consecutiveEmptyBatches++;
-        if (consecutiveEmptyBatches >= 2) {
-          stayIdx++;
-          stayNights = STAY_LADDER[stayIdx];
-          consecutiveEmptyBatches = 0;
-          b -= BATCH_SIZE; // retry this batch
-          console.log(`[PriceScraper] calendar-fallback escalating to ${stayNights}-night for ${siteKey}`);
-        }
-      } else {
-        consecutiveEmptyBatches = 0;
+        stayIdx++;
+        stayNights = STAY_LADDER[stayIdx];
+        b -= BATCH_SIZE; // retry this batch with longer stay
+        console.log(`[PriceScraper] calendar-fallback escalating to ${stayNights}-night for ${siteKey}`);
       }
     }
 
