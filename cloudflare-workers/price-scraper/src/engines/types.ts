@@ -96,6 +96,14 @@ export interface ProfitroomHotelDetails {
   };
 }
 
+export interface MealPlanPrice {
+  price: number;        // per-night, cheapest for this meal plan
+  currency: string;
+  roomName?: string;    // which room had this price
+  offerName?: string;   // which offer had this price
+  offerId?: number;
+}
+
 export interface ScrapeResult {
   success: boolean;
   rooms?: RoomResult[];
@@ -118,4 +126,6 @@ export interface ScrapeResult {
   hotelDetails?: ProfitroomHotelDetails;
   exchangeRates?: Record<string, number>;
   roomDetails?: ProfitroomRoomDetail[];
+  // Meal plan pricing: cheapest per-night price per mealPlanType (18=breakfast, 19=half-board, 20=full-board)
+  pricesByMealPlan?: Record<string, MealPlanPrice>;
 }

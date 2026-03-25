@@ -29,6 +29,7 @@ import type {
   ProfitroomOffer,
   ProfitroomHotelDetails,
   ProfitroomRoomDetail,
+  MealPlanPrice,
 } from "./types";
 
 // ── Profitroom API types ──────────────────────────────────────────────────
@@ -998,6 +999,52 @@ export async function scrapeProfitroomFull(
         })
       : undefined;
 
+    // ── Meal plan pricing: cheapest per-night price per mealPlanType ──
+    // Cross-reference: offers (mealPlanType) × availability proposals (prices)
+    // mealPlanType: 18=śniadanie, 19=półpensja, 20=pełne wyżywienie
+    let pricesByMealPlan: Record<string, MealPlanPrice> | undefined;
+    if (offers && availability && availability.length > 0) {
+      const offerMealPlan = new Map<number, { mealPlanType: number; name: string }>();
+      for (const o of offers) {
+        if (o.mealPlanType != null) {
+          offerMealPlan.set(o.offerId, { mealPlanType: o.mealPlanType, name: o.name });
+        }
+      }
+
+      const mealPlanBest = new Map<number, MealPlanPrice>();
+      for (const group of availability) {
+        for (const { proposal } of group.proposals) {
+          const offerInfo = offerMealPlan.get(proposal.OfferID);
+          if (!offerInfo) continue;
+
+          const minAllowed = proposal.price.currency === "PLN" ? MIN_PRICE_PLN : MIN_PRICE_EUR;
+          if (proposal.price.amount < minAllowed) continue;
+
+          const perNight = params.nights > 0
+            ? Math.round((proposal.price.amount / params.nights) * 100) / 100
+            : proposal.price.amount;
+
+          const existing = mealPlanBest.get(offerInfo.mealPlanType);
+          if (!existing || perNight < existing.price) {
+            mealPlanBest.set(offerInfo.mealPlanType, {
+              price: perNight,
+              currency: proposal.price.currency,
+              roomName: roomNames.get(proposal.RoomID) || undefined,
+              offerName: offerInfo.name,
+              offerId: proposal.OfferID,
+            });
+          }
+        }
+      }
+
+      if (mealPlanBest.size > 0) {
+        pricesByMealPlan = {};
+        for (const [mealType, data] of mealPlanBest) {
+          pricesByMealPlan[String(mealType)] = data;
+        }
+      }
+    }
+
     // ── Build comprehensive result ────────────────────────────────────
     return {
       // Success if ANY data was fetched (not just rooms — calendar/offers/details count too)
@@ -1012,6 +1059,7 @@ export async function scrapeProfitroomFull(
       hotelDetails: hotelDetails ?? undefined,
       exchangeRates: exchangeRates ?? undefined,
       roomDetails: roomDetails.length > 0 ? roomDetails : undefined,
+      pricesByMealPlan,
     };
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Unknown error";
