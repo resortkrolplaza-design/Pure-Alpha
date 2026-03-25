@@ -1108,8 +1108,8 @@ export async function scrapeProfitroomCalendarFallback(
       if (unavailable) unavailableSet = new Set(unavailable);
     } catch { /* non-critical */ }
 
-    // Start with 2-night stay (handles min 2-night hotels).
-    // If entire batch returns 0 results, escalate to 3-night (high season min-stay).
+    // Start with 1-night stay for accurate pricing (multi-night stays have lower per-night rates).
+    // If entire batch returns 0 results, escalate to 2+ nights (min-stay restriction).
     const availableDays = Array.from({ length: daysToFetch }, (_, i) => {
       const ci = new Date(startDate);
       ci.setUTCDate(ci.getUTCDate() + i);
@@ -1117,7 +1117,8 @@ export async function scrapeProfitroomCalendarFallback(
     }).filter(d => !unavailableSet.has(d));
 
     // Hotels have variable min-stay: off-season 1n, shoulder 2n, summer 3n, peak 5n
-    const STAY_LADDER = [2, 3, 4, 5];
+    // Start with 1-night to get accurate per-night price (2+ night stays have lower per-night rates)
+    const STAY_LADDER = [1, 2, 3, 4, 5];
     let stayIdx = 0;
     let stayNights = STAY_LADDER[0];
     const calendarPrices: CalendarPrice[] = [];
