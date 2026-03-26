@@ -1109,6 +1109,22 @@ export async function scrapeProfitroomFull(
         }
       }
 
+      // Fallback: fill gaps from enrichedOffers (have minPrice from calendar/availability)
+      // Catches offers not in today's availability (e.g., sold out today but valid future dates)
+      if (enrichedOffers) {
+        for (const o of enrichedOffers) {
+          if (o.mealPlanType != null && o.minPrice && o.minPrice > 0 && !mealPlanBest.has(o.mealPlanType)) {
+            mealPlanBest.set(o.mealPlanType, {
+              price: o.minPrice,
+              currency: o.currency || "PLN",
+              roomName: undefined,
+              offerName: o.name,
+              offerId: o.offerId,
+            });
+          }
+        }
+      }
+
       if (mealPlanBest.size > 0) {
         pricesByMealPlan = {};
         for (const [mealType, data] of mealPlanBest) {
