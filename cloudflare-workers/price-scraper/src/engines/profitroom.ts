@@ -1121,7 +1121,27 @@ export async function scrapeProfitroomFull(
         }
       }
 
-      // Fallback: fill gaps from enrichedOffers (have minPrice from calendar/availability)
+      // Fallback 1: calendar prices (90d) cross-referenced with offer meal plan types
+      // Captures meal plans that aren't available TODAY but appear as cheapest on other dates
+      if (calendarPrices) {
+        for (const cp of calendarPrices) {
+          if (cp.offerId == null) continue;
+          const offerInfo = offerMealPlan.get(cp.offerId);
+          if (!offerInfo) continue;
+          if (mealPlanBest.has(offerInfo.mealPlanType)) continue;
+          const minAllowed = cp.currency === "PLN" ? MIN_PRICE_PLN : MIN_PRICE_EUR;
+          if (cp.minPrice < minAllowed) continue;
+          mealPlanBest.set(offerInfo.mealPlanType, {
+            price: cp.minPrice,
+            currency: cp.currency,
+            roomName: undefined,
+            offerName: offerInfo.name,
+            offerId: cp.offerId,
+          });
+        }
+      }
+
+      // Fallback 2: enrichedOffers with minPrice from availability/calendar
       // Catches offers not in today's availability (e.g., sold out today but valid future dates)
       if (enrichedOffers) {
         for (const o of enrichedOffers) {
@@ -1162,8 +1182,6 @@ export async function scrapeProfitroomFull(
       pricesByMealPlan,
       lowestOriginalPrice,
       lowestRecentLowestPrice,
-      lowestOriginalPrice: cheapestRoom?.originalPrice ?? undefined,
-      lowestRecentLowestPrice: cheapestRoom?.recentLowestPrice ?? undefined,
     };
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Unknown error";
