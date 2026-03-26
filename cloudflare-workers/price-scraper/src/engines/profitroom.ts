@@ -1025,6 +1025,18 @@ export async function scrapeProfitroomFull(
       rooms.sort((a, b) => a.price - b.price);
     }
 
+    // Extract original price from cheapest room for discount detection
+    // cheapestByRoom has originalPrice from availability API
+    let lowestOriginalPrice: number | undefined;
+    let lowestRecentLowestPrice: number | undefined;
+    if (availability && availability.length > 0) {
+      const cheapest = cheapestFromGroups(availability);
+      if (cheapest) {
+        lowestOriginalPrice = cheapest.originalPrice;
+        lowestRecentLowestPrice = cheapest.recentLowestPrice;
+      }
+    }
+
     // ── Cross-reference bestseller IDs + minPrice from availability ───
     const bestsellerSet = bestsellerIds ? new Set(bestsellerIds) : null;
 
@@ -1148,6 +1160,10 @@ export async function scrapeProfitroomFull(
       exchangeRates: exchangeRates ?? undefined,
       roomDetails: roomDetails.length > 0 ? roomDetails : undefined,
       pricesByMealPlan,
+      lowestOriginalPrice,
+      lowestRecentLowestPrice,
+      lowestOriginalPrice: cheapestRoom?.originalPrice ?? undefined,
+      lowestRecentLowestPrice: cheapestRoom?.recentLowestPrice ?? undefined,
     };
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Unknown error";
