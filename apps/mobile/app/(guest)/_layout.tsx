@@ -4,22 +4,13 @@
 
 import { useRef } from "react";
 import { Tabs } from "expo-router";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { NAVY, GOLD, guest, fontSize } from "@/lib/tokens";
+import { TabIcon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-
-// Simple text-based icons (no external icon library needed)
-// Using plain text labels instead of emoji for accessibility
-const TAB_LABELS: Record<string, string> = {
-  stay: "H",
-  points: "*",
-  rewards: "+",
-  hotel: "#",
-  messages: "...",
-};
 
 export default function GuestLayout() {
   const lang = useAppStore((s) => s.lang);
@@ -54,7 +45,7 @@ export default function GuestLayout() {
         options={{
           title: t(lang, "tab.stay"),
           tabBarIcon: ({ focused }) => (
-            <TabIcon label={TAB_LABELS.stay} active={focused} />
+            <TabIcon active={focused} activeName="bed" inactiveName="bed-outline" activeColor={GOLD} inactiveColor={guest.textMuted} />
           ),
         }}
       />
@@ -63,7 +54,7 @@ export default function GuestLayout() {
         options={{
           title: t(lang, "tab.points"),
           tabBarIcon: ({ focused }) => (
-            <TabIcon label={TAB_LABELS.points} active={focused} />
+            <TabIcon active={focused} activeName="star" inactiveName="star-outline" activeColor={GOLD} inactiveColor={guest.textMuted} />
           ),
         }}
       />
@@ -72,7 +63,7 @@ export default function GuestLayout() {
         options={{
           title: t(lang, "tab.rewards"),
           tabBarIcon: ({ focused }) => (
-            <TabIcon label={TAB_LABELS.rewards} active={focused} />
+            <TabIcon active={focused} activeName="gift" inactiveName="gift-outline" activeColor={GOLD} inactiveColor={guest.textMuted} />
           ),
         }}
       />
@@ -81,7 +72,7 @@ export default function GuestLayout() {
         options={{
           title: t(lang, "tab.hotel"),
           tabBarIcon: ({ focused }) => (
-            <TabIcon label={TAB_LABELS.hotel} active={focused} />
+            <TabIcon active={focused} activeName="business" inactiveName="business-outline" activeColor={GOLD} inactiveColor={guest.textMuted} />
           ),
         }}
       />
@@ -90,23 +81,11 @@ export default function GuestLayout() {
         options={{
           title: t(lang, "tab.messages"),
           tabBarIcon: ({ focused }) => (
-            <TabIcon label={TAB_LABELS.messages} active={focused} />
+            <TabIcon active={focused} activeName="chatbubble" inactiveName="chatbubble-outline" activeColor={GOLD} inactiveColor={guest.textMuted} />
           ),
         }}
       />
     </Tabs>
-  );
-}
-
-// P2-1: Inactive icons get 0.5 opacity for visual distinction
-// P2-2: Add accessible={false} to prevent screen readers from reading icon text
-function TabIcon({ label, active }: { label: string; active: boolean }) {
-  return (
-    <View style={{ opacity: active ? 1 : 0.5 }}>
-      <Text style={{ fontSize: 22, color: active ? GOLD : guest.textMuted }} accessible={false}>
-        {label}
-      </Text>
-    </View>
   );
 }
 

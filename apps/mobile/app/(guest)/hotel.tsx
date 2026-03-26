@@ -3,11 +3,13 @@
 // =============================================================================
 
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, Linking, useWindowDimensions } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, Linking, useWindowDimensions, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { configureListAnimation, useRotation } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
 import type { FaqData } from "@/lib/types";
@@ -53,6 +55,11 @@ export default function HotelScreen() {
     { key: "attractions", label: t(lang, "hotel.attractions") },
   ];
 
+  const handleSectionChange = (key: Section) => {
+    configureListAnimation();
+    setSection(key);
+  };
+
   return (
     <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
       <ScrollView
@@ -72,7 +79,7 @@ export default function HotelScreen() {
               <Pressable
                 key={s.key}
                 style={[styles.tab, section === s.key && styles.tabActive]}
-                onPress={() => setSection(s.key)}
+                onPress={() => handleSectionChange(s.key)}
                 // P2-3: Add accessibility props to section tabs
                 accessibilityRole="tab"
                 accessibilityState={{ selected: section === s.key }}
@@ -90,14 +97,14 @@ export default function HotelScreen() {
             <View style={styles.contactGrid}>
               {hotel.phone && (
                 <Pressable style={styles.contactCard} onPress={() => Linking.openURL(`tel:${hotel.phone}`)}>
-                  <Text style={styles.contactIcon}>Tel</Text>
+                  <Icon name="call-outline" size={20} color={GOLD} />
                   <Text style={styles.contactLabel}>{t(lang, "hotel.call")}</Text>
                   <Text style={styles.contactValue}>{hotel.phone}</Text>
                 </Pressable>
               )}
               {hotel.email && (
                 <Pressable style={styles.contactCard} onPress={() => Linking.openURL(`mailto:${hotel.email}`)}>
-                  <Text style={styles.contactIcon}>@</Text>
+                  <Icon name="mail-outline" size={20} color={GOLD} />
                   <Text style={styles.contactLabel}>Email</Text>
                   <Text style={styles.contactValue} numberOfLines={1}>{hotel.email}</Text>
                 </Pressable>
@@ -209,6 +216,8 @@ export default function HotelScreen() {
 
 function FaqItem({ faq }: { faq: FaqData }) {
   const [open, setOpen] = useState(false);
+  const rotation = useRotation(open);
+
   return (
     <Pressable
       style={styles.faqCard}
@@ -219,7 +228,9 @@ function FaqItem({ faq }: { faq: FaqData }) {
     >
       <View style={styles.faqHeader}>
         <Text style={styles.faqQuestion}>{faq.question}</Text>
-        <Text style={styles.faqChevron}>{open ? "v" : ">"}</Text>
+        <Animated.View style={{ transform: [{ rotate: rotation }] }}>
+          <Icon name="chevron-forward" size={16} color={GOLD} />
+        </Animated.View>
       </View>
       {open && <Text style={styles.faqAnswer}>{faq.answer}</Text>}
     </Pressable>
@@ -229,8 +240,11 @@ function FaqItem({ faq }: { faq: FaqData }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: spacing.xl, gap: spacing.xl },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text },
-  address: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary, marginTop: 4 },
+  title: {
+    fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text,
+    letterSpacing: -0.3,
+  },
+  address: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary, marginTop: 4, lineHeight: 18 },
   tabsScroll: { marginHorizontal: -spacing.xl },
   tabs: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.xl },
   tab: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: guest.glassBorder },
@@ -244,7 +258,6 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: guest.card, borderRadius: radius.lg, borderWidth: 1, borderColor: guest.cardBorder,
     padding: spacing.lg, alignItems: "center", gap: spacing.sm, minHeight: 44,
   },
-  contactIcon: { fontSize: 18, fontFamily: "Inter_700Bold", color: GOLD },
   contactLabel: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: guest.text },
   contactValue: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
   card: { backgroundColor: guest.card, borderRadius: radius.lg, borderWidth: 1, borderColor: guest.cardBorder, padding: spacing.lg, gap: spacing.md },
@@ -262,7 +275,7 @@ const styles = StyleSheet.create({
   },
   serviceInfo: { flex: 1, gap: 2 },
   serviceName: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: guest.text },
-  serviceDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
+  serviceDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted, lineHeight: 18 },
   servicePrice: { fontSize: fontSize.base, fontFamily: "Inter_700Bold", color: GOLD, marginLeft: spacing.md },
   faqCard: {
     backgroundColor: guest.card, borderRadius: radius.md, borderWidth: 1, borderColor: guest.cardBorder,
@@ -270,7 +283,6 @@ const styles = StyleSheet.create({
   },
   faqHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   faqQuestion: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: guest.text, flex: 1 },
-  faqChevron: { fontSize: 16, color: GOLD, marginLeft: spacing.sm },
   faqAnswer: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary, lineHeight: 20 },
   attractionCard: {
     flexDirection: "row", backgroundColor: guest.card, borderRadius: radius.md, borderWidth: 1, borderColor: guest.cardBorder,
@@ -280,5 +292,5 @@ const styles = StyleSheet.create({
   attractionInfo: { flex: 1, padding: spacing.md, gap: 4 },
   attractionName: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: guest.text },
   attractionDist: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: GOLD },
-  attractionDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
+  attractionDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted, lineHeight: 18 },
 });

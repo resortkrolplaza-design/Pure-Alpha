@@ -32,6 +32,13 @@ export const guest = {
   successBg: "rgba(16,185,129,0.1)",
   inputBg: "rgba(255,255,255,0.05)",
   inputBorder: "rgba(255,255,255,0.1)",
+  textOnGold: "rgba(13,34,54,0.6)",
+  tierBadgeBg: "rgba(13,34,54,0.15)",
+  warningBg: "rgba(245,158,11,0.1)",
+  warningBorder: "rgba(245,158,11,0.2)",
+  warningText: "#fcd34d",
+  inputBarBg: "rgba(13,34,54,0.8)",
+  msgTimeMine: "rgba(13,34,54,0.5)",
 } as const;
 
 // ── Employee App: Warm Beige ─────────────────────────────────────────────────
@@ -60,6 +67,12 @@ export const group = {
   card: "rgba(255,255,255,0.9)",
   cardBorder: "rgba(0,0,0,0.06)",
   surface: "rgba(255,255,255,0.7)",
+  inputBg: "rgba(0,0,0,0.04)",
+  disabledBg: "rgba(0,0,0,0.08)",
+  overlayWhite70: "rgba(255,255,255,0.7)",
+  overlayWhite60: "rgba(255,255,255,0.6)",
+  primaryLight: "rgba(99,102,241,0.1)",
+  photoFallback: "rgba(0,0,0,0.06)",
 } as const;
 
 // ── Shared Semantic Colors ───────────────────────────────────────────────────
@@ -69,7 +82,37 @@ export const semantic = {
   warning: "#f59e0b",
   danger: "#ef4444",
   info: "#3b82f6",
+  successLight: "#6ee7b7",
+  dangerLight: "#fca5a5",
 } as const;
+
+// ── Destructive Action Colors ───────────────────────────────────────────────
+
+export const destructive = {
+  bg: "#fef2f2",
+  border: "#fecaca",
+  text: "#dc2626",
+} as const;
+
+// ── Shift Type Colors (SSOT -- used by dashboard + schedule) ────────────────
+
+export const shiftColors: Record<string, string> = {
+  MORNING: "#fbbf24",
+  AFTERNOON: "#60a5fa",
+  NIGHT: "#818cf8",
+  DAY: "#34d399",
+  SPLIT: "#a78bfa",
+  CUSTOM: "#a8a29e",
+  REST_DAY: "#e7e5e4",
+};
+
+// ── RSVP Status Colors (SSOT -- used by group guests) ──────────────────────
+
+export const rsvpColors: Record<string, { bg: string; text: string }> = {
+  confirmed: { bg: "rgba(16,185,129,0.1)", text: "#10b981" },
+  declined: { bg: "rgba(239,68,68,0.1)", text: "#ef4444" },
+  pending: { bg: "rgba(245,158,11,0.1)", text: "#f59e0b" },
+};
 
 // ── Spacing (px values, NOT rem) ─────────────────────────────────────────────
 

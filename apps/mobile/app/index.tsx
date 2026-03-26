@@ -3,12 +3,15 @@
 // =============================================================================
 
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, fontWeight, radius, spacing, shadow } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import type { IconName } from "@/lib/icons";
+import { useFadeIn, useSlideUp, useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
 import { getAppMode, getPortalToken, getGroupTrackingId, getGroupToken, getEmployeeToken, logout, isTokenExpired } from "@/lib/auth";
@@ -16,9 +19,9 @@ import { portalFetch } from "@/lib/api";
 import { mapInitResponse } from "@/lib/portal-helpers";
 
 const MODES = [
-  { key: "guest" as const, icon: "🏨", route: "/(guest)/stay" },
-  { key: "group" as const, icon: "👥", route: "/(group)/overview" },
-  { key: "employee" as const, icon: "👷", route: "/(employee)/dashboard" },
+  { key: "guest" as const, icon: "bed-outline" as IconName, route: "/(guest)/stay" },
+  { key: "group" as const, icon: "people-outline" as IconName, route: "/(group)/overview" },
+  { key: "employee" as const, icon: "briefcase-outline" as IconName, route: "/(employee)/dashboard" },
 ] as const;
 
 
@@ -29,6 +32,12 @@ export default function ModeSelector() {
   const setStorePortalToken = useAppStore((s) => s.setPortalToken);
   const setPortalData = useGuestStore((s) => s.setPortalData);
   const [checking, setChecking] = useState(true);
+
+  const logoFade = useFadeIn(0);
+  const card0Slide = useSlideUp(100);
+  const card1Slide = useSlideUp(200);
+  const card2Slide = useSlideUp(300);
+  const cardSlides = [card0Slide, card1Slide, card2Slide];
 
   // Auto-resume last session — must hydrate Zustand from SecureStore
   useEffect(() => {
@@ -105,34 +114,24 @@ export default function ModeSelector() {
     <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}>
         {/* Logo */}
-        <View style={styles.logoArea}>
+        <Animated.View style={[styles.logoArea, logoFade]}>
           <View style={styles.logoCircle}>
-            <Text style={styles.logoStar}>★</Text>
+            <Icon name="star" size={28} color={NAVY} />
           </View>
           <Text style={styles.title}>{t(lang, "mode.title")}</Text>
           <Text style={styles.subtitle}>{t(lang, "mode.subtitle")}</Text>
-        </View>
+        </Animated.View>
 
         {/* Mode Cards */}
         <View style={styles.cards}>
           {MODES.map((mode, i) => (
-            <View key={mode.key}>
-              <Pressable
-                style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
-                onPress={() => handleMode(mode)}
-                accessibilityRole="button"
-                accessibilityLabel={t(lang, `mode.${mode.key}`)}
-              >
-                <View style={styles.cardIcon}>
-                  <Text style={styles.cardEmoji}>{mode.icon}</Text>
-                </View>
-                <View style={styles.cardText}>
-                  <Text style={styles.cardTitle}>{t(lang, `mode.${mode.key}`)}</Text>
-                  <Text style={styles.cardDesc}>{t(lang, `mode.${mode.key}Desc`)}</Text>
-                </View>
-                <Text style={styles.cardArrow}>›</Text>
-              </Pressable>
-            </View>
+            <ModeCard
+              key={mode.key}
+              mode={mode}
+              lang={lang}
+              slideStyle={cardSlides[i]}
+              onPress={() => handleMode(mode)}
+            />
           ))}
         </View>
 
@@ -142,6 +141,42 @@ export default function ModeSelector() {
         </View>
       </View>
     </LinearGradient>
+  );
+}
+
+function ModeCard({
+  mode,
+  lang,
+  slideStyle,
+  onPress,
+}: {
+  mode: typeof MODES[number];
+  lang: "pl" | "en";
+  slideStyle: { opacity: Animated.Value; transform: { translateY: Animated.Value }[] };
+  onPress: () => void;
+}) {
+  const { scaleStyle, onPressIn, onPressOut } = useScalePress();
+
+  return (
+    <Animated.View style={[slideStyle, scaleStyle]}>
+      <Pressable
+        style={styles.card}
+        onPress={onPress}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        accessibilityRole="button"
+        accessibilityLabel={t(lang, `mode.${mode.key}`)}
+      >
+        <View style={styles.cardIcon}>
+          <Icon name={mode.icon} size={24} color={GOLD} />
+        </View>
+        <View style={styles.cardText}>
+          <Text style={styles.cardTitle}>{t(lang, `mode.${mode.key}`)}</Text>
+          <Text style={styles.cardDesc}>{t(lang, `mode.${mode.key}Desc`)}</Text>
+        </View>
+        <Icon name="chevron-forward" size={22} color={GOLD} />
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -159,7 +194,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadow.gold,
   },
-  logoStar: { fontSize: 32, color: NAVY },
   title: {
     fontSize: fontSize["3xl"],
     fontFamily: "Inter_700Bold",
@@ -170,6 +204,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontFamily: "Inter_400Regular",
     color: guest.textSecondary,
+    lineHeight: 21,
   },
   cards: { gap: spacing.lg },
   card: {
@@ -182,7 +217,6 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     gap: spacing.lg,
   },
-  cardPressed: { opacity: 0.7, transform: [{ scale: 0.98 }] },
   cardIcon: {
     width: 52,
     height: 52,
@@ -193,7 +227,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  cardEmoji: { fontSize: 24 },
   cardText: { flex: 1, gap: 2 },
   cardTitle: {
     fontSize: fontSize.lg,
@@ -204,8 +237,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: "Inter_400Regular",
     color: guest.textSecondary,
+    lineHeight: 18,
   },
-  cardArrow: { fontSize: 28, color: GOLD, fontWeight: fontWeight.normal },
   footer: {
     textAlign: "center",
     fontSize: fontSize.xs,

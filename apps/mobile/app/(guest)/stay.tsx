@@ -2,10 +2,12 @@
 // Guest Portal -- Stay Tab (Member Card + Services + Contact)
 // =============================================================================
 
-import { View, Text, ScrollView, Pressable, StyleSheet, Linking } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, Linking, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { NAVY, NAVY_LIGHT, GOLD, GOLD_DARK, guest, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { useSlideUp } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { useGuestStore } from "@/lib/store";
@@ -33,6 +35,8 @@ export default function StayScreen() {
   // P1-7: Use program currency instead of hardcoded PLN
   const currency = program?.currency ?? "PLN";
 
+  const memberCardSlide = useSlideUp(100);
+
   if (!member || !program) {
     return (
       <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
@@ -58,35 +62,37 @@ export default function StayScreen() {
         </View>
 
         {/* Member Card */}
-        <View style={styles.memberCard}>
-          <LinearGradient
-            colors={[GOLD, "#c4a030"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.memberCardGradient}
-          >
-            <View style={styles.memberCardHeader}>
-              <Text style={styles.memberCardProgram}>{program.programName}</Text>
-              <Text style={styles.memberCardNumber}>#{member.memberNumber}</Text>
-            </View>
-
-            <Text style={styles.memberCardName}>
-              {member.firstName} {member.lastName}
-            </Text>
-
-            <View style={styles.memberCardPoints}>
-              <View>
-                <Text style={styles.pointsValue}>{member.availablePoints.toLocaleString()}</Text>
-                <Text style={styles.pointsLabel}>{t(lang, "stay.availablePoints")}</Text>
+        <Animated.View style={memberCardSlide}>
+          <View style={styles.memberCard}>
+            <LinearGradient
+              colors={[GOLD, GOLD_DARK]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.memberCardGradient}
+            >
+              <View style={styles.memberCardHeader}>
+                <Text style={styles.memberCardProgram}>{program.programName}</Text>
+                <Text style={styles.memberCardNumber}>#{member.memberNumber}</Text>
               </View>
-              {member.tier && (
-                <View style={styles.tierBadge}>
-                  <Text style={styles.tierText}>{member.tier.name}</Text>
+
+              <Text style={styles.memberCardName}>
+                {member.firstName} {member.lastName}
+              </Text>
+
+              <View style={styles.memberCardPoints}>
+                <View>
+                  <Text style={styles.pointsValue}>{member.availablePoints.toLocaleString()}</Text>
+                  <Text style={styles.pointsLabel}>{t(lang, "stay.availablePoints")}</Text>
                 </View>
-              )}
-            </View>
-          </LinearGradient>
-        </View>
+                {member.tier && (
+                  <View style={styles.tierBadge}>
+                    <Text style={styles.tierText}>{member.tier.name}</Text>
+                  </View>
+                )}
+              </View>
+            </LinearGradient>
+          </View>
+        </Animated.View>
 
         {/* Stats Grid */}
         <View style={styles.statsGrid}>
@@ -145,7 +151,7 @@ export default function StayScreen() {
             {/* P2-9: Use benefit string as key instead of index */}
             {member.tier.benefits.map((b) => (
               <View key={b} style={styles.benefitRow}>
-                <Text style={styles.benefitDot}>*</Text>
+                <Icon name="checkmark-circle" size={16} color={GOLD} />
                 <Text style={styles.benefitText}>{b}</Text>
               </View>
             ))}
@@ -164,7 +170,7 @@ export default function StayScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={t(lang, "hotel.call")}
                 >
-                  <Text style={styles.contactBtnIcon}>Tel</Text>
+                  <Icon name="call-outline" size={20} color={GOLD} />
                   <Text style={styles.contactBtnText}>{t(lang, "hotel.call")}</Text>
                 </Pressable>
               )}
@@ -175,7 +181,7 @@ export default function StayScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={t(lang, "hotel.sendEmail")}
                 >
-                  <Text style={styles.contactBtnIcon}>@</Text>
+                  <Icon name="mail-outline" size={20} color={GOLD} />
                   <Text style={styles.contactBtnText}>Email</Text>
                 </Pressable>
               )}
@@ -199,21 +205,24 @@ function StatCard({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  loadingText: { color: guest.textSecondary, fontSize: fontSize.base, fontFamily: "Inter_400Regular" },
+  loadingText: { color: guest.textSecondary, fontSize: fontSize.base, fontFamily: "Inter_400Regular", lineHeight: 21 },
   scroll: { paddingHorizontal: spacing.xl, gap: spacing.xl },
-  greeting: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text },
-  hotelName: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary, marginTop: 2 },
+  greeting: {
+    fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text,
+    letterSpacing: -0.3,
+  },
+  hotelName: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary, marginTop: 2, lineHeight: 18 },
   memberCard: { borderRadius: radius.xl, overflow: "hidden", ...shadow.gold },
   memberCardGradient: { padding: spacing.xl, gap: spacing.md },
   memberCardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   memberCardProgram: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold", color: NAVY, textTransform: "uppercase", letterSpacing: 1 },
-  memberCardNumber: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium", color: "rgba(13,34,54,0.6)" },
+  memberCardNumber: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium", color: guest.textOnGold },
   memberCardName: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: NAVY },
   memberCardPoints: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginTop: spacing.sm },
-  pointsValue: { fontSize: fontSize["3xl"], fontFamily: "Inter_700Bold", color: NAVY },
-  pointsLabel: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: "rgba(13,34,54,0.6)" },
+  pointsValue: { fontSize: fontSize["3xl"], fontFamily: "Inter_700Bold", color: NAVY, letterSpacing: -0.5 },
+  pointsLabel: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textOnGold },
   tierBadge: {
-    backgroundColor: "rgba(13,34,54,0.15)", borderRadius: radius.full,
+    backgroundColor: guest.tierBadgeBg, borderRadius: radius.full,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
   },
   tierText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: NAVY },
@@ -238,14 +247,13 @@ const styles = StyleSheet.create({
   progressFill: { height: "100%", backgroundColor: GOLD, borderRadius: 3 },
   progressText: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textSecondary },
   warningCard: {
-    backgroundColor: "rgba(245,158,11,0.1)", borderRadius: radius.lg,
-    borderWidth: 1, borderColor: "rgba(245,158,11,0.2)",
+    backgroundColor: guest.warningBg, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: guest.warningBorder,
     padding: spacing.lg,
   },
-  warningText: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: "#fcd34d" },
-  benefitRow: { flexDirection: "row", gap: spacing.sm },
-  benefitDot: { color: GOLD, fontSize: fontSize.base },
-  benefitText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary, flex: 1 },
+  warningText: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: guest.warningText, lineHeight: 18 },
+  benefitRow: { flexDirection: "row", gap: spacing.sm, alignItems: "center" },
+  benefitText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary, flex: 1, lineHeight: 18 },
   contactRow: { flexDirection: "row", gap: spacing.md },
   contactBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
@@ -253,6 +261,5 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: guest.glassBorder,
     paddingVertical: spacing.md, minHeight: 44,
   },
-  contactBtnIcon: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: GOLD },
   contactBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: guest.text },
 });

@@ -5,12 +5,14 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import {
   View, Text, FlatList, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { group, fontSize, radius, spacing } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
@@ -25,6 +27,8 @@ export default function GroupMessagesScreen() {
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const flatListRef = useRef<FlatList>(null);
+
+  const { scaleStyle, onPressIn, onPressOut } = useScalePress();
 
   const { data: msgData, isLoading } = useQuery({
     queryKey: ["group-messages", trackingId],
@@ -137,15 +141,19 @@ export default function GroupMessagesScreen() {
             multiline
             maxLength={2000}
           />
-          <Pressable
-            style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            disabled={!text.trim() || sendMutation.isPending}
-            accessibilityRole="button"
-            accessibilityLabel={t(lang, "messages.send")}
-          >
-            <Text style={styles.sendBtnText}>↑</Text>
-          </Pressable>
+          <Animated.View style={scaleStyle}>
+            <Pressable
+              style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              disabled={!text.trim() || sendMutation.isPending}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "messages.send")}
+            >
+              <Icon name="arrow-up" size={20} color="#FFFFFF" />
+            </Pressable>
+          </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -158,7 +166,7 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, borderBottomWidth: 0.5, borderBottomColor: group.cardBorder },
   title: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: group.text },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted },
+  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, lineHeight: 18 },
   listContent: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md, gap: spacing.sm },
   msgRow: { alignItems: "flex-start", maxWidth: "80%" },
   msgRowOrg: { alignSelf: "flex-end", alignItems: "flex-end" },
@@ -166,25 +174,24 @@ const styles = StyleSheet.create({
   bubbleOrg: { backgroundColor: group.primary, borderBottomRightRadius: 4 },
   bubbleParticipant: { backgroundColor: group.card, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: group.cardBorder },
   msgSender: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold", color: group.primary, marginBottom: 2 },
-  msgSenderOrg: { color: "rgba(255,255,255,0.7)" },
-  msgText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, lineHeight: 20 },
+  msgSenderOrg: { color: group.overlayWhite70 },
+  msgText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, lineHeight: 21 },
   msgTextOrg: { color: "#FFFFFF" },
   msgTime: { fontSize: 10, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 4, alignSelf: "flex-end" },
-  msgTimeOrg: { color: "rgba(255,255,255,0.6)" },
+  msgTimeOrg: { color: group.overlayWhite60 },
   inputBar: {
     flexDirection: "row", alignItems: "flex-end", gap: spacing.sm,
     paddingHorizontal: spacing.xl, paddingTop: spacing.sm,
-    borderTopWidth: 0.5, borderTopColor: group.cardBorder, backgroundColor: "rgba(255,255,255,0.95)",
+    borderTopWidth: 0.5, borderTopColor: group.cardBorder, backgroundColor: group.overlayWhite70,
   },
   input: {
-    flex: 1, backgroundColor: "rgba(0,0,0,0.04)", borderWidth: 1, borderColor: group.cardBorder,
+    flex: 1, backgroundColor: group.inputBg, borderWidth: 1, borderColor: group.cardBorder,
     borderRadius: radius.xl, paddingHorizontal: spacing.lg, paddingVertical: 10,
-    fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, maxHeight: 120,
+    fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, maxHeight: 120, lineHeight: 21,
   },
   sendBtn: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: group.primary, alignItems: "center", justifyContent: "center",
   },
-  sendBtnDisabled: { backgroundColor: "rgba(0,0,0,0.08)" },
-  sendBtnText: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#FFFFFF" },
+  sendBtnDisabled: { backgroundColor: group.disabledBg },
 });

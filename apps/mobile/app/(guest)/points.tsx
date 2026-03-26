@@ -7,7 +7,9 @@ import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator } from "
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing, semantic } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { configureListAnimation } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
 import { portalFetch } from "@/lib/api";
@@ -22,6 +24,11 @@ export default function PointsScreen() {
   const member = useGuestStore((s) => s.member);
   const program = useGuestStore((s) => s.program);
   const [section, setSection] = useState<Section>("history");
+
+  const handleSectionChange = (key: Section) => {
+    configureListAnimation();
+    setSection(key);
+  };
 
   // P1-14: Destructure isError from all 3 queries
   const { data: transactions, isLoading: loadingTx, isError: errorTx, refetch: refetchTx } = useQuery({
@@ -90,7 +97,7 @@ export default function PointsScreen() {
           <Pressable
             key={s.key}
             style={[styles.tab, section === s.key && styles.tabActive]}
-            onPress={() => setSection(s.key)}
+            onPress={() => handleSectionChange(s.key)}
             accessibilityRole="tab"
             accessibilityState={{ selected: section === s.key }}
           >
@@ -129,7 +136,7 @@ export default function PointsScreen() {
             <View style={styles.badgeGrid}>
               {badgeData.earned.map((b) => (
                 <View key={b.id} style={styles.badge}>
-                  <Text style={styles.badgeIcon}>{b.emoji || "M"}</Text>
+                  <Icon name="ribbon" size={28} color={GOLD} />
                   <Text style={styles.badgeName}>{b.name}</Text>
                 </View>
               ))}
@@ -142,7 +149,7 @@ export default function PointsScreen() {
             <View style={styles.badgeGrid}>
               {badgeData.available.map((b) => (
                 <View key={b.id} style={[styles.badge, styles.badgeLocked]}>
-                  <Text style={styles.badgeIcon}>{b.emoji || "?"}</Text>
+                  <Icon name="ribbon-outline" size={28} color={guest.textMuted} />
                   <Text style={styles.badgeName}>{b.name}</Text>
                 </View>
               ))}
@@ -248,7 +255,7 @@ const ChallengeCard = React.memo(function ChallengeCard({ challenge: c, lang, po
     <View style={styles.challengeCard}>
       <View style={styles.challengeHeader}>
         <Text style={styles.challengeName}>{c.name}</Text>
-        {isComplete && <Text style={styles.challengeComplete}>OK</Text>}
+        {isComplete && <Icon name="checkmark-circle" size={18} color={semantic.success} />}
       </View>
       {c.description && <Text style={styles.challengeDesc}>{c.description}</Text>}
       <View style={styles.progressBar}>
@@ -300,8 +307,8 @@ const styles = StyleSheet.create({
   txDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
   txRight: { alignItems: "flex-end", gap: 2 },
   txPoints: { fontSize: fontSize.lg, fontFamily: "Inter_700Bold" },
-  txPositive: { color: "#6ee7b7" },
-  txNegative: { color: "#fca5a5" },
+  txPositive: { color: semantic.successLight },
+  txNegative: { color: semantic.dangerLight },
   txDate: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
   challengeCard: {
     backgroundColor: guest.card, borderRadius: radius.lg, borderWidth: 1, borderColor: guest.cardBorder,
@@ -309,8 +316,7 @@ const styles = StyleSheet.create({
   },
   challengeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   challengeName: { fontSize: fontSize.base, fontFamily: "Inter_600SemiBold", color: guest.text, flex: 1 },
-  challengeComplete: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#6ee7b7" },
-  challengeDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
+  challengeDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted, lineHeight: 18 },
   progressBar: { height: 6, borderRadius: 3, backgroundColor: guest.glassBorder, overflow: "hidden" },
   progressFill: { height: "100%", backgroundColor: GOLD, borderRadius: 3 },
   challengeFooter: { flexDirection: "row", justifyContent: "space-between" },
@@ -323,6 +329,5 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   badgeLocked: { opacity: 0.5 },
-  badgeIcon: { fontSize: 28, fontFamily: "Inter_700Bold", color: GOLD },
   badgeName: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium", color: guest.text, textAlign: "center" },
 });

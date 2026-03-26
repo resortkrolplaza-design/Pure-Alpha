@@ -92,12 +92,12 @@ export default function PhotosScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
   header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text },
-  count: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2 },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: -0.3 },
+  count: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2, lineHeight: 18 },
   list: { paddingHorizontal: spacing.xl },
   row: { gap: COLUMN_GAP, marginBottom: COLUMN_GAP },
   photoWrapper: {},
-  photoFallback: { borderRadius: radius.sm, backgroundColor: "rgba(0,0,0,0.06)" },
+  photoFallback: { borderRadius: radius.sm, backgroundColor: group.photoFallback },
   photoCaption: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2 },
-  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"] },
+  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"], lineHeight: 18 },
 });

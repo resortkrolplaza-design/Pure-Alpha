@@ -3,25 +3,16 @@
 // =============================================================================
 
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet } from "react-native";
+import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { employee, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { employee, fontSize, radius, spacing, shadow, shiftColors } from "@/lib/tokens";
+import { useFadeIn, useSlideUp } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { employeeFetch } from "@/lib/employee-api";
 import type { DashboardData, ShiftData } from "@/lib/types";
-
-const SHIFT_TYPE_COLORS: Record<string, string> = {
-  MORNING: "#fbbf24",
-  AFTERNOON: "#60a5fa",
-  NIGHT: "#818cf8",
-  DAY: "#34d399",
-  SPLIT: "#a78bfa",
-  CUSTOM: "#a8a29e",
-  REST_DAY: "#e7e5e4",
-};
 
 function getGreetingKey(): string {
   const h = new Date().getHours();
@@ -36,6 +27,9 @@ export default function DashboardScreen() {
   const lang = useAppStore((s) => s.lang);
   const employeeName = useAppStore((s) => s.employeeName);
   const [refreshing, setRefreshing] = useState(false);
+
+  const fadeStyle = useFadeIn();
+  const slideStyle = useSlideUp(100);
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["employee-dashboard"],
@@ -61,12 +55,12 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={employee.brand} />}
       >
-        <View>
+        <Animated.View style={fadeStyle}>
           <Text style={styles.greeting}>
             {t(lang, getGreetingKey())}{employeeName ? `, ${employeeName}` : ""}
           </Text>
           <Text style={styles.subtitle}>Pure Alpha Employee App</Text>
-        </View>
+        </Animated.View>
 
         {/* Error State */}
         {isError && (
@@ -84,11 +78,11 @@ export default function DashboardScreen() {
         )}
 
         {/* Today's Shift */}
-        <View style={[styles.card, styles.shiftCard]}>
+        <Animated.View style={[styles.card, styles.shiftCard, slideStyle]}>
           <View style={styles.shiftHeader}>
             <Text style={styles.shiftTitle}>{t(lang, "emp.todayShift")}</Text>
             {data?.todayShift && (
-              <View style={[styles.shiftBadge, { backgroundColor: SHIFT_TYPE_COLORS[data.todayShift.shiftType] ?? employee.accent }]}>
+              <View style={[styles.shiftBadge, { backgroundColor: shiftColors[data.todayShift.shiftType] ?? employee.accent }]}>
                 <Text style={styles.shiftBadgeText}>{t(lang, `emp.shift.${data.todayShift.shiftType}`)}</Text>
               </View>
             )}
@@ -105,7 +99,7 @@ export default function DashboardScreen() {
               {isLoading ? t(lang, "common.loading") : t(lang, "emp.noShift")}
             </Text>
           )}
-        </View>
+        </Animated.View>
 
         {/* Week Stats */}
         <View style={styles.statsRow}>
@@ -140,7 +134,7 @@ export default function DashboardScreen() {
 }
 
 function ShiftRow({ shift, lang, locale }: { shift: ShiftData; lang: "pl" | "en"; locale: string }) {
-  const color = SHIFT_TYPE_COLORS[shift.shiftType] ?? employee.accent;
+  const color = shiftColors[shift.shiftType] ?? employee.accent;
   return (
     <View style={styles.upcomingCard}>
       <View style={[styles.upcomingDot, { backgroundColor: color }]} />
@@ -158,21 +152,21 @@ function ShiftRow({ shift, lang, locale }: { shift: ShiftData; lang: "pl" | "en"
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: spacing.xl, gap: spacing.xl },
-  greeting: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: employee.text },
-  subtitle: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textSecondary, marginTop: 2 },
+  greeting: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: employee.text, letterSpacing: -0.3 },
+  subtitle: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textSecondary, marginTop: 2, lineHeight: 18 },
   card: {
     backgroundColor: employee.card, borderRadius: radius.xl, borderWidth: 1, borderColor: employee.cardBorder,
     padding: spacing.xl, gap: spacing.md, ...shadow.sm,
   },
   shiftCard: { borderLeftWidth: 4, borderLeftColor: employee.brand },
   shiftHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  shiftTitle: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: employee.text },
+  shiftTitle: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: employee.text, lineHeight: 24 },
   shiftBadge: { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 2 },
   shiftBadgeText: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold", color: employee.text },
   shiftDetails: { gap: 4 },
   shiftTime: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: employee.brand },
-  shiftDept: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textSecondary },
-  placeholder: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textMuted },
+  shiftDept: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textSecondary, lineHeight: 18 },
+  placeholder: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textMuted, lineHeight: 18 },
   statsRow: { flexDirection: "row", gap: spacing.md },
   statCard: {
     flex: 1, backgroundColor: employee.card, borderRadius: radius.lg, borderWidth: 1, borderColor: employee.cardBorder,
@@ -180,7 +174,7 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: employee.brand },
   statLabel: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: employee.textSecondary },
-  sectionTitle: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: employee.text, marginBottom: spacing.sm },
+  sectionTitle: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: employee.text, marginBottom: spacing.sm, lineHeight: 24 },
   upcomingCard: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: employee.card, borderRadius: radius.md, borderWidth: 1, borderColor: employee.cardBorder,
@@ -188,7 +182,7 @@ const styles = StyleSheet.create({
   },
   upcomingDot: { width: 8, height: 8, borderRadius: 4 },
   upcomingInfo: { flex: 1, gap: 2 },
-  upcomingDate: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: employee.text },
+  upcomingDate: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: employee.text, lineHeight: 18 },
   upcomingTime: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: employee.textSecondary },
   upcomingType: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold", color: employee.textMuted },
   retryBtn: {

@@ -3,15 +3,12 @@
 // =============================================================================
 
 import { Tabs } from "expo-router";
-import { Platform, StyleSheet, Text } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { group, fontSize } from "@/lib/tokens";
+import { TabIcon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-
-function TabIcon({ emoji, label }: { emoji: string; label: string }) {
-  return <Text style={{ fontSize: 22 }} accessibilityLabel={label}>{emoji}</Text>;
-}
 
 export default function GroupLayout() {
   const lang = useAppStore((s) => s.lang);
@@ -27,11 +24,11 @@ export default function GroupLayout() {
       }}
       screenListeners={{ tabPress: () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } }}
     >
-      <Tabs.Screen name="overview" options={{ title: t(lang, "group.tab.overview"), tabBarIcon: () => <TabIcon emoji="📋" label={t(lang, "group.tab.overview")} /> }} />
-      <Tabs.Screen name="guests" options={{ title: t(lang, "group.tab.guests"), tabBarIcon: () => <TabIcon emoji="👥" label={t(lang, "group.tab.guests")} /> }} />
-      <Tabs.Screen name="messages" options={{ title: t(lang, "group.tab.messages"), tabBarIcon: () => <TabIcon emoji="💬" label={t(lang, "group.tab.messages")} /> }} />
-      <Tabs.Screen name="documents" options={{ title: t(lang, "group.tab.documents"), tabBarIcon: () => <TabIcon emoji="📄" label={t(lang, "group.tab.documents")} /> }} />
-      <Tabs.Screen name="photos" options={{ title: t(lang, "group.tab.photos"), tabBarIcon: () => <TabIcon emoji="📸" label={t(lang, "group.tab.photos")} /> }} />
+      <Tabs.Screen name="overview" options={{ title: t(lang, "group.tab.overview"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="clipboard" inactiveName="clipboard-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
+      <Tabs.Screen name="guests" options={{ title: t(lang, "group.tab.guests"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="people" inactiveName="people-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
+      <Tabs.Screen name="messages" options={{ title: t(lang, "group.tab.messages"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="chatbubbles" inactiveName="chatbubbles-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
+      <Tabs.Screen name="documents" options={{ title: t(lang, "group.tab.documents"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="document-text" inactiveName="document-text-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
+      <Tabs.Screen name="photos" options={{ title: t(lang, "group.tab.photos"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="camera" inactiveName="camera-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
     </Tabs>
   );
 }

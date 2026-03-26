@@ -3,10 +3,12 @@
 // =============================================================================
 
 import { useMemo, useState, useCallback } from "react";
-import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable } from "react-native";
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable, Animated } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { useSlideUp, configureListAnimation } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
@@ -18,6 +20,8 @@ export default function OverviewScreen() {
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
   const [showAllAgenda, setShowAllAgenda] = useState(false);
+
+  const countdownSlide = useSlideUp(100);
 
   const { data: agenda, isError: isAgendaError, refetch: refetchAgenda } = useQuery({
     queryKey: ["group-agenda", trackingId],
@@ -88,6 +92,11 @@ export default function OverviewScreen() {
     return showAllAgenda ? agenda : agenda.slice(0, 5);
   }, [agenda, showAllAgenda]);
 
+  const handleSeeAll = useCallback(() => {
+    configureListAnimation();
+    setShowAllAgenda(true);
+  }, []);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -107,11 +116,13 @@ export default function OverviewScreen() {
         )}
 
         {/* Countdown Card */}
-        <View style={styles.countdownCard} accessibilityLabel={`${t(lang, "group.countdown")}: ${countdownText}`}>
-          <Text style={styles.countdownLabel}>{t(lang, "group.countdown")}</Text>
-          <Text style={styles.countdownValue}>{countdownText}</Text>
-          {countdownSubText ? <Text style={styles.countdownSub}>{countdownSubText}</Text> : null}
-        </View>
+        <Animated.View style={countdownSlide}>
+          <View style={styles.countdownCard} accessibilityLabel={`${t(lang, "group.countdown")}: ${countdownText}`}>
+            <Text style={styles.countdownLabel}>{t(lang, "group.countdown")}</Text>
+            <Text style={styles.countdownValue}>{countdownText}</Text>
+            {countdownSubText ? <Text style={styles.countdownSub}>{countdownSubText}</Text> : null}
+          </View>
+        </Animated.View>
 
         {/* Pinned Announcements */}
         {pinnedAnnouncements.length > 0 && (
@@ -120,7 +131,7 @@ export default function OverviewScreen() {
             {pinnedAnnouncements.map((a) => (
               <View key={a.id} style={styles.announcementCard}>
                 <View style={styles.pinBadge}>
-                  <Text style={styles.pinText}>📌</Text>
+                  <Icon name="pin" size={14} color={group.primary} />
                 </View>
                 <Text style={styles.announcementText}>{a.content}</Text>
                 <Text style={styles.announcementDate}>
@@ -158,7 +169,7 @@ export default function OverviewScreen() {
               {agenda.length > 5 && !showAllAgenda && (
                 <Pressable
                   style={styles.seeAllBtn}
-                  onPress={() => setShowAllAgenda(true)}
+                  onPress={handleSeeAll}
                   accessibilityRole="button"
                   accessibilityLabel={t(lang, "common.seeAll")}
                 >
@@ -176,27 +187,26 @@ export default function OverviewScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
   scroll: { paddingHorizontal: spacing.xl, gap: spacing.xl },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: -0.3 },
   countdownCard: {
     backgroundColor: group.primary, borderRadius: radius.xl, padding: spacing.xl,
     alignItems: "center", gap: spacing.sm, ...shadow.md,
   },
-  countdownLabel: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.7)" },
+  countdownLabel: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: group.overlayWhite70, lineHeight: 18 },
   countdownValue: { fontSize: fontSize["4xl"], fontFamily: "Inter_700Bold", color: "#FFFFFF" },
-  countdownSub: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.6)", textAlign: "center" },
-  sectionTitle: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: group.text, marginBottom: spacing.sm },
+  countdownSub: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.overlayWhite60, textAlign: "center" },
+  sectionTitle: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: group.text, marginBottom: spacing.sm, lineHeight: 24 },
   card: {
     backgroundColor: group.card, borderRadius: radius.lg, borderWidth: 1, borderColor: group.cardBorder,
     padding: spacing.xl, ...shadow.sm,
   },
-  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center" },
+  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", lineHeight: 18 },
   announcementCard: {
     backgroundColor: group.card, borderRadius: radius.lg, borderWidth: 1, borderColor: group.cardBorder,
     padding: spacing.lg, marginBottom: spacing.sm, ...shadow.sm,
   },
   pinBadge: { position: "absolute", top: spacing.sm, right: spacing.sm },
-  pinText: { fontSize: 14 },
-  announcementText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, lineHeight: 22 },
+  announcementText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, lineHeight: 21 },
   announcementDate: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: spacing.sm },
   agendaItem: {
     flexDirection: "row", backgroundColor: group.card, borderRadius: radius.md,
@@ -205,11 +215,11 @@ const styles = StyleSheet.create({
   },
   agendaTime: {
     width: 56, alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(99,102,241,0.1)", borderRadius: radius.sm, paddingVertical: spacing.xs,
+    backgroundColor: group.primaryLight, borderRadius: radius.sm, paddingVertical: spacing.xs,
   },
   agendaTimeText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.primary },
   agendaInfo: { flex: 1, gap: 2 },
-  agendaTitle: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text },
+  agendaTitle: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text, lineHeight: 21 },
   agendaLocation: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted },
   seeAllBtn: {
     alignSelf: "center", paddingVertical: spacing.md, paddingHorizontal: spacing.xl,

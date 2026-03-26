@@ -3,11 +3,13 @@
 // =============================================================================
 
 import { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { employee, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { employee, fontSize, radius, spacing, shadow, destructive } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { logout, getEmployeeToken } from "@/lib/auth";
@@ -44,6 +46,7 @@ export default function ProfileScreen() {
   const lang = useAppStore((s) => s.lang);
   const reset = useAppStore((s) => s.reset);
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
+  const { scaleStyle, onPressIn, onPressOut } = useScalePress();
 
   useEffect(() => {
     (async () => {
@@ -93,7 +96,7 @@ export default function ProfileScreen() {
         {/* Employee Info Card */}
         <View style={styles.card}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{"\u{1F464}"}</Text>
+            <Icon name="person" size={28} color={employee.brand} />
           </View>
           <Text style={styles.name}>{profile?.name || t(lang, "emp.tab.profile")}</Text>
           <Text style={styles.meta}>
@@ -107,14 +110,18 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <View>
-          <Pressable
-            style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
-            onPress={handleLogout}
-            accessibilityRole="button"
-            accessibilityLabel={t(lang, "auth.logout")}
-          >
-            <Text style={styles.logoutText}>{t(lang, "auth.logout")}</Text>
-          </Pressable>
+          <Animated.View style={scaleStyle}>
+            <Pressable
+              style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
+              onPress={handleLogout}
+              onPressIn={onPressIn}
+              onPressOut={onPressOut}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "auth.logout")}
+            >
+              <Text style={styles.logoutText}>{t(lang, "auth.logout")}</Text>
+            </Pressable>
+          </Animated.View>
 
           <Text style={styles.version}>Pure Alpha Employee App v1.0</Text>
         </View>
@@ -126,7 +133,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: spacing.xl, gap: spacing.xl },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: employee.text },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: employee.text, letterSpacing: -0.3 },
   card: {
     backgroundColor: employee.card, borderRadius: radius.xl, borderWidth: 1, borderColor: employee.cardBorder,
     padding: spacing.xl, alignItems: "center", gap: spacing.md, ...shadow.sm,
@@ -135,15 +142,14 @@ const styles = StyleSheet.create({
     width: 64, height: 64, borderRadius: 32,
     backgroundColor: employee.accent, alignItems: "center", justifyContent: "center",
   },
-  avatarText: { fontSize: 28 },
   name: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: employee.text },
-  meta: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textMuted, textAlign: "center" },
+  meta: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textMuted, textAlign: "center", lineHeight: 18 },
   spacer: { flex: 1 },
   logoutBtn: {
-    backgroundColor: "#fef2f2", borderRadius: radius.full, borderWidth: 1, borderColor: "#fecaca",
+    backgroundColor: destructive.bg, borderRadius: radius.full, borderWidth: 1, borderColor: destructive.border,
     paddingVertical: 14, alignItems: "center",
   },
   logoutBtnPressed: { opacity: 0.7 },
-  logoutText: { fontSize: fontSize.base, fontFamily: "Inter_600SemiBold", color: "#dc2626" },
+  logoutText: { fontSize: fontSize.base, fontFamily: "Inter_600SemiBold", color: destructive.text },
   version: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: employee.textMuted, textAlign: "center", marginTop: spacing.xl },
 });

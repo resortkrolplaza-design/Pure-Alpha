@@ -3,13 +3,14 @@
 // =============================================================================
 
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { useScalePress } from "@/lib/animations";
 import { t, type Lang } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
 import { portalFetch } from "@/lib/api";
@@ -129,15 +130,14 @@ export default function RewardsScreen() {
           <View style={styles.grid}>
             {/* P3-2: Remove unused variable i */}
             {rewards.map((r) => (
-              <View key={r.id}>
-                <RewardCard
-                  reward={r}
-                  lang={lang}
-                  pointsName={program?.pointsName ?? "pkt"}
-                  onRedeem={() => handleRedeem(r)}
-                  isRedeeming={redeemingId === r.id}
-                />
-              </View>
+              <RewardCard
+                key={r.id}
+                reward={r}
+                lang={lang}
+                pointsName={program?.pointsName ?? "pkt"}
+                onRedeem={() => handleRedeem(r)}
+                isRedeeming={redeemingId === r.id}
+              />
             ))}
           </View>
         )}
@@ -153,48 +153,57 @@ function RewardCard({
 }) {
   const catKey = `rewards.cat.${r.category}` as const;
   const blocked = !r.canRedeem;
+  const { scaleStyle, onPressIn, onPressOut } = useScalePress();
 
   return (
-    <View style={styles.card}>
-      {r.imageUrl && (
-        <Image
-          source={{ uri: r.imageUrl }}
-          style={styles.cardImage}
-          resizeMode="cover"
-          // P3-7: Add accessibilityLabel to reward image
-          accessibilityLabel={r.name}
-        />
-      )}
-      <View style={styles.cardBody}>
-        <Text style={styles.cardCategory}>{t(lang, catKey)}</Text>
-        <Text style={styles.cardName}>{r.name}</Text>
-        {r.description && <Text style={styles.cardDesc} numberOfLines={2}>{r.description}</Text>}
-        <View style={styles.cardFooter}>
-          <Text style={styles.cardCost}>{r.pointsCost.toLocaleString()} {pointsName}</Text>
-          <Pressable
-            style={[styles.redeemBtn, blocked && styles.redeemBtnDisabled]}
-            onPress={onRedeem}
-            disabled={blocked || isRedeeming}
-            accessibilityRole="button"
-            accessibilityLabel={`${t(lang, "rewards.redeem")} ${r.name}`}
-          >
-            <Text style={[styles.redeemBtnText, blocked && styles.redeemBtnTextDisabled]}>
-              {/* P1-12: Use getBlockReason for all blocking reasons */}
-              {blocked
-                ? getBlockReason(r.reasonsBlocked, lang)
-                : t(lang, "rewards.redeem")}
-            </Text>
-          </Pressable>
+    <Animated.View style={scaleStyle}>
+      <Pressable
+        onPress={onRedeem}
+        onPressIn={onPressIn}
+        onPressOut={onPressOut}
+        disabled={blocked || isRedeeming}
+        accessibilityRole="button"
+        accessibilityLabel={`${t(lang, "rewards.redeem")} ${r.name}`}
+      >
+        <View style={styles.card}>
+          {r.imageUrl && (
+            <Image
+              source={{ uri: r.imageUrl }}
+              style={styles.cardImage}
+              resizeMode="cover"
+              // P3-7: Add accessibilityLabel to reward image
+              accessibilityLabel={r.name}
+            />
+          )}
+          <View style={styles.cardBody}>
+            <Text style={styles.cardCategory}>{t(lang, catKey)}</Text>
+            <Text style={styles.cardName}>{r.name}</Text>
+            {r.description && <Text style={styles.cardDesc} numberOfLines={2}>{r.description}</Text>}
+            <View style={styles.cardFooter}>
+              <Text style={styles.cardCost}>{r.pointsCost.toLocaleString()} {pointsName}</Text>
+              <View style={[styles.redeemBtn, blocked && styles.redeemBtnDisabled]}>
+                <Text style={[styles.redeemBtnText, blocked && styles.redeemBtnTextDisabled]}>
+                  {/* P1-12: Use getBlockReason for all blocking reasons */}
+                  {blocked
+                    ? getBlockReason(r.reasonsBlocked, lang)
+                    : t(lang, "rewards.redeem")}
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
-      </View>
-    </View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: spacing.xl, gap: spacing.xl },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text },
+  title: {
+    fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text,
+    letterSpacing: -0.3,
+  },
   pointsBadge: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: GOLD, marginTop: 4 },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textMuted, textAlign: "center", paddingVertical: spacing["3xl"] },
   errorContainer: { alignItems: "center", gap: spacing.md, paddingVertical: spacing["3xl"] },
@@ -213,7 +222,7 @@ const styles = StyleSheet.create({
   cardBody: { padding: spacing.lg, gap: spacing.sm },
   cardCategory: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium", color: GOLD, textTransform: "uppercase", letterSpacing: 0.5 },
   cardName: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: guest.text },
-  cardDesc: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textMuted },
+  cardDesc: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textMuted, lineHeight: 18 },
   cardFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: spacing.sm },
   cardCost: { fontSize: fontSize.base, fontFamily: "Inter_700Bold", color: GOLD },
   redeemBtn: {

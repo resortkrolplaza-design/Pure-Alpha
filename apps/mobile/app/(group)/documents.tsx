@@ -6,6 +6,8 @@ import { View, Text, FlatList, Pressable, StyleSheet, Linking, RefreshControl } 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import type { IconName } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
@@ -24,12 +26,12 @@ function isUrlAllowed(urlStr: string): boolean {
   }
 }
 
-const FILE_ICONS: Record<string, string> = {
-  "application/pdf": "📄",
-  "image/jpeg": "🖼️",
-  "image/png": "🖼️",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "📊",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "📝",
+const FILE_ICONS: Record<string, IconName> = {
+  "application/pdf": "document-text-outline",
+  "image/jpeg": "image-outline",
+  "image/png": "image-outline",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "bar-chart-outline",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "create-outline",
 };
 
 function formatFileSize(bytes: number): string {
@@ -67,7 +69,7 @@ export default function DocumentsScreen() {
   }, []);
 
   const renderDocument = useCallback(({ item: doc }: { item: GroupDocumentData }) => {
-    const icon = FILE_ICONS[doc.fileType] ?? "📎";
+    const iconName = FILE_ICONS[doc.fileType] ?? "attach-outline";
     return (
       <Pressable
         style={({ pressed }) => [styles.docCard, pressed && styles.docCardPressed]}
@@ -75,14 +77,14 @@ export default function DocumentsScreen() {
         accessibilityRole="button"
         accessibilityLabel={`${t(lang, "group.tab.documents")}: ${doc.title}`}
       >
-        <Text style={styles.docIcon}>{icon}</Text>
+        <Icon name={iconName} size={28} color={group.primary} />
         <View style={styles.docInfo}>
           <Text style={styles.docTitle} numberOfLines={1}>{doc.title}</Text>
           <Text style={styles.docMeta}>
             {formatFileSize(doc.fileSize)} · {new Date(doc.createdAt).toLocaleDateString(lang === "pl" ? "pl-PL" : "en-GB")}
           </Text>
         </View>
-        <Text style={styles.downloadIcon}>⬇️</Text>
+        <Icon name="download-outline" size={18} color={group.textMuted} />
       </Pressable>
     );
   }, [lang, handleDownload]);
@@ -113,7 +115,7 @@ export default function DocumentsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
   header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: -0.3 },
   list: { paddingHorizontal: spacing.xl, gap: spacing.sm },
   docCard: {
     flexDirection: "row", alignItems: "center",
@@ -121,10 +123,8 @@ const styles = StyleSheet.create({
     padding: spacing.lg, gap: spacing.md, ...shadow.sm, minHeight: 44,
   },
   docCardPressed: { opacity: 0.7 },
-  docIcon: { fontSize: 28 },
   docInfo: { flex: 1, gap: 2 },
-  docTitle: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text },
+  docTitle: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text, lineHeight: 21 },
   docMeta: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted },
-  downloadIcon: { fontSize: 18 },
-  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"] },
+  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"], lineHeight: 18 },
 });

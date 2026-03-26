@@ -3,15 +3,12 @@
 // =============================================================================
 
 import { Tabs } from "expo-router";
-import { Platform, StyleSheet, Text } from "react-native";
+import { Platform, StyleSheet } from "react-native";
 import * as Haptics from "expo-haptics";
 import { employee, fontSize } from "@/lib/tokens";
+import { TabIcon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-
-function TabIcon({ label }: { label: string }) {
-  return <Text accessible={false} style={{ fontSize: 22 }}>{label}</Text>;
-}
 
 export default function EmployeeLayout() {
   const lang = useAppStore((s) => s.lang);
@@ -27,10 +24,66 @@ export default function EmployeeLayout() {
       }}
       screenListeners={{ tabPress: () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } }}
     >
-      <Tabs.Screen name="dashboard" options={{ title: t(lang, "emp.tab.home"), tabBarIcon: () => <TabIcon label={"\u{1F3E0}"} /> }} />
-      <Tabs.Screen name="schedule" options={{ title: t(lang, "emp.tab.schedule"), tabBarIcon: () => <TabIcon label={"\u{1F4C5}"} /> }} />
-      <Tabs.Screen name="chat" options={{ title: t(lang, "emp.tab.chat"), tabBarIcon: () => <TabIcon label={"\u{1F4AC}"} /> }} />
-      <Tabs.Screen name="profile" options={{ title: t(lang, "emp.tab.profile"), tabBarIcon: () => <TabIcon label={"\u{1F464}"} /> }} />
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          title: t(lang, "emp.tab.home"),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              active={focused}
+              activeName="home"
+              inactiveName="home-outline"
+              activeColor={employee.brand}
+              inactiveColor={employee.textMuted}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="schedule"
+        options={{
+          title: t(lang, "emp.tab.schedule"),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              active={focused}
+              activeName="calendar"
+              inactiveName="calendar-outline"
+              activeColor={employee.brand}
+              inactiveColor={employee.textMuted}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: t(lang, "emp.tab.chat"),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              active={focused}
+              activeName="chatbubble-ellipses"
+              inactiveName="chatbubble-ellipses-outline"
+              activeColor={employee.brand}
+              inactiveColor={employee.textMuted}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: t(lang, "emp.tab.profile"),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              active={focused}
+              activeName="person"
+              inactiveName="person-outline"
+              activeColor={employee.brand}
+              inactiveColor={employee.textMuted}
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

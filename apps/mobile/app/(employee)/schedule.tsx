@@ -8,7 +8,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { employee, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { employee, fontSize, radius, spacing, shadow, shiftColors } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { employeeFetch } from "@/lib/employee-api";
@@ -18,16 +19,6 @@ const DAY_LABEL_KEYS = [
   "emp.day.mon", "emp.day.tue", "emp.day.wed", "emp.day.thu",
   "emp.day.fri", "emp.day.sat", "emp.day.sun",
 ];
-
-const SHIFT_COLORS: Record<string, string> = {
-  MORNING: "#fbbf24",
-  AFTERNOON: "#60a5fa",
-  NIGHT: "#818cf8",
-  DAY: "#34d399",
-  SPLIT: "#a78bfa",
-  CUSTOM: "#a8a29e",
-  REST_DAY: "#e7e5e4",
-};
 
 function getWeekStart(date: Date): Date {
   const d = new Date(date);
@@ -125,7 +116,7 @@ export default function ScheduleScreen() {
         {/* Week Navigation */}
         <View style={styles.weekNav}>
           <Pressable onPress={handlePrev} style={styles.navBtn} accessibilityLabel={t(lang, "emp.prevWeek")}>
-            <Text style={styles.navBtnText}>{"\u2039"}</Text>
+            <Icon name="chevron-back" size={24} color={employee.text} />
           </Pressable>
           <Text style={styles.weekLabel}>
             {weekDays[0].date.toLocaleDateString(locale, { day: "numeric", month: "short" })}
@@ -133,7 +124,7 @@ export default function ScheduleScreen() {
             {weekDays[6].date.toLocaleDateString(locale, { day: "numeric", month: "short" })}
           </Text>
           <Pressable onPress={handleNext} style={styles.navBtn} accessibilityLabel={t(lang, "emp.nextWeek")}>
-            <Text style={styles.navBtnText}>{"\u203A"}</Text>
+            <Icon name="chevron-forward" size={24} color={employee.text} />
           </Pressable>
         </View>
 
@@ -176,7 +167,7 @@ export default function ScheduleScreen() {
                 </View>
                 {ownShift ? (
                   <View style={styles.shiftInfo}>
-                    <View style={[styles.shiftDot, { backgroundColor: SHIFT_COLORS[ownShift.shiftType] ?? "#a8a29e" }]} />
+                    <View style={[styles.shiftDot, { backgroundColor: shiftColors[ownShift.shiftType] ?? "#a8a29e" }]} />
                     <Text style={styles.shiftTime}>{ownShift.startTime}--{ownShift.endTime}</Text>
                     <Text style={styles.shiftTypeLabel}>{t(lang, `emp.shift.${ownShift.shiftType}`)}</Text>
                   </View>
@@ -198,11 +189,10 @@ export default function ScheduleScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: spacing.xl, gap: spacing.lg },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: employee.text },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: employee.text, letterSpacing: -0.3 },
   weekNav: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   navBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  navBtnText: { fontSize: 28, color: employee.brand, fontFamily: "Inter_500Medium" },
-  weekLabel: { fontSize: fontSize.base, fontFamily: "Inter_600SemiBold", color: employee.text },
+  weekLabel: { fontSize: fontSize.base, fontFamily: "Inter_600SemiBold", color: employee.text, lineHeight: 21 },
   dayList: { gap: spacing.sm },
   dayCard: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
@@ -211,20 +201,20 @@ const styles = StyleSheet.create({
   },
   dayCardToday: { borderLeftWidth: 3, borderLeftColor: employee.brand },
   dayHeader: { flexDirection: "row", alignItems: "center", gap: spacing.md, width: 80 },
-  dayLabel: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: employee.textSecondary, width: 30 },
+  dayLabel: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: employee.textSecondary, width: 30, lineHeight: 18 },
   dayLabelToday: { color: employee.brand, fontFamily: "Inter_700Bold" },
-  dayDate: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: employee.text },
+  dayDate: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: employee.text, lineHeight: 24 },
   dayDateToday: { color: employee.brand },
   shiftInfo: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   shiftDot: { width: 8, height: 8, borderRadius: 4 },
-  shiftTime: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: employee.text },
+  shiftTime: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: employee.text, lineHeight: 21 },
   shiftTypeLabel: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: employee.textMuted },
-  noShift: { fontSize: fontSize.base, color: employee.textMuted },
+  noShift: { fontSize: fontSize.base, color: employee.textMuted, lineHeight: 21 },
   errorCard: {
     backgroundColor: employee.card, borderRadius: radius.md, borderWidth: 1, borderColor: employee.cardBorder,
     padding: spacing.lg, alignItems: "center", gap: spacing.sm, ...shadow.sm,
   },
-  errorText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textMuted },
+  errorText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textMuted, lineHeight: 18 },
   retryBtn: {
     backgroundColor: employee.accent, borderRadius: radius.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
@@ -234,5 +224,5 @@ const styles = StyleSheet.create({
     backgroundColor: employee.card, borderRadius: radius.md, borderWidth: 1, borderColor: employee.cardBorder,
     padding: spacing.lg, alignItems: "center", ...shadow.sm,
   },
-  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textMuted },
+  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textMuted, lineHeight: 18 },
 });

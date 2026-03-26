@@ -5,13 +5,15 @@
 import { useState, useRef, useCallback, useMemo } from "react";
 import {
   View, Text, FlatList, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { portalFetch } from "@/lib/api";
@@ -27,6 +29,8 @@ export default function MessagesScreen() {
   const [text, setText] = useState("");
   const flatListRef = useRef<FlatList>(null);
   const prevCountRef = useRef(0);
+
+  const { scaleStyle: sendScale, onPressIn: sendPressIn, onPressOut: sendPressOut } = useScalePress();
 
   // P0-1.2: Fix response shape -- backend returns { messages, hasMore } wrapped in ApiResponse.data
   const { data: messages, isLoading, isError, refetch } = useQuery({
@@ -161,19 +165,23 @@ export default function MessagesScreen() {
             returnKeyType="send"
             blurOnSubmit={false}
           />
-          <Pressable
-            style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
-            onPress={handleSend}
-            disabled={!text.trim() || sendMutation.isPending}
-            accessibilityRole="button"
-            accessibilityLabel={t(lang, "messages.send")}
-          >
-            {sendMutation.isPending ? (
-              <ActivityIndicator color={NAVY} size="small" />
-            ) : (
-              <Text style={styles.sendBtnText}>{"^"}</Text>
-            )}
-          </Pressable>
+          <Animated.View style={sendScale}>
+            <Pressable
+              style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
+              onPress={handleSend}
+              onPressIn={sendPressIn}
+              onPressOut={sendPressOut}
+              disabled={!text.trim() || sendMutation.isPending}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "messages.send")}
+            >
+              {sendMutation.isPending ? (
+                <ActivityIndicator color={NAVY} size="small" />
+              ) : (
+                <Icon name="arrow-up" size={20} color={NAVY} />
+              )}
+            </Pressable>
+          </Animated.View>
         </View>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -200,16 +208,16 @@ const styles = StyleSheet.create({
   msgBubbleMine: { backgroundColor: GOLD, borderBottomRightRadius: 4 },
   msgBubbleTheirs: { backgroundColor: guest.glass, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: guest.glassBorder },
   msgSender: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold", color: GOLD, marginBottom: 2 },
-  msgText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: guest.text, lineHeight: 20 },
+  msgText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: guest.text, lineHeight: 21 },
   msgTextMine: { color: NAVY },
   // P2-10: Fix timestamp font size -- use fontSize.xs without subtracting 1
   msgTime: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted, marginTop: 4, alignSelf: "flex-end" },
-  msgTimeMine: { color: "rgba(13,34,54,0.5)" },
+  msgTimeMine: { color: guest.msgTimeMine },
   inputBar: {
     flexDirection: "row", alignItems: "flex-end", gap: spacing.sm,
     paddingHorizontal: spacing.xl, paddingTop: spacing.sm,
     borderTopWidth: 0.5, borderTopColor: guest.glassBorder,
-    backgroundColor: "rgba(13,34,54,0.8)",
+    backgroundColor: guest.inputBarBg,
   },
   input: {
     flex: 1, backgroundColor: guest.inputBg, borderWidth: 1, borderColor: guest.inputBorder,
@@ -222,5 +230,4 @@ const styles = StyleSheet.create({
     backgroundColor: GOLD, alignItems: "center", justifyContent: "center",
   },
   sendBtnDisabled: { backgroundColor: guest.glass },
-  sendBtnText: { fontSize: 20, fontFamily: "Inter_700Bold", color: NAVY },
 });

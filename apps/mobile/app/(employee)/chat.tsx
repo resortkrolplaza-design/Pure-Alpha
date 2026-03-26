@@ -37,13 +37,13 @@ export default function ChatScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: spacing.xl, gap: spacing.xl },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: employee.text },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: employee.text, letterSpacing: -0.3 },
   card: {
     backgroundColor: employee.card, borderRadius: radius.xl, borderWidth: 1, borderColor: employee.cardBorder,
     padding: spacing["3xl"], alignItems: "center", gap: spacing.md, ...shadow.sm,
   },
   cardTitle: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: employee.text },
-  cardDesc: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textSecondary, textAlign: "center", lineHeight: 20 },
+  cardDesc: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textSecondary, textAlign: "center", lineHeight: 18 },
   comingSoonBadge: {
     backgroundColor: employee.accent, borderRadius: radius.full,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginTop: spacing.sm,

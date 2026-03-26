@@ -5,18 +5,12 @@
 import { View, Text, FlatList, StyleSheet, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { group, fontSize, radius, spacing, shadow, rsvpColors } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupGuestData } from "@/lib/types";
 import { useCallback, useState } from "react";
-
-const RSVP_COLORS: Record<string, { bg: string; text: string }> = {
-  confirmed: { bg: "rgba(16,185,129,0.1)", text: "#10b981" },
-  declined: { bg: "rgba(239,68,68,0.1)", text: "#ef4444" },
-  pending: { bg: "rgba(245,158,11,0.1)", text: "#f59e0b" },
-};
 
 const RSVP_LABEL_KEYS: Record<string, string> = {
   confirmed: "group.rsvp.confirmed",
@@ -47,7 +41,7 @@ export default function GuestsScreen() {
   }, [refetch]);
 
   const renderGuest = useCallback(({ item: g }: { item: GroupGuestData }) => {
-    const rsvp = RSVP_COLORS[g.rsvpStatus] ?? RSVP_COLORS.pending;
+    const rsvp = rsvpColors[g.rsvpStatus] ?? rsvpColors.pending;
     const rsvpLabelKey = RSVP_LABEL_KEYS[g.rsvpStatus] ?? RSVP_LABEL_KEYS.pending;
     return (
       <View style={styles.guestCard} accessibilityLabel={`${g.firstName} ${g.lastName}, ${t(lang, rsvpLabelKey)}`}>
@@ -94,8 +88,8 @@ export default function GuestsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
   header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text },
-  count: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2 },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: -0.3 },
+  count: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2, lineHeight: 18 },
   list: { paddingHorizontal: spacing.xl, gap: spacing.sm },
   guestCard: {
     flexDirection: "row", alignItems: "center",
@@ -104,13 +98,13 @@ const styles = StyleSheet.create({
   },
   guestAvatar: {
     width: 40, height: 40, borderRadius: 20,
-    backgroundColor: "rgba(99,102,241,0.1)", alignItems: "center", justifyContent: "center",
+    backgroundColor: group.primaryLight, alignItems: "center", justifyContent: "center",
   },
   guestInitials: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.primary },
   guestInfo: { flex: 1, gap: 2 },
-  guestName: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text },
+  guestName: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text, lineHeight: 21 },
   organizerBadge: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium", color: group.primary },
   rsvpBadge: { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   rsvpText: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold" },
-  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"] },
+  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"], lineHeight: 18 },
 });

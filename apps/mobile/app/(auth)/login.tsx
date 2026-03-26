@@ -5,13 +5,15 @@
 import { useState } from "react";
 import {
   View, Text, TextInput, Pressable, StyleSheet, KeyboardAvoidingView,
-  Platform, ActivityIndicator, Alert,
+  Platform, ActivityIndicator, Alert, Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { useFadeIn, useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
 import { setPortalToken, setAppMode } from "@/lib/auth";
@@ -26,6 +28,9 @@ export default function LoginScreen() {
 
   const [tokenInput, setTokenInput] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const fadeStyle = useFadeIn(0);
+  const { scaleStyle, onPressIn, onPressOut } = useScalePress();
 
   const handleLogin = async () => {
     // Portal token login — guest receives token via email/QR/deep link
@@ -67,14 +72,17 @@ export default function LoginScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
-        <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}>
+        <Animated.View style={[styles.content, fadeStyle, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}>
           {/* Header */}
           <View style={styles.header}>
             <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel={t(lang, "common.back")}>
-              <Text style={styles.backText}>‹ {t(lang, "common.back")}</Text>
+              <View style={styles.backRow}>
+                <Icon name="chevron-back" size={20} color={GOLD} />
+                <Text style={styles.backText}>{t(lang, "common.back")}</Text>
+              </View>
             </Pressable>
             <View style={styles.logoCircle}>
-              <Text style={styles.logoStar}>★</Text>
+              <Icon name="star" size={24} color={NAVY} />
             </View>
             <Text style={styles.title}>Pure Loyal</Text>
             <Text style={styles.subtitle}>{t(lang, "mode.guestDesc")}</Text>
@@ -97,23 +105,27 @@ export default function LoginScreen() {
               />
             </View>
 
-            <Pressable
-              style={({ pressed }) => [styles.loginBtn, pressed && styles.loginBtnPressed, loading && styles.loginBtnDisabled]}
-              onPress={handleLogin}
-              disabled={loading}
-              accessibilityRole="button"
-              accessibilityLabel={t(lang, "auth.login")}
-            >
-              {loading ? (
-                <ActivityIndicator color={NAVY} />
-              ) : (
-                <Text style={styles.loginBtnText}>{t(lang, "auth.login")}</Text>
-              )}
-            </Pressable>
+            <Animated.View style={scaleStyle}>
+              <Pressable
+                style={({ pressed }) => [styles.loginBtn, pressed && styles.loginBtnPressed, loading && styles.loginBtnDisabled]}
+                onPress={handleLogin}
+                onPressIn={onPressIn}
+                onPressOut={onPressOut}
+                disabled={loading}
+                accessibilityRole="button"
+                accessibilityLabel={t(lang, "auth.login")}
+              >
+                {loading ? (
+                  <ActivityIndicator color={NAVY} />
+                ) : (
+                  <Text style={styles.loginBtnText}>{t(lang, "auth.login")}</Text>
+                )}
+              </Pressable>
+            </Animated.View>
           </View>
 
           <View style={styles.spacer} />
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </LinearGradient>
   );
@@ -125,15 +137,21 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: spacing["2xl"], justifyContent: "space-between" },
   header: { alignItems: "center", gap: spacing.sm },
   backBtn: { alignSelf: "flex-start", marginBottom: spacing.xl, minHeight: 44 },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   backText: { fontSize: fontSize.base, color: GOLD, fontFamily: "Inter_500Medium" },
   logoCircle: {
     width: 56, height: 56, borderRadius: radius.full,
     backgroundColor: GOLD, alignItems: "center", justifyContent: "center",
     ...shadow.gold,
   },
-  logoStar: { fontSize: 24, color: NAVY },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text },
-  subtitle: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary },
+  title: {
+    fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary,
+    lineHeight: 18,
+  },
   form: { gap: spacing.xl },
   inputGroup: { gap: spacing.sm },
   label: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: guest.textSecondary },
@@ -148,7 +166,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16, alignItems: "center", marginTop: spacing.sm,
     ...shadow.gold,
   },
-  loginBtnPressed: { opacity: 0.8, transform: [{ scale: 0.98 }] },
+  loginBtnPressed: { opacity: 0.8 },
   loginBtnDisabled: { opacity: 0.6 },
   loginBtnText: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: NAVY },
   spacer: { flex: 1 },

@@ -9,6 +9,7 @@ import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { setGroupTrackingId as persistGroupId, setGroupToken, setAppMode, setEmployeeToken as persistEmpToken } from "@/lib/auth";
@@ -16,7 +17,8 @@ import { verifyPin } from "@/lib/group-api";
 import { resolveHotel, loginWithPin } from "@/lib/employee-api";
 
 const PIN_LENGTH = 4;
-const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"] as const;
+// "DEL" is a sentinel for the backspace key — rendered as an Icon, not text
+const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "DEL"] as const;
 
 export default function PinScreen() {
   const insets = useSafeAreaInsets();
@@ -31,7 +33,7 @@ export default function PinScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleDigit = useCallback(async (digit: string) => {
-    if (digit === "\u232B") {
+    if (digit === "DEL") {
       const shortened = pinRef.current.slice(0, -1);
       pinRef.current = shortened;
       setPin(shortened);
@@ -89,7 +91,7 @@ export default function PinScreen() {
             setLoading(false);
             return;
           }
-          // Step 1: resolve hotelSlug → hotelId
+          // Step 1: resolve hotelSlug -> hotelId
           const resolveRes = await resolveHotel(slug);
           if (resolveRes.status !== "success" || !resolveRes.data?.hotelId) {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -136,7 +138,10 @@ export default function PinScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel={t(lang, "common.back")}>
-            <Text style={styles.backText}>‹ {t(lang, "common.back")}</Text>
+            <View style={styles.backRow}>
+              <Icon name="chevron-back" size={20} color={GOLD} />
+              <Text style={styles.backText}>{t(lang, "common.back")}</Text>
+            </View>
           </Pressable>
           <Text style={styles.title}>{modeTitle}</Text>
           <Text style={styles.subtitle}>{t(lang, "auth.enterPin")}</Text>
@@ -210,9 +215,13 @@ export default function PinScreen() {
               onPress={() => handleDigit(digit)}
               disabled={digit === "" || loading}
               accessibilityRole="button"
-              accessibilityLabel={digit === "\u232B" ? t(lang, "common.delete") : digit}
+              accessibilityLabel={digit === "DEL" ? t(lang, "common.delete") : digit}
             >
-              <Text style={[styles.keyText, digit === "⌫" && styles.keyDelete]}>{digit}</Text>
+              {digit === "DEL" ? (
+                <Icon name="backspace-outline" size={24} color={guest.text} />
+              ) : (
+                <Text style={styles.keyText}>{digit}</Text>
+              )}
             </Pressable>
           ))}
         </View>
@@ -226,9 +235,13 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingHorizontal: spacing["2xl"], alignItems: "center" },
   header: { alignItems: "center", gap: spacing.sm, marginBottom: spacing.xl },
   backBtn: { alignSelf: "flex-start", marginBottom: spacing.xl, minHeight: 44 },
+  backRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   backText: { fontSize: fontSize.base, color: GOLD, fontFamily: "Inter_500Medium" },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text },
-  subtitle: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: guest.textSecondary },
+  title: {
+    fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text,
+    letterSpacing: -0.3,
+  },
+  subtitle: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: guest.textSecondary, lineHeight: 21 },
   inputGroup: { gap: spacing.sm, width: "100%", marginBottom: spacing.xl },
   input: {
     backgroundColor: guest.inputBg, borderWidth: 1, borderColor: guest.inputBorder,
@@ -249,5 +262,4 @@ const styles = StyleSheet.create({
   keyEmpty: { opacity: 0 },
   keyPressed: { backgroundColor: guest.glass },
   keyText: { fontSize: fontSize["2xl"], fontFamily: "Inter_500Medium", color: guest.text },
-  keyDelete: { fontSize: fontSize.xl },
 });
