@@ -1194,7 +1194,6 @@ export async function scrapeProfitroomCalendarFallback(
     let stayIdx = 0;
     let stayNights = STAY_LADDER[0];
     const calendarPrices: CalendarPrice[] = [];
-    let consecutiveEmptyBatches = 0;
 
     for (let b = 0; b < availableDays.length; b += BATCH_SIZE) {
       if (Date.now() - start > TIME_BUDGET_MS) {
