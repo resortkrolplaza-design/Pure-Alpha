@@ -884,10 +884,82 @@ export async function scrapeProfitroomFull(
     const calendarPricesSupported = calendarPrices !== null;
     const unavailableDays = settled[3].status === "fulfilled" ? settled[3].value : null;
 
-    // NOTE: Calendar fallback (per-day availability for hotels without calendar/prices)
-    // has been MOVED to dedicated scrapeProfitroomCalendarFallback (Tier 3).
-    // Full mode no longer does fallback — keeps it fast for ALL hotels.
-    // Tier 3 is called separately by Next.js when calendarPricesSupported === false.
+    // ── GAP-FILL: min-stay restricted dates ──────────────────────────────
+    // /calendar/prices omits dates where hotel has min-stay > 1 night.
+    // For those gaps, query /availability with STAY_LADDER [2,3] to get prices.
+    // Max 15 gap-fill calls to avoid overwhelming the API.
+    if (calendarPrices && calendarPrices.length > 0) {
+      const calendarDateSet = new Set(calendarPrices.map((cp) => cp.date));
+      const unavailSet = new Set(unavailableDays ?? []);
+
+      // Build list of all expected dates in range
+      const gapDates: string[] = [];
+      for (let d = 0; d < calendarDays && gapDates.length < 15; d++) {
+        const dt = new Date(now.getTime() + d * 86_400_000);
+        const ds = formatDate(dt);
+        // Gap = date exists in range, NOT in calendar, NOT unavailable
+        if (!calendarDateSet.has(ds) && !unavailSet.has(ds)) {
+          gapDates.push(ds);
+        }
+      }
+
+      if (gapDates.length > 0) {
+        console.log(`[PriceScraper] gap-fill: ${gapDates.length} min-stay gaps for ${siteKey}, trying 2-night availability`);
+        const GAP_STAY_LADDER = [2, 3, 5]; // 2→3→5 covers min-stay 2/3/4/5 (5-night query satisfies min-stay=4 too)
+        const GAP_BATCH = 5; // Process 5 dates at a time
+
+        for (let b = 0; b < gapDates.length; b += GAP_BATCH) {
+          if (Date.now() - start > 25_000) break; // 25s safety budget (full mode has 30s total)
+          const batch = gapDates.slice(b, b + GAP_BATCH);
+
+          for (const stayNights of GAP_STAY_LADDER) {
+            const batchResults = await Promise.allSettled(
+              batch
+                .filter((checkIn) => !calendarDateSet.has(checkIn)) // Skip already filled
+                .map((checkIn) => {
+                  const co = new Date(new Date(checkIn).getTime() + stayNights * 86_400_000);
+                  return fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
+                    siteKey, "availability",
+                    { checkIn, checkOut: formatDate(co), "occupancy[0][adults]": "2", lang: "pl" },
+                  ).then((groups): CalendarPrice | null => {
+                    if (!groups?.length) return null;
+                    const cheapest = cheapestFromGroups(groups);
+                    if (!cheapest) return null;
+                    const perNight = Math.round((cheapest.minPrice / stayNights) * 100) / 100;
+                    return {
+                      date: checkIn,
+                      minPrice: perNight,
+                      currency: cheapest.currency,
+                      offerId: cheapest.offerId,
+                      roomId: cheapest.roomId,
+                      originalPrice: cheapest.originalPrice
+                        ? Math.round((cheapest.originalPrice / stayNights) * 100) / 100
+                        : undefined,
+                      recentLowestPrice: cheapest.recentLowestPrice
+                        ? Math.round((cheapest.recentLowestPrice / stayNights) * 100) / 100
+                        : undefined,
+                    };
+                  });
+                }),
+            );
+
+            for (const r of batchResults) {
+              if (r.status === "fulfilled" && r.value) {
+                calendarPrices.push(r.value);
+                calendarDateSet.add(r.value.date); // Mark as filled
+              }
+            }
+
+            // If this stay length filled all gaps in batch, skip longer stays
+            if (batch.every((d) => calendarDateSet.has(d))) break;
+          }
+        }
+
+        // Re-sort by date after gap-fill
+        calendarPrices.sort((a, b) => a.date.localeCompare(b.date));
+        console.log(`[PriceScraper] gap-fill complete: ${calendarPrices.length} total days for ${siteKey}`);
+      }
+    }
     const offers = settled[4].status === "fulfilled" ? settled[4].value : null;
     const bestsellerIds = settled[5].status === "fulfilled" ? settled[5].value : null;
     const hotelDetails = settled[6].status === "fulfilled" ? settled[6].value : null;
