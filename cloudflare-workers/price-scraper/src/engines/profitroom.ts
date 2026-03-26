@@ -1254,37 +1254,50 @@ export async function scrapeProfitroomCalendarFallback(
         b -= BATCH_SIZE; // retry this batch with longer stay
         console.log(`[PriceScraper] calendar-fallback escalating to ${stayNights}-night for ${siteKey}`);
       }
-      // Per-date retry: if SOME dates missed (mixed min-stay), retry only those with 2-night
+      // Per-date retry: if SOME dates missed (mixed min-stay), escalate through STAY_LADDER
+      // Hotels have variable min-stay: off-season 1n, shoulder 2n, Easter 3n, peak 5n
       else if (missedDates.length > 0 && stayNights === 1 && Date.now() - start < TIME_BUDGET_MS) {
-        const retryResults = await Promise.allSettled(
-          missedDates.map((checkIn) => {
-            const co = new Date(checkIn);
-            co.setUTCDate(co.getUTCDate() + 2); // try 2-night
-            return fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
-              siteKey, "availability",
-              { checkIn, checkOut: formatDate(co), "occupancy[0][adults]": "2", lang: "pl" },
-            ).then((groups) => {
-              if (!groups?.length) return null;
-              const cheapest = cheapestFromGroups(groups);
-              if (!cheapest) return null;
-              const perNight = Math.round((cheapest.minPrice / 2) * 100) / 100;
-              return {
-                date: checkIn,
-                ...cheapest,
-                minPrice: perNight,
-                originalPrice: cheapest.originalPrice
-                  ? Math.round((cheapest.originalPrice / 2) * 100) / 100
-                  : undefined,
-                recentLowestPrice: cheapest.recentLowestPrice
-                  ? Math.round((cheapest.recentLowestPrice / 2) * 100) / 100
-                  : undefined,
-              };
-            });
-          }),
-        );
-        for (const r of retryResults) {
-          if (r.status === "fulfilled" && r.value) {
-            calendarPrices.push(r.value);
+        let remaining = [...missedDates];
+        for (const retryNights of [2, 3, 5]) {
+          if (remaining.length === 0 || Date.now() - start > TIME_BUDGET_MS) break;
+          const retryResults = await Promise.allSettled(
+            remaining.map((checkIn) => {
+              const co = new Date(checkIn);
+              co.setUTCDate(co.getUTCDate() + retryNights);
+              return fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
+                siteKey, "availability",
+                { checkIn, checkOut: formatDate(co), "occupancy[0][adults]": "2", lang: "pl" },
+              ).then((groups) => {
+                if (!groups?.length) return null;
+                const cheapest = cheapestFromGroups(groups);
+                if (!cheapest) return null;
+                const perNight = Math.round((cheapest.minPrice / retryNights) * 100) / 100;
+                return {
+                  date: checkIn,
+                  ...cheapest,
+                  minPrice: perNight,
+                  originalPrice: cheapest.originalPrice
+                    ? Math.round((cheapest.originalPrice / retryNights) * 100) / 100
+                    : undefined,
+                  recentLowestPrice: cheapest.recentLowestPrice
+                    ? Math.round((cheapest.recentLowestPrice / retryNights) * 100) / 100
+                    : undefined,
+                };
+              });
+            }),
+          );
+          const stillMissed: string[] = [];
+          for (let ri = 0; ri < retryResults.length; ri++) {
+            const r = retryResults[ri];
+            if (r.status === "fulfilled" && r.value) {
+              calendarPrices.push(r.value);
+            } else {
+              stillMissed.push(remaining[ri]);
+            }
+          }
+          remaining = stillMissed;
+          if (remaining.length > 0) {
+            console.log(`[PriceScraper] per-date retry ${retryNights}-night: ${missedDates.length - remaining.length} found, ${remaining.length} still missing for ${siteKey}`);
           }
         }
       }
