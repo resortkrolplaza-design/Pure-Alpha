@@ -1,0 +1,237 @@
+// =============================================================================
+// Guest Portal — Hotel Tab (Info, Gallery, Services, FAQ, Attractions)
+// =============================================================================
+
+import { useState } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet, Linking } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Image } from "expo-image";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { t } from "@/lib/i18n";
+import { useAppStore, useGuestStore } from "@/lib/store";
+import type { FaqData } from "@/lib/types";
+
+type Section = "info" | "gallery" | "services" | "faq" | "attractions";
+
+export default function HotelScreen() {
+  const insets = useSafeAreaInsets();
+  const lang = useAppStore((s) => s.lang);
+  const hotel = useGuestStore((s) => s.hotel);
+  const gallery = useGuestStore((s) => s.gallery);
+  const services = useGuestStore((s) => s.services);
+  const faq = useGuestStore((s) => s.faq);
+  const attractions = useGuestStore((s) => s.attractions);
+  const socialLinks = useGuestStore((s) => s.socialLinks);
+  const [section, setSection] = useState<Section>("info");
+
+  const SECTIONS: { key: Section; label: string }[] = [
+    { key: "info", label: t(lang, "hotel.info") },
+    { key: "gallery", label: t(lang, "hotel.gallery") },
+    { key: "services", label: t(lang, "hotel.services") },
+    { key: "faq", label: t(lang, "hotel.faq") },
+    { key: "attractions", label: t(lang, "hotel.attractions") },
+  ];
+
+  return (
+    <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+      <ScrollView
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Hotel Name */}
+        <Animated.View entering={FadeInDown.delay(100).springify()}>
+          <Text style={styles.title}>{hotel?.name ?? "Hotel"}</Text>
+          {hotel?.address && <Text style={styles.address}>{hotel.address}</Text>}
+        </Animated.View>
+
+        {/* Section Tabs (scrollable) */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll}>
+          <View style={styles.tabs}>
+            {SECTIONS.map((s) => (
+              <Pressable
+                key={s.key}
+                style={[styles.tab, section === s.key && styles.tabActive]}
+                onPress={() => setSection(s.key)}
+              >
+                <Text style={[styles.tabText, section === s.key && styles.tabTextActive]}>{s.label}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+
+        {/* Content */}
+        {section === "info" && hotel && (
+          <View style={styles.section}>
+            {/* Contact buttons */}
+            <View style={styles.contactGrid}>
+              {hotel.phone && (
+                <Pressable style={styles.contactCard} onPress={() => Linking.openURL(`tel:${hotel.phone}`)}>
+                  <Text style={styles.contactIcon}>📞</Text>
+                  <Text style={styles.contactLabel}>{t(lang, "hotel.call")}</Text>
+                  <Text style={styles.contactValue}>{hotel.phone}</Text>
+                </Pressable>
+              )}
+              {hotel.email && (
+                <Pressable style={styles.contactCard} onPress={() => Linking.openURL(`mailto:${hotel.email}`)}>
+                  <Text style={styles.contactIcon}>✉️</Text>
+                  <Text style={styles.contactLabel}>Email</Text>
+                  <Text style={styles.contactValue} numberOfLines={1}>{hotel.email}</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {/* Social Links */}
+            {socialLinks && socialLinks.length > 0 && (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>{t(lang, "hotel.social")}</Text>
+                <View style={styles.socialRow}>
+                  {socialLinks.map((link, i) => (
+                    <View key={i} style={styles.socialBadge}>
+                      <Text style={styles.socialText}>{link.platform}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        {section === "gallery" && (
+          <View style={styles.galleryGrid}>
+            {gallery.map((img) => (
+              <Image
+                key={img.id}
+                source={{ uri: img.url }}
+                style={styles.galleryImage}
+                contentFit="cover"
+                transition={200}
+              />
+            ))}
+            {!gallery.length && (
+              <Text style={styles.emptyText}>{t(lang, "common.noData")}</Text>
+            )}
+          </View>
+        )}
+
+        {section === "services" && (
+          <View style={styles.section}>
+            {services.map((s) => (
+              <View key={s.id} style={styles.serviceCard}>
+                <View style={styles.serviceInfo}>
+                  <Text style={styles.serviceName}>{s.name}</Text>
+                  {s.publicDescription && <Text style={styles.serviceDesc}>{s.publicDescription}</Text>}
+                </View>
+                {s.price != null && (
+                  <Text style={styles.servicePrice}>{s.price} {s.currency ?? "PLN"}</Text>
+                )}
+              </View>
+            ))}
+            {!services.length && (
+              <Text style={styles.emptyText}>{t(lang, "common.noData")}</Text>
+            )}
+          </View>
+        )}
+
+        {section === "faq" && (
+          <View style={styles.section}>
+            {faq.map((f) => (
+              <FaqItem key={f.id} faq={f} />
+            ))}
+            {!faq.length && (
+              <Text style={styles.emptyText}>{t(lang, "common.noData")}</Text>
+            )}
+          </View>
+        )}
+
+        {section === "attractions" && (
+          <View style={styles.section}>
+            {attractions.map((a) => (
+              <View key={a.id} style={styles.attractionCard}>
+                {a.imageUrl && <Image source={{ uri: a.imageUrl }} style={styles.attractionImg} contentFit="cover" />}
+                <View style={styles.attractionInfo}>
+                  <Text style={styles.attractionName}>{a.name}</Text>
+                  {a.distance && <Text style={styles.attractionDist}>📍 {a.distance}</Text>}
+                  {a.description && <Text style={styles.attractionDesc} numberOfLines={2}>{a.description}</Text>}
+                </View>
+              </View>
+            ))}
+            {!attractions.length && (
+              <Text style={styles.emptyText}>{t(lang, "common.noData")}</Text>
+            )}
+          </View>
+        )}
+      </ScrollView>
+    </LinearGradient>
+  );
+}
+
+function FaqItem({ faq }: { faq: FaqData }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Pressable style={styles.faqCard} onPress={() => setOpen(!open)}>
+      <View style={styles.faqHeader}>
+        <Text style={styles.faqQuestion}>{faq.question}</Text>
+        <Text style={styles.faqChevron}>{open ? "▾" : "▸"}</Text>
+      </View>
+      {open && <Text style={styles.faqAnswer}>{faq.answer}</Text>}
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  scroll: { paddingHorizontal: spacing.xl, gap: spacing.xl },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text },
+  address: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary, marginTop: 4 },
+  tabsScroll: { marginHorizontal: -spacing.xl },
+  tabs: { flexDirection: "row", gap: spacing.sm, paddingHorizontal: spacing.xl },
+  tab: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: guest.glassBorder },
+  tabActive: { backgroundColor: GOLD, borderColor: GOLD },
+  tabText: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: guest.textSecondary },
+  tabTextActive: { color: NAVY, fontFamily: "Inter_600SemiBold" },
+  section: { gap: spacing.md },
+  emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textMuted, textAlign: "center", paddingVertical: spacing["3xl"] },
+  contactGrid: { flexDirection: "row", gap: spacing.md },
+  contactCard: {
+    flex: 1, backgroundColor: guest.card, borderRadius: radius.lg, borderWidth: 1, borderColor: guest.cardBorder,
+    padding: spacing.lg, alignItems: "center", gap: spacing.sm, minHeight: 44,
+  },
+  contactIcon: { fontSize: 24 },
+  contactLabel: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: guest.text },
+  contactValue: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
+  card: { backgroundColor: guest.card, borderRadius: radius.lg, borderWidth: 1, borderColor: guest.cardBorder, padding: spacing.lg, gap: spacing.md },
+  cardTitle: { fontSize: fontSize.base, fontFamily: "Inter_600SemiBold", color: guest.text },
+  socialRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  socialBadge: { backgroundColor: guest.glass, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
+  socialText: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium", color: guest.textSecondary, textTransform: "capitalize" },
+  galleryGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
+  galleryImage: { width: "48%", aspectRatio: 4 / 3, borderRadius: radius.md },
+  serviceCard: {
+    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
+    backgroundColor: guest.card, borderRadius: radius.md, borderWidth: 1, borderColor: guest.cardBorder,
+    padding: spacing.lg,
+  },
+  serviceInfo: { flex: 1, gap: 2 },
+  serviceName: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: guest.text },
+  serviceDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
+  servicePrice: { fontSize: fontSize.base, fontFamily: "Inter_700Bold", color: GOLD, marginLeft: spacing.md },
+  faqCard: {
+    backgroundColor: guest.card, borderRadius: radius.md, borderWidth: 1, borderColor: guest.cardBorder,
+    padding: spacing.lg, gap: spacing.sm,
+  },
+  faqHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  faqQuestion: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: guest.text, flex: 1 },
+  faqChevron: { fontSize: 16, color: GOLD, marginLeft: spacing.sm },
+  faqAnswer: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textSecondary, lineHeight: 20 },
+  attractionCard: {
+    flexDirection: "row", backgroundColor: guest.card, borderRadius: radius.md, borderWidth: 1, borderColor: guest.cardBorder,
+    overflow: "hidden",
+  },
+  attractionImg: { width: 80, height: 80 },
+  attractionInfo: { flex: 1, padding: spacing.md, gap: 4 },
+  attractionName: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: guest.text },
+  attractionDist: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: GOLD },
+  attractionDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
+});
