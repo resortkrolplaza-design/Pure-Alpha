@@ -21,7 +21,7 @@ const POLL_INTERVAL = 10_000;
 export default function GroupMessagesScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
-  const trackingId = ""; // from auth
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const flatListRef = useRef<FlatList>(null);

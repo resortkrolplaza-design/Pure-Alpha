@@ -14,10 +14,12 @@ interface AppState {
   mode: AppMode | null;
   isAuthenticated: boolean;
   portalToken: string | null;
+  groupTrackingId: string | null;
   lang: "pl" | "en";
   setMode: (mode: AppMode) => void;
   setAuthenticated: (auth: boolean) => void;
   setPortalToken: (token: string | null) => void;
+  setGroupTrackingId: (id: string | null) => void;
   setLang: (lang: "pl" | "en") => void;
   reset: () => void;
 }
@@ -26,12 +28,14 @@ export const useAppStore = create<AppState>((set) => ({
   mode: null,
   isAuthenticated: false,
   portalToken: null,
+  groupTrackingId: null,
   lang: "pl",
   setMode: (mode) => set({ mode }),
   setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
   setPortalToken: (portalToken) => set({ portalToken }),
+  setGroupTrackingId: (groupTrackingId) => set({ groupTrackingId }),
   setLang: (lang) => set({ lang }),
-  reset: () => set({ mode: null, isAuthenticated: false, portalToken: null }),
+  reset: () => set({ mode: null, isAuthenticated: false, portalToken: null, groupTrackingId: null }),
 }));
 
 // ── Guest Portal Store ───────────────────────────────────────────────────────

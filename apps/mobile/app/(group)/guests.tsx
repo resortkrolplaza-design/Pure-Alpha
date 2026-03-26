@@ -22,7 +22,7 @@ const RSVP_COLORS: Record<string, { bg: string; text: string; label: string }> =
 export default function GuestsScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
-  const trackingId = ""; // from auth
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
   const { data: guests, isLoading } = useQuery({
     queryKey: ["group-guests", trackingId],

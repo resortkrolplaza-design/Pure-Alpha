@@ -30,7 +30,7 @@ function formatFileSize(bytes: number): string {
 export default function DocumentsScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
-  const trackingId = ""; // from auth
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
   const { data: documents, isLoading } = useQuery({
     queryKey: ["group-documents", trackingId],

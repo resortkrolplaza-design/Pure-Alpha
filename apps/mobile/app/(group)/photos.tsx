@@ -22,7 +22,7 @@ const IMAGE_SIZE = (SCREEN_WIDTH - 40 - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_CO
 export default function PhotosScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
-  const trackingId = ""; // from auth
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
   const { data: photos, isLoading } = useQuery({
     queryKey: ["group-photos", trackingId],

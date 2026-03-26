@@ -23,12 +23,12 @@ const SHIFT_TYPE_COLORS: Record<string, string> = {
   REST_DAY: "#e7e5e4",
 };
 
-function getGreeting(): string {
+function getGreetingKey(): string {
   const h = new Date().getHours();
-  if (h >= 5 && h < 12) return "Dzień dobry";
-  if (h >= 12 && h < 18) return "Dzień dobry";
-  if (h >= 18 && h < 22) return "Dobry wieczór";
-  return "Dobrej nocy";
+  if (h >= 5 && h < 12) return "stay.greeting.morning";
+  if (h >= 12 && h < 18) return "stay.greeting.afternoon";
+  if (h >= 18 && h < 22) return "stay.greeting.evening";
+  return "stay.greeting.night";
 }
 
 export default function DashboardScreen() {
@@ -51,7 +51,7 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View entering={FadeInDown.delay(100).springify()}>
-          <Text style={styles.greeting}>{getGreeting()} 👋</Text>
+          <Text style={styles.greeting}>{t(lang, getGreetingKey())} 👋</Text>
           <Text style={styles.subtitle}>Pure Alpha Employee App</Text>
         </Animated.View>
 

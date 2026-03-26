@@ -16,8 +16,7 @@ import type { AgendaItemData, GroupAnnouncementData } from "@/lib/types";
 export default function OverviewScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
-  // TODO: get trackingId from store/auth
-  const trackingId = ""; // Will be set after PIN auth
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
   const { data: agenda } = useQuery({
     queryKey: ["group-agenda", trackingId],
@@ -58,7 +57,9 @@ export default function OverviewScreen() {
         <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.countdownCard}>
           <Text style={styles.countdownLabel}>{t(lang, "group.countdown")}</Text>
           <Text style={styles.countdownValue}>—</Text>
-          <Text style={styles.countdownSub}>Zaloguj się PINem aby zobaczyć dane wydarzenia</Text>
+          <Text style={styles.countdownSub}>
+            {trackingId ? "" : lang === "pl" ? "Wprowadź PIN aby zobaczyć dane" : "Enter PIN to see event data"}
+          </Text>
         </Animated.View>
 
         {/* Pinned Announcements */}

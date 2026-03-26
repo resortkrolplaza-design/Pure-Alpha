@@ -2,7 +2,7 @@
 // Employee App — Schedule (Week view with day navigation)
 // =============================================================================
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo } from "react";
 import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

@@ -3,15 +3,20 @@
 // =============================================================================
 
 import { useState, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, TextInput, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown, useSharedValue, useAnimatedStyle } from "react-native-reanimated";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { setGroupTrackingId as persistGroupId, setAppMode, setEmployeeToken as persistEmpToken } from "@/lib/auth";
+import { setGroupToken } from "@/lib/group-api";
+import { verifyPin } from "@/lib/group-api";
+import { setEmployeeToken } from "@/lib/employee-api";
+import { loginWithPin } from "@/lib/employee-api";
 
 const PIN_LENGTH = 4;
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"] as const;
@@ -20,13 +25,11 @@ export default function PinScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const mode = useAppStore((s) => s.mode);
+  const setGroupTrackingId = useAppStore((s) => s.setGroupTrackingId);
   const [pin, setPin] = useState("");
+  const [email, setEmail] = useState("");
+  const [trackingId, setTrackingId] = useState("");
   const [loading, setLoading] = useState(false);
-  const shakeX = useSharedValue(0);
-
-  const shakeStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: shakeX.value }],
-  }));
 
   const handleDigit = useCallback(async (digit: string) => {
     if (digit === "⌫") {
@@ -42,18 +45,43 @@ export default function PinScreen() {
 
     if (newPin.length === PIN_LENGTH) {
       setLoading(true);
-      // TODO: Verify PIN against API
-      // For now, simulate a check
-      setTimeout(() => {
+      try {
         if (mode === "group") {
-          router.replace("/(group)/overview");
+          if (!trackingId.trim()) {
+            Alert.alert("Błąd", "Wprowadź ID wydarzenia");
+            setPin("");
+            return;
+          }
+          const res = await verifyPin(trackingId.trim(), newPin, email.trim().toLowerCase());
+          if (res.status === "success" && res.data?.token) {
+            setGroupToken(res.data.token);
+            setGroupTrackingId(trackingId.trim());
+            await Promise.all([
+              persistGroupId(trackingId.trim()),
+              setAppMode("group"),
+            ]);
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            router.replace("/(group)/overview");
+          } else {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert("Błąd", res.errorMessage || "Nieprawidłowy PIN");
+            setPin("");
+          }
         } else {
-          router.replace("/(employee)/dashboard");
+          // Employee — PIN login (requires login field too)
+          // TODO: add login/hotelId fields for employee auth
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          Alert.alert("Info", "Employee PIN auth — w budowie");
+          setPin("");
         }
+      } catch {
+        Alert.alert("Błąd", t(lang, "common.error"));
+        setPin("");
+      } finally {
         setLoading(false);
-      }, 500);
+      }
     }
-  }, [pin, mode]);
+  }, [pin, mode, trackingId, email, lang, setGroupTrackingId]);
 
   const modeTitle = mode === "group" ? t(lang, "mode.group") : t(lang, "mode.employee");
 
@@ -69,12 +97,36 @@ export default function PinScreen() {
           <Text style={styles.subtitle}>{t(lang, "auth.enterPin")}</Text>
         </View>
 
+        {/* Group needs trackingId + email */}
+        {mode === "group" && (
+          <View style={styles.inputGroup}>
+            <TextInput
+              style={styles.input}
+              placeholder="ID wydarzenia (trackingId)"
+              placeholderTextColor={guest.textMuted}
+              value={trackingId}
+              onChangeText={setTrackingId}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Email (opcjonalnie)"
+              placeholderTextColor={guest.textMuted}
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
+        )}
+
         {/* PIN Dots */}
-        <Animated.View style={[styles.dots, shakeStyle]}>
+        <View style={styles.dots}>
           {Array.from({ length: PIN_LENGTH }).map((_, i) => (
             <View key={i} style={[styles.dot, i < pin.length && styles.dotFilled]} />
           ))}
-        </Animated.View>
+        </View>
 
         {/* Keypad */}
         <View style={styles.keypad}>
@@ -103,12 +155,18 @@ export default function PinScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: spacing["2xl"], alignItems: "center" },
-  header: { alignItems: "center", gap: spacing.sm, marginBottom: spacing["4xl"] },
+  header: { alignItems: "center", gap: spacing.sm, marginBottom: spacing.xl },
   backBtn: { alignSelf: "flex-start", marginBottom: spacing.xl, minHeight: 44, width: "100%" },
   backText: { fontSize: fontSize.base, color: GOLD, fontFamily: "Inter_500Medium" },
   title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text },
   subtitle: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: guest.textSecondary },
-  dots: { flexDirection: "row", gap: spacing.lg, marginBottom: spacing["4xl"] },
+  inputGroup: { gap: spacing.sm, width: "100%", marginBottom: spacing.xl },
+  input: {
+    backgroundColor: guest.inputBg, borderWidth: 1, borderColor: guest.inputBorder,
+    borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: 12,
+    fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: guest.text,
+  },
+  dots: { flexDirection: "row", gap: spacing.lg, marginBottom: spacing["3xl"] },
   dot: {
     width: 16, height: 16, borderRadius: radius.full,
     borderWidth: 2, borderColor: guest.glassBorder,
@@ -121,8 +179,6 @@ const styles = StyleSheet.create({
   },
   keyEmpty: { opacity: 0 },
   keyPressed: { backgroundColor: guest.glass },
-  keyText: {
-    fontSize: fontSize["2xl"], fontFamily: "Inter_500Medium", color: guest.text,
-  },
+  keyText: { fontSize: fontSize["2xl"], fontFamily: "Inter_500Medium", color: guest.text },
   keyDelete: { fontSize: fontSize.xl },
 });
