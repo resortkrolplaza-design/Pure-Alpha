@@ -11,15 +11,16 @@ interface IconProps {
   name: IconName;
   size?: number;
   color?: string;
+  accessible?: boolean;
 }
 
-export function Icon({ name, size = 24, color = "#FFFFFF" }: IconProps) {
+export function Icon({ name, size = 24, color = "#FFFFFF", accessible = false }: IconProps) {
   return (
     <Ionicons
       name={name}
       size={size}
       color={color}
-      accessible={false}
+      accessible={accessible}
     />
   );
 }
@@ -32,6 +33,7 @@ export function TabIcon({
   size = 24,
   activeColor,
   inactiveColor,
+  accessible = false,
 }: {
   active: boolean;
   activeName: IconName;
@@ -39,13 +41,14 @@ export function TabIcon({
   size?: number;
   activeColor: string;
   inactiveColor: string;
+  accessible?: boolean;
 }) {
   return (
     <Ionicons
       name={active ? activeName : inactiveName}
       size={size}
       color={active ? activeColor : inactiveColor}
-      accessible={false}
+      accessible={accessible}
     />
   );
 }

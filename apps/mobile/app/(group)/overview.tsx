@@ -110,8 +110,16 @@ export default function OverviewScreen() {
 
         {/* Error State */}
         {isError && (
-          <View style={styles.card}>
-            <Text style={styles.emptyText}>{t(lang, "common.error")}</Text>
+          <View style={styles.errorCard}>
+            <Text style={styles.errorText}>{t(lang, "common.error")}</Text>
+            <Pressable
+              style={styles.retryBtn}
+              onPress={() => { refetchAgenda(); refetchAnnouncements(); }}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.retry")}
+            >
+              <Text style={styles.retryBtnText}>{t(lang, "common.retry")}</Text>
+            </Pressable>
           </View>
         )}
 
@@ -201,6 +209,17 @@ const styles = StyleSheet.create({
     padding: spacing.xl, ...shadow.sm,
   },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", lineHeight: 18 },
+  errorCard: {
+    backgroundColor: group.card, borderRadius: radius.lg, borderWidth: 1, borderColor: group.cardBorder,
+    padding: spacing.xl, alignItems: "center", gap: spacing.md, ...shadow.sm,
+  },
+  errorText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", lineHeight: 18 },
+  retryBtn: {
+    backgroundColor: group.primary, borderRadius: radius.full,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
+    minHeight: 44, justifyContent: "center", alignItems: "center",
+  },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
   announcementCard: {
     backgroundColor: group.card, borderRadius: radius.lg, borderWidth: 1, borderColor: group.cardBorder,
     padding: spacing.lg, marginBottom: spacing.sm, ...shadow.sm,

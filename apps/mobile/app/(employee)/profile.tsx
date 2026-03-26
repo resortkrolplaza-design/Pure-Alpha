@@ -6,34 +6,14 @@ import { useState, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, Alert, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import Constants from "expo-constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { employee, fontSize, radius, spacing, shadow, destructive } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { logout, getEmployeeToken } from "@/lib/auth";
-
-// Hermes engine (React Native) has no atob(). Manual base64 decode.
-function base64Decode(str: string): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-  let output = "";
-  let i = 0;
-  const input = str.replace(/[^A-Za-z0-9+/=]/g, "");
-  while (i < input.length) {
-    const enc1 = chars.indexOf(input.charAt(i++));
-    const enc2 = chars.indexOf(input.charAt(i++));
-    const enc3 = chars.indexOf(input.charAt(i++));
-    const enc4 = chars.indexOf(input.charAt(i++));
-    const chr1 = (enc1 << 2) | (enc2 >> 4);
-    const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
-    const chr3 = ((enc3 & 3) << 6) | enc4;
-    output += String.fromCharCode(chr1);
-    if (enc3 !== 64) output += String.fromCharCode(chr2);
-    if (enc4 !== 64) output += String.fromCharCode(chr3);
-  }
-  return decodeURIComponent(escape(output));
-}
+import { logout, getEmployeeToken, decodeBase64 } from "@/lib/auth";
 
 interface EmployeeProfile {
   name: string;
@@ -55,7 +35,7 @@ export default function ProfileScreen() {
       try {
         const parts = token.split(".");
         if (parts.length < 2) return;
-        const payload = JSON.parse(base64Decode(parts[1]));
+        const payload = JSON.parse(decodeBase64(parts[1]));
         setProfile({
           name: payload.employeeName ?? payload.name ?? "",
           department: payload.department ?? "",
@@ -66,6 +46,10 @@ export default function ProfileScreen() {
       }
     })();
   }, []);
+
+  const initials = profile?.name
+    ? profile.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
+    : "";
 
   const handleLogout = () => {
     Alert.alert(
@@ -88,7 +72,7 @@ export default function ProfileScreen() {
 
   return (
     <LinearGradient colors={[employee.bgFrom, employee.bgTo]} style={styles.container}>
-      <View style={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}>
+      <View style={[styles.content, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing["4xl"] }]}>
         <View>
           <Text style={styles.title}>{t(lang, "emp.tab.profile")}</Text>
         </View>
@@ -96,7 +80,11 @@ export default function ProfileScreen() {
         {/* Employee Info Card */}
         <View style={styles.card}>
           <View style={styles.avatar}>
-            <Icon name="person" size={28} color={employee.brand} />
+            {initials ? (
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            ) : (
+              <Icon name="person" size={28} color={employee.brand} />
+            )}
           </View>
           <Text style={styles.name}>{profile?.name || t(lang, "emp.tab.profile")}</Text>
           <Text style={styles.meta}>
@@ -123,7 +111,7 @@ export default function ProfileScreen() {
             </Pressable>
           </Animated.View>
 
-          <Text style={styles.version}>Pure Alpha Employee App v1.0</Text>
+          <Text style={styles.version}>Pure Alpha Employee App v{Constants.expoConfig?.version ?? "1.0"}</Text>
         </View>
       </View>
     </LinearGradient>
@@ -141,6 +129,9 @@ const styles = StyleSheet.create({
   avatar: {
     width: 64, height: 64, borderRadius: 32,
     backgroundColor: employee.accent, alignItems: "center", justifyContent: "center",
+  },
+  avatarInitials: {
+    fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: employee.brand,
   },
   name: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: employee.text },
   meta: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textMuted, textAlign: "center", lineHeight: 18 },

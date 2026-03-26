@@ -2,7 +2,7 @@
 // Guest Portal -- Messages Tab (Chat with hotel staff)
 // =============================================================================
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   View, Text, FlatList, TextInput, Pressable, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Animated,
@@ -28,7 +28,6 @@ export default function MessagesScreen() {
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const flatListRef = useRef<FlatList>(null);
-  const prevCountRef = useRef(0);
 
   const { scaleStyle: sendScale, onPressIn: sendPressIn, onPressOut: sendPressOut } = useScalePress();
 
@@ -73,9 +72,6 @@ export default function MessagesScreen() {
     sendMutation.mutate(trimmed);
   };
 
-  // Reversed list -- newest at bottom (memoized to avoid re-sort on every render)
-  const sortedMessages = useMemo(() => [...(messages ?? [])].reverse(), [messages]);
-
   const renderMessage = useCallback(({ item: msg }: { item: Message }) => {
     const isMe = msg.isGuest;
     return (
@@ -96,15 +92,6 @@ export default function MessagesScreen() {
       </View>
     );
   }, [lang]);
-
-  // P2-16: Only scroll to end when message count increases (not on every layout change)
-  const handleContentSizeChange = useCallback(() => {
-    const currentCount = sortedMessages.length;
-    if (currentCount > prevCountRef.current) {
-      flatListRef.current?.scrollToEnd({ animated: false });
-    }
-    prevCountRef.current = currentCount;
-  }, [sortedMessages.length]);
 
   return (
     <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
@@ -136,19 +123,19 @@ export default function MessagesScreen() {
               <Text style={styles.retryBtnText}>{t(lang, "common.retry")}</Text>
             </Pressable>
           </View>
-        ) : !sortedMessages.length ? (
+        ) : !(messages ?? []).length ? (
           <View style={styles.center}>
             <Text style={styles.emptyText}>{t(lang, "messages.empty")}</Text>
           </View>
         ) : (
           <FlatList
             ref={flatListRef}
-            data={sortedMessages}
+            data={messages ?? []}
             renderItem={renderMessage}
             keyExtractor={(m) => m.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            onContentSizeChange={handleContentSizeChange}
+            inverted
           />
         )}
 

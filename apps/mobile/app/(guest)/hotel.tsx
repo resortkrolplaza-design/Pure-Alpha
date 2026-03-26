@@ -74,7 +74,7 @@ export default function HotelScreen() {
 
         {/* Section Tabs (scrollable) */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll}>
-          <View style={styles.tabs}>
+          <View style={styles.tabs} accessibilityRole="tablist">
             {SECTIONS.map((s) => (
               <Pressable
                 key={s.key}

@@ -6,6 +6,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { employee, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 
@@ -15,17 +16,18 @@ export default function ChatScreen() {
 
   return (
     <LinearGradient colors={[employee.bgFrom, employee.bgTo]} style={styles.container}>
-      <View style={[styles.content, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.content, { paddingTop: insets.top + spacing.xl }]}>
         <View>
           <Text style={styles.title}>{t(lang, "emp.tab.chat")}</Text>
         </View>
 
         <View style={styles.card}>
+          <Icon name="chatbubble-ellipses-outline" size={48} color={employee.brand} />
           <Text style={styles.cardTitle}>{t(lang, "emp.chat.title")}</Text>
           <Text style={styles.cardDesc}>
             {t(lang, "emp.chat.desc")}
           </Text>
-          <View style={styles.comingSoonBadge}>
+          <View style={styles.comingSoonBadge} accessible={true} accessibilityRole="text">
             <Text style={styles.comingSoonText}>{t(lang, "emp.chatComingSoon")}</Text>
           </View>
         </View>

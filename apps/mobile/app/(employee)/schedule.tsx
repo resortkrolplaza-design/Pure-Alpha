@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { useState, useMemo } from "react";
-import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet } from "react-native";
+import { View, Text, Pressable, FlatList, RefreshControl, StyleSheet, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -107,7 +107,7 @@ export default function ScheduleScreen() {
 
   return (
     <LinearGradient colors={[employee.bgFrom, employee.bgTo]} style={styles.container}>
-      <View style={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}>
+      <View style={[styles.content, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing["6xl"] }]}>
         {/* Header */}
         <View>
           <Text style={styles.title}>{t(lang, "emp.tab.schedule")}</Text>
@@ -115,7 +115,7 @@ export default function ScheduleScreen() {
 
         {/* Week Navigation */}
         <View style={styles.weekNav}>
-          <Pressable onPress={handlePrev} style={styles.navBtn} accessibilityLabel={t(lang, "emp.prevWeek")}>
+          <Pressable onPress={handlePrev} style={styles.navBtn} accessibilityRole="button" accessibilityLabel={t(lang, "emp.prevWeek")}>
             <Icon name="chevron-back" size={24} color={employee.text} />
           </Pressable>
           <Text style={styles.weekLabel}>
@@ -123,7 +123,7 @@ export default function ScheduleScreen() {
             {" -- "}
             {weekDays[6].date.toLocaleDateString(locale, { day: "numeric", month: "short" })}
           </Text>
-          <Pressable onPress={handleNext} style={styles.navBtn} accessibilityLabel={t(lang, "emp.nextWeek")}>
+          <Pressable onPress={handleNext} style={styles.navBtn} accessibilityRole="button" accessibilityLabel={t(lang, "emp.nextWeek")}>
             <Icon name="chevron-forward" size={24} color={employee.text} />
           </Pressable>
         </View>
@@ -151,36 +151,49 @@ export default function ScheduleScreen() {
         )}
 
         {/* Day Cards */}
-        <FlatList
-          data={weekDays}
-          keyExtractor={(d) => d.dateStr}
-          renderItem={({ item: day }) => {
-            const dayShifts = shiftsByDate.get(day.dateStr) ?? [];
-            const ownShift = dayShifts.find((s) => s.isOwnShift);
-            return (
-              <View style={[styles.dayCard, day.isToday && styles.dayCardToday]}>
-                <View style={styles.dayHeader}>
-                  <Text style={[styles.dayLabel, day.isToday && styles.dayLabelToday]}>{day.dayLabel}</Text>
-                  <Text style={[styles.dayDate, day.isToday && styles.dayDateToday]}>
-                    {day.date.getDate()}
-                  </Text>
-                </View>
-                {ownShift ? (
-                  <View style={styles.shiftInfo}>
-                    <View style={[styles.shiftDot, { backgroundColor: shiftColors[ownShift.shiftType] ?? "#a8a29e" }]} />
-                    <Text style={styles.shiftTime}>{ownShift.startTime}--{ownShift.endTime}</Text>
-                    <Text style={styles.shiftTypeLabel}>{t(lang, `emp.shift.${ownShift.shiftType}`)}</Text>
+        {shifts === undefined ? (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color={employee.brand} />
+          </View>
+        ) : (
+          <FlatList
+            data={weekDays}
+            keyExtractor={(d) => d.dateStr}
+            renderItem={({ item: day }) => {
+              const dayShifts = shiftsByDate.get(day.dateStr) ?? [];
+              const ownShift = dayShifts.find((s) => s.isOwnShift);
+              const shiftLabel = ownShift
+                ? `${day.dayLabel} ${day.date.getDate()}, ${t(lang, `emp.shift.${ownShift.shiftType}`)} ${ownShift.startTime}--${ownShift.endTime}`
+                : `${day.dayLabel} ${day.date.getDate()}, ${t(lang, "emp.noShift")}`;
+              return (
+                <View
+                  style={[styles.dayCard, day.isToday && styles.dayCardToday]}
+                  accessible={true}
+                  accessibilityLabel={shiftLabel}
+                >
+                  <View style={styles.dayHeader}>
+                    <Text style={[styles.dayLabel, day.isToday && styles.dayLabelToday]}>{day.dayLabel}</Text>
+                    <Text style={[styles.dayDate, day.isToday && styles.dayDateToday]}>
+                      {day.date.getDate()}
+                    </Text>
                   </View>
-                ) : (
-                  <Text style={styles.noShift}>--</Text>
-                )}
-              </View>
-            );
-          }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.dayList}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={employee.brand} />}
-        />
+                  {ownShift ? (
+                    <View style={styles.shiftInfo}>
+                      <View style={[styles.shiftDot, { backgroundColor: shiftColors[ownShift.shiftType] ?? shiftColors.CUSTOM }]} />
+                      <Text style={styles.shiftTime}>{ownShift.startTime}--{ownShift.endTime}</Text>
+                      <Text style={styles.shiftTypeLabel}>{t(lang, `emp.shift.${ownShift.shiftType}`)}</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.noShift}>--</Text>
+                  )}
+                </View>
+              );
+            }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.dayList}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={employee.brand} />}
+          />
+        )}
       </View>
     </LinearGradient>
   );
@@ -218,8 +231,12 @@ const styles = StyleSheet.create({
   retryBtn: {
     backgroundColor: employee.accent, borderRadius: radius.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
+    minHeight: 44, justifyContent: "center",
   },
   retryText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: employee.brand },
+  loadingOverlay: {
+    flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: spacing["4xl"],
+  },
   emptyCard: {
     backgroundColor: employee.card, borderRadius: radius.md, borderWidth: 1, borderColor: employee.cardBorder,
     padding: spacing.lg, alignItems: "center", ...shadow.sm,

@@ -22,14 +22,14 @@ function getBlockReason(reasons: string[] | undefined, lang: Lang): string {
   const reason = reasons[0];
   const map: Record<string, string> = {
     INSUFFICIENT_POINTS: t(lang, "rewards.notEnoughPoints"),
-    REWARD_TIER_LOCKED: t(lang, "rewards.tierRequired"),
-    REWARD_OUT_OF_STOCK: t(lang, "rewards.outOfStock"),
-    REWARD_LIMIT_REACHED: t(lang, "rewards.limitReached"),
+    TIER_REQUIREMENT_NOT_MET: t(lang, "rewards.tierRequired"),
+    OUT_OF_STOCK: t(lang, "rewards.outOfStock"),
+    REDEMPTION_LIMIT_REACHED: t(lang, "rewards.limitReached"),
     REWARD_YEARLY_LIMIT_REACHED: t(lang, "rewards.yearlyLimitReached"),
     REWARD_NOT_YET_VALID: t(lang, "rewards.notYetValid"),
     REWARD_EXPIRED: t(lang, "rewards.expired"),
   };
-  return map[reason] ?? t(lang, "rewards.tierRequired");
+  return map[reason] ?? reason;
 }
 
 export default function RewardsScreen() {
@@ -105,7 +105,7 @@ export default function RewardsScreen() {
         <View>
           <Text style={styles.title}>{t(lang, "rewards.catalog")}</Text>
           <Text style={styles.pointsBadge}>
-            {member?.availablePoints.toLocaleString() ?? 0} {program?.pointsName ?? "pkt"}
+            {(member?.availablePoints ?? 0).toLocaleString()} {program?.pointsName ?? "pkt"}
           </Text>
         </View>
 

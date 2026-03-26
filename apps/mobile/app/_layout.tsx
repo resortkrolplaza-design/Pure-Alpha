@@ -48,6 +48,7 @@ export default function RootLayout() {
     configureApiClient({
       getToken,
       onTokenExpired: handleSessionExpired,
+      onPortalTokenExpired: handleSessionExpired,
     });
     configureGroupApi({ onSessionExpired: handleSessionExpired });
     configureEmployeeApi({ onSessionExpired: handleSessionExpired });

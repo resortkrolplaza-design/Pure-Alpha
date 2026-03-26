@@ -50,7 +50,7 @@ export async function employeeFetch<T>(
     }
     return {
       status: "error",
-      errorMessage: err instanceof Error ? err.message : "Network error",
+      errorMessage: "Network error",
     };
   } finally {
     clearTimeout(timeout);

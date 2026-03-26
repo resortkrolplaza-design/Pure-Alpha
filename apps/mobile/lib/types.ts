@@ -39,6 +39,7 @@ export interface MemberData {
   memberNumber: string;
   availablePoints: number;
   lifetimePoints: number;
+  totalPoints?: number;
   pendingPoints: number;
   totalSpent: number;
   totalStays: number;
@@ -65,6 +66,7 @@ export interface HotelData {
   name: string;
   logoUrl: string | null;
   address: string | null;
+  city?: string;
   phone: string | null;
   email: string | null;
 }

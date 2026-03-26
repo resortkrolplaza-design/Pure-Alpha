@@ -103,9 +103,23 @@ export default function DocumentsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={group.primary} />}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {isLoading ? t(lang, "common.loading") : isError ? t(lang, "common.error") : t(lang, "common.noData")}
-          </Text>
+          isError ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.emptyText}>{t(lang, "common.error")}</Text>
+              <Pressable
+                style={styles.retryBtn}
+                onPress={() => refetch()}
+                accessibilityRole="button"
+                accessibilityLabel={t(lang, "common.retry")}
+              >
+                <Text style={styles.retryBtnText}>{t(lang, "common.retry")}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text style={styles.emptyText}>
+              {isLoading ? t(lang, "common.loading") : t(lang, "common.noData")}
+            </Text>
+          )
         }
       />
     </View>
@@ -127,4 +141,11 @@ const styles = StyleSheet.create({
   docTitle: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text, lineHeight: 21 },
   docMeta: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"], lineHeight: 18 },
+  errorContainer: { alignItems: "center", gap: spacing.md, paddingVertical: spacing["3xl"] },
+  retryBtn: {
+    backgroundColor: group.primary, borderRadius: radius.full,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
+    minHeight: 44, justifyContent: "center", alignItems: "center",
+  },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
 });

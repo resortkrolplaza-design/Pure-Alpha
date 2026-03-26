@@ -19,6 +19,7 @@ type OnExpired = () => void;
 interface ApiClientConfig {
   getToken: TokenGetter;
   onTokenExpired: OnExpired;
+  onPortalTokenExpired?: OnExpired;
 }
 
 let config: ApiClientConfig | null = null;
@@ -121,6 +122,7 @@ export async function portalFetch<T>(
     });
 
     if (res.status === 401 || res.status === 403) {
+      config?.onPortalTokenExpired?.();
       return { status: "error", errorMessage: "Token expired or invalid" };
     }
 

@@ -4,6 +4,7 @@
 
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import type { AppMode } from "./types";
 
 // Web fallback — SecureStore doesn't work on web.
 // Use localStorage so tokens survive page refreshes (in-memory object is volatile).
@@ -134,7 +135,7 @@ export async function clearGroupTrackingId(): Promise<void> {
 
 // ── App Mode ─────────────────────────────────────────────────────────────────
 
-export type AppMode = "guest" | "group" | "employee";
+export type { AppMode };
 
 export async function getAppMode(): Promise<AppMode | null> {
   try {
@@ -169,7 +170,7 @@ export async function logout(): Promise<void> {
 
 // Hermes (React Native) has no atob(). Manual base64 decode.
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-function decodeBase64(str: string): string {
+export function decodeBase64(str: string): string {
   const input = str.replace(/-/g, "+").replace(/_/g, "/").replace(/[^A-Za-z0-9+/=]/g, "");
   let output = "";
   let i = 0;

@@ -30,7 +30,7 @@ export default function GroupMessagesScreen() {
 
   const { scaleStyle, onPressIn, onPressOut } = useScalePress();
 
-  const { data: msgData, isLoading } = useQuery({
+  const { data: msgData, isLoading, isError, refetch } = useQuery({
     queryKey: ["group-messages", trackingId],
     queryFn: async () => {
       if (!trackingId) return { replies: [] };
@@ -116,6 +116,18 @@ export default function GroupMessagesScreen() {
           <View style={styles.center}>
             <ActivityIndicator color={group.primary} />
           </View>
+        ) : isError ? (
+          <View style={styles.center}>
+            <Text style={styles.emptyText}>{t(lang, "common.error")}</Text>
+            <Pressable
+              style={styles.retryBtn}
+              onPress={() => refetch()}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.retry")}
+            >
+              <Text style={styles.retryBtnText}>{t(lang, "common.retry")}</Text>
+            </Pressable>
+          </View>
         ) : !messages.length ? (
           <View style={styles.center}>
             <Text style={styles.emptyText}>{t(lang, "messages.empty")}</Text>
@@ -177,7 +189,7 @@ const styles = StyleSheet.create({
   msgSenderOrg: { color: group.overlayWhite70 },
   msgText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, lineHeight: 21 },
   msgTextOrg: { color: "#FFFFFF" },
-  msgTime: { fontSize: 10, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 4, alignSelf: "flex-end" },
+  msgTime: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 4, alignSelf: "flex-end" },
   msgTimeOrg: { color: group.overlayWhite60 },
   inputBar: {
     flexDirection: "row", alignItems: "flex-end", gap: spacing.sm,
@@ -194,4 +206,10 @@ const styles = StyleSheet.create({
     backgroundColor: group.primary, alignItems: "center", justifyContent: "center",
   },
   sendBtnDisabled: { backgroundColor: group.disabledBg },
+  retryBtn: {
+    backgroundColor: group.primary, borderRadius: radius.full,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
+    minHeight: 44, justifyContent: "center", alignItems: "center", marginTop: spacing.md,
+  },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
 });

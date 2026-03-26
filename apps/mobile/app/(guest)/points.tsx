@@ -82,17 +82,17 @@ export default function PointsScreen() {
       {/* Points Summary */}
       <View style={styles.summaryRow}>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{member?.availablePoints.toLocaleString() ?? "0"}</Text>
+          <Text style={styles.summaryValue}>{(member?.availablePoints ?? 0).toLocaleString()}</Text>
           <Text style={styles.summaryLabel}>{t(lang, "stay.availablePoints")}</Text>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryValue}>{member?.lifetimePoints.toLocaleString() ?? "0"}</Text>
+          <Text style={styles.summaryValue}>{(member?.lifetimePoints ?? 0).toLocaleString()}</Text>
           <Text style={styles.summaryLabel}>{t(lang, "stay.lifetimePoints")}</Text>
         </View>
       </View>
 
       {/* Section Tabs */}
-      <View style={styles.tabs}>
+      <View style={styles.tabs} accessibilityRole="tablist">
         {SECTIONS.map((s) => (
           <Pressable
             key={s.key}

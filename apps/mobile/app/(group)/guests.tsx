@@ -2,7 +2,7 @@
 // Group Portal — Guests Tab (Guest list + RSVP status)
 // =============================================================================
 
-import { View, Text, FlatList, StyleSheet, RefreshControl } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { group, fontSize, radius, spacing, shadow, rsvpColors } from "@/lib/tokens";
@@ -76,9 +76,23 @@ export default function GuestsScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={group.primary} />}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {isLoading ? t(lang, "common.loading") : isError ? t(lang, "common.error") : t(lang, "common.noData")}
-          </Text>
+          isError ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.emptyText}>{t(lang, "common.error")}</Text>
+              <Pressable
+                style={styles.retryBtn}
+                onPress={() => refetch()}
+                accessibilityRole="button"
+                accessibilityLabel={t(lang, "common.retry")}
+              >
+                <Text style={styles.retryBtnText}>{t(lang, "common.retry")}</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Text style={styles.emptyText}>
+              {isLoading ? t(lang, "common.loading") : t(lang, "common.noData")}
+            </Text>
+          )
         }
       />
     </View>
@@ -107,4 +121,11 @@ const styles = StyleSheet.create({
   rsvpBadge: { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   rsvpText: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold" },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"], lineHeight: 18 },
+  errorContainer: { alignItems: "center", gap: spacing.md, paddingVertical: spacing["3xl"] },
+  retryBtn: {
+    backgroundColor: group.primary, borderRadius: radius.full,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
+    minHeight: 44, justifyContent: "center", alignItems: "center",
+  },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
 });

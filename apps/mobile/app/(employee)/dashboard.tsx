@@ -3,11 +3,12 @@
 // =============================================================================
 
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet, Animated } from "react-native";
+import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet, Animated, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { employee, fontSize, radius, spacing, shadow, shiftColors } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
 import { useFadeIn, useSlideUp } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -51,7 +52,7 @@ export default function DashboardScreen() {
   return (
     <LinearGradient colors={[employee.bgFrom, employee.bgTo]} style={styles.container}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing["6xl"] }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={employee.brand} />}
       >
@@ -78,28 +79,32 @@ export default function DashboardScreen() {
         )}
 
         {/* Today's Shift */}
-        <Animated.View style={[styles.card, styles.shiftCard, slideStyle]}>
-          <View style={styles.shiftHeader}>
-            <Text style={styles.shiftTitle}>{t(lang, "emp.todayShift")}</Text>
-            {data?.todayShift && (
-              <View style={[styles.shiftBadge, { backgroundColor: shiftColors[data.todayShift.shiftType] ?? employee.accent }]}>
-                <Text style={styles.shiftBadgeText}>{t(lang, `emp.shift.${data.todayShift.shiftType}`)}</Text>
-              </View>
-            )}
+        {isLoading ? (
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={employee.brand} />
           </View>
-          {data?.todayShift ? (
-            <View style={styles.shiftDetails}>
-              <Text style={styles.shiftTime}>
-                {data.todayShift.startTime} -- {data.todayShift.endTime}
-              </Text>
-              <Text style={styles.shiftDept}>{data.todayShift.department}</Text>
+        ) : (
+          <Animated.View style={[styles.card, styles.shiftCard, slideStyle]}>
+            <View style={styles.shiftHeader}>
+              <Text style={styles.shiftTitle}>{t(lang, "emp.todayShift")}</Text>
+              {data?.todayShift && (
+                <View style={[styles.shiftBadge, { backgroundColor: shiftColors[data.todayShift.shiftType] ?? employee.accent }]}>
+                  <Text style={styles.shiftBadgeText}>{t(lang, `emp.shift.${data.todayShift.shiftType}`)}</Text>
+                </View>
+              )}
             </View>
-          ) : (
-            <Text style={styles.placeholder}>
-              {isLoading ? t(lang, "common.loading") : t(lang, "emp.noShift")}
-            </Text>
-          )}
-        </Animated.View>
+            {data?.todayShift ? (
+              <View style={styles.shiftDetails}>
+                <Text style={styles.shiftTime}>
+                  {data.todayShift.startTime} -- {data.todayShift.endTime}
+                </Text>
+                <Text style={styles.shiftDept}>{data.todayShift.department}</Text>
+              </View>
+            ) : (
+              <Text style={styles.placeholder}>{t(lang, "emp.noShift")}</Text>
+            )}
+          </Animated.View>
+        )}
 
         {/* Week Stats */}
         <View style={styles.statsRow}>
@@ -119,7 +124,8 @@ export default function DashboardScreen() {
         <View>
           <Text style={styles.sectionTitle}>{t(lang, "emp.upcoming")}</Text>
           {!data?.upcomingShifts?.length ? (
-            <View style={styles.card}>
+            <View style={[styles.card, styles.emptyCard]}>
+              <Icon name="calendar-outline" size={32} color={employee.textMuted} />
               <Text style={styles.placeholder}>{t(lang, "common.noData")}</Text>
             </View>
           ) : (
@@ -188,6 +194,12 @@ const styles = StyleSheet.create({
   retryBtn: {
     backgroundColor: employee.accent, borderRadius: radius.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, alignSelf: "center",
+    minHeight: 44, justifyContent: "center",
   },
   retryText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: employee.brand },
+  loadingCard: {
+    backgroundColor: employee.card, borderRadius: radius.xl, borderWidth: 1, borderColor: employee.cardBorder,
+    padding: spacing["3xl"], alignItems: "center", justifyContent: "center", ...shadow.sm,
+  },
+  emptyCard: { alignItems: "center" },
 });

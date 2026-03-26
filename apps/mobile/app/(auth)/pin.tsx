@@ -158,6 +158,7 @@ export default function PinScreen() {
               onChangeText={setTrackingId}
               autoCapitalize="none"
               autoCorrect={false}
+              maxLength={200}
             />
             <TextInput
               style={styles.input}
@@ -167,6 +168,7 @@ export default function PinScreen() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+              maxLength={320}
             />
           </View>
         )}
@@ -182,6 +184,7 @@ export default function PinScreen() {
               onChangeText={setTrackingId}
               autoCapitalize="none"
               autoCorrect={false}
+              maxLength={200}
             />
             <TextInput
               style={styles.input}
@@ -191,6 +194,7 @@ export default function PinScreen() {
               onChangeText={setHotelSlug}
               autoCapitalize="none"
               autoCorrect={false}
+              maxLength={100}
             />
           </View>
         )}

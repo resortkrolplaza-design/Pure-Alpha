@@ -53,6 +53,7 @@ export const employee = {
   card: "rgba(255,255,255,0.9)",
   cardBorder: "rgba(0,0,0,0.06)",
   accent: "#fef3c7",
+  tabBarBg: "rgba(255,255,255,0.85)",
 } as const;
 
 // ── Group Portal: Admin Indigo ───────────────────────────────────────────────

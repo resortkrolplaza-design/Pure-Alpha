@@ -164,6 +164,7 @@ const styles = StyleSheet.create({
   loginBtn: {
     backgroundColor: GOLD, borderRadius: radius.full,
     paddingVertical: 16, alignItems: "center", marginTop: spacing.sm,
+    minHeight: 44,
     ...shadow.gold,
   },
   loginBtnPressed: { opacity: 0.8 },

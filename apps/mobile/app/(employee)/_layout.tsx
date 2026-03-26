@@ -90,7 +90,7 @@ export default function EmployeeLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: "rgba(255,255,255,0.85)",
+    backgroundColor: employee.tabBarBg,
     borderTopColor: employee.cardBorder,
     borderTopWidth: 0.5,
     height: Platform.OS === "ios" ? 88 : 64,
