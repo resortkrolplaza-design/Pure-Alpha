@@ -1236,20 +1236,57 @@ export async function scrapeProfitroomCalendarFallback(
       );
 
       let batchHits = 0;
-      for (const r of results) {
+      const missedDates: string[] = [];
+      for (let ri = 0; ri < results.length; ri++) {
+        const r = results[ri];
         if (r.status === "fulfilled" && r.value) {
           calendarPrices.push(r.value);
           batchHits++;
+        } else {
+          missedDates.push(batchDays[ri]);
         }
       }
 
-      // If batch returned 0 results, escalate stay length immediately
-      // (don't wait for 2 consecutive — that loses 5 days of data)
+      // If entire batch returned 0 results, escalate stay length for ALL dates
       if (batchHits === 0 && stayIdx < STAY_LADDER.length - 1) {
         stayIdx++;
         stayNights = STAY_LADDER[stayIdx];
         b -= BATCH_SIZE; // retry this batch with longer stay
         console.log(`[PriceScraper] calendar-fallback escalating to ${stayNights}-night for ${siteKey}`);
+      }
+      // Per-date retry: if SOME dates missed (mixed min-stay), retry only those with 2-night
+      else if (missedDates.length > 0 && stayNights === 1 && Date.now() - start < TIME_BUDGET_MS) {
+        const retryResults = await Promise.allSettled(
+          missedDates.map((checkIn) => {
+            const co = new Date(checkIn);
+            co.setUTCDate(co.getUTCDate() + 2); // try 2-night
+            return fetchProfitroomApi<ProfitroomAvailabilityGroup[]>(
+              siteKey, "availability",
+              { checkIn, checkOut: formatDate(co), "occupancy[0][adults]": "2", lang: "pl" },
+            ).then((groups) => {
+              if (!groups?.length) return null;
+              const cheapest = cheapestFromGroups(groups);
+              if (!cheapest) return null;
+              const perNight = Math.round((cheapest.minPrice / 2) * 100) / 100;
+              return {
+                date: checkIn,
+                ...cheapest,
+                minPrice: perNight,
+                originalPrice: cheapest.originalPrice
+                  ? Math.round((cheapest.originalPrice / 2) * 100) / 100
+                  : undefined,
+                recentLowestPrice: cheapest.recentLowestPrice
+                  ? Math.round((cheapest.recentLowestPrice / 2) * 100) / 100
+                  : undefined,
+              };
+            });
+          }),
+        );
+        for (const r of retryResults) {
+          if (r.status === "fulfilled" && r.value) {
+            calendarPrices.push(r.value);
+          }
+        }
       }
     }
 
