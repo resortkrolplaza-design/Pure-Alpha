@@ -7,16 +7,13 @@ import { View, Text, Pressable, StyleSheet, TextInput, Alert } from "react-nativ
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { setGroupTrackingId as persistGroupId, setAppMode, setEmployeeToken as persistEmpToken } from "@/lib/auth";
-import { setGroupToken } from "@/lib/group-api";
+import { setGroupTrackingId as persistGroupId, setGroupToken, setAppMode, setEmployeeToken as persistEmpToken } from "@/lib/auth";
 import { verifyPin } from "@/lib/group-api";
-import { setEmployeeToken } from "@/lib/employee-api";
-import { loginWithPin } from "@/lib/employee-api";
+import { resolveHotel, loginWithPin } from "@/lib/employee-api";
 
 const PIN_LENGTH = 4;
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "⌫"] as const;
@@ -29,6 +26,7 @@ export default function PinScreen() {
   const [pin, setPin] = useState("");
   const [email, setEmail] = useState("");
   const [trackingId, setTrackingId] = useState("");
+  const [hotelSlug, setHotelSlug] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleDigit = useCallback(async (digit: string) => {
@@ -48,15 +46,15 @@ export default function PinScreen() {
       try {
         if (mode === "group") {
           if (!trackingId.trim()) {
-            Alert.alert("Błąd", "Wprowadź ID wydarzenia");
+            Alert.alert(t(lang, "auth.error"), t(lang, "pin.enterTrackingId"));
             setPin("");
             return;
           }
           const res = await verifyPin(trackingId.trim(), newPin, email.trim().toLowerCase());
           if (res.status === "success" && res.data?.token) {
-            setGroupToken(res.data.token);
             setGroupTrackingId(trackingId.trim());
             await Promise.all([
+              setGroupToken(res.data.token),
               persistGroupId(trackingId.trim()),
               setAppMode("group"),
             ]);
@@ -64,24 +62,55 @@ export default function PinScreen() {
             router.replace("/(group)/overview");
           } else {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-            Alert.alert("Błąd", res.errorMessage || "Nieprawidłowy PIN");
+            Alert.alert(t(lang, "auth.error"), res.errorMessage || t(lang, "pin.invalidPin"));
             setPin("");
           }
         } else {
-          // Employee — PIN login (requires login field too)
-          // TODO: add login/hotelId fields for employee auth
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          Alert.alert("Info", "Employee PIN auth — w budowie");
-          setPin("");
+          // Employee — PIN login
+          const login = trackingId.trim();
+          const slug = hotelSlug.trim();
+          if (!login) {
+            Alert.alert(t(lang, "auth.error"), t(lang, "pin.enterLogin"));
+            setPin("");
+            setLoading(false);
+            return;
+          }
+          if (!slug) {
+            Alert.alert(t(lang, "auth.error"), t(lang, "pin.enterHotelSlug"));
+            setPin("");
+            setLoading(false);
+            return;
+          }
+          // Step 1: resolve hotelSlug → hotelId
+          const resolveRes = await resolveHotel(slug);
+          if (resolveRes.status !== "success" || !resolveRes.data?.hotelId) {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(t(lang, "auth.error"), resolveRes.errorMessage || t(lang, "pin.hotelNotFound"));
+            setPin("");
+            setLoading(false);
+            return;
+          }
+          // Step 2: login with PIN
+          const empRes = await loginWithPin(login, newPin, resolveRes.data.hotelId);
+          if (empRes.status === "success" && empRes.data?.token) {
+            await persistEmpToken(empRes.data.token);
+            await setAppMode("employee");
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            router.replace("/(employee)/dashboard");
+          } else {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(t(lang, "auth.error"), empRes.errorMessage || t(lang, "pin.invalidPin"));
+            setPin("");
+          }
         }
       } catch {
-        Alert.alert("Błąd", t(lang, "common.error"));
+        Alert.alert(t(lang, "auth.error"), t(lang, "common.error"));
         setPin("");
       } finally {
         setLoading(false);
       }
     }
-  }, [pin, mode, trackingId, email, lang, setGroupTrackingId]);
+  }, [pin, mode, trackingId, email, hotelSlug, lang, setGroupTrackingId]);
 
   const modeTitle = mode === "group" ? t(lang, "mode.group") : t(lang, "mode.employee");
 
@@ -117,6 +146,30 @@ export default function PinScreen() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
+            />
+          </View>
+        )}
+
+        {/* Employee needs login + hotelSlug */}
+        {mode === "employee" && (
+          <View style={styles.inputGroup}>
+            <TextInput
+              style={styles.input}
+              placeholder={t(lang, "pin.loginPlaceholder")}
+              placeholderTextColor={guest.textMuted}
+              value={trackingId}
+              onChangeText={setTrackingId}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder={t(lang, "pin.hotelSlugPlaceholder")}
+              placeholderTextColor={guest.textMuted}
+              value={hotelSlug}
+              onChangeText={setHotelSlug}
+              autoCapitalize="none"
+              autoCorrect={false}
             />
           </View>
         )}

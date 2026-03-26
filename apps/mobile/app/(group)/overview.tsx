@@ -6,7 +6,6 @@ import { useMemo } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -49,22 +48,22 @@ export default function OverviewScreen() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
+        <View>
           <Text style={styles.title}>{t(lang, "group.tab.overview")}</Text>
-        </Animated.View>
+        </View>
 
         {/* Countdown Card */}
-        <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.countdownCard}>
+        <View style={styles.countdownCard}>
           <Text style={styles.countdownLabel}>{t(lang, "group.countdown")}</Text>
           <Text style={styles.countdownValue}>—</Text>
           <Text style={styles.countdownSub}>
             {trackingId ? "" : lang === "pl" ? "Wprowadź PIN aby zobaczyć dane" : "Enter PIN to see event data"}
           </Text>
-        </Animated.View>
+        </View>
 
         {/* Pinned Announcements */}
         {pinnedAnnouncements.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(300).springify()}>
+          <View>
             <Text style={styles.sectionTitle}>{t(lang, "group.announcements")}</Text>
             {pinnedAnnouncements.map((a) => (
               <View key={a.id} style={styles.announcementCard}>
@@ -77,11 +76,11 @@ export default function OverviewScreen() {
                 </Text>
               </View>
             ))}
-          </Animated.View>
+          </View>
         )}
 
         {/* Agenda Preview */}
-        <Animated.View entering={FadeInDown.delay(400).springify()}>
+        <View>
           <Text style={styles.sectionTitle}>{t(lang, "group.agenda")}</Text>
           {!agenda?.length ? (
             <View style={styles.card}>
@@ -104,7 +103,7 @@ export default function OverviewScreen() {
               </View>
             ))
           )}
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );

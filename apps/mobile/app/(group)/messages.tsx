@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, maxHeight: 120,
   },
   sendBtn: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: group.primary, alignItems: "center", justifyContent: "center",
   },
   sendBtnDisabled: { backgroundColor: "rgba(0,0,0,0.08)" },

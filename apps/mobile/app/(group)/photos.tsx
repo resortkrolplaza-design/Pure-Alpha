@@ -3,10 +3,9 @@
 // =============================================================================
 
 import { View, Text, FlatList, StyleSheet, Dimensions } from "react-native";
-import { Image } from "expo-image";
+import { Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { group, fontSize, radius, spacing } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -39,8 +38,8 @@ export default function PhotosScreen() {
       <Image
         source={{ uri: item.imageUrl }}
         style={styles.photo}
-        contentFit="cover"
-        transition={200}
+        resizeMode="cover"
+        
       />
       {item.caption && (
         <Text style={styles.photoCaption} numberOfLines={1}>{item.caption}</Text>
@@ -50,10 +49,10 @@ export default function PhotosScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-      <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.title}>{t(lang, "group.tab.photos")}</Text>
-        {photos && <Text style={styles.count}>{photos.length} zdjęć</Text>}
-      </Animated.View>
+        {photos && <Text style={styles.count}>{photos.length} {t(lang, "group.photosCount")}</Text>}
+      </View>
 
       <FlatList
         data={photos ?? []}

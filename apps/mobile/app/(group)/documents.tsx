@@ -5,7 +5,6 @@
 import { View, Text, FlatList, Pressable, StyleSheet, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -43,7 +42,9 @@ export default function DocumentsScreen() {
   });
 
   const handleDownload = useCallback((doc: GroupDocumentData) => {
-    if (doc.fileUrl) Linking.openURL(doc.fileUrl);
+    if (doc.fileUrl && doc.fileUrl.startsWith("https://")) {
+      Linking.openURL(doc.fileUrl);
+    }
   }, []);
 
   const renderDocument = useCallback(({ item: doc }: { item: GroupDocumentData }) => {
@@ -69,9 +70,9 @@ export default function DocumentsScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-      <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.title}>{t(lang, "group.tab.documents")}</Text>
-      </Animated.View>
+      </View>
 
       <FlatList
         data={documents ?? []}

@@ -31,8 +31,8 @@ export default function MessagesScreen() {
     queryKey: ["messages", portalToken],
     queryFn: async () => {
       if (!portalToken) return [];
-      const res = await portalFetch<{ messages: Message[] }>(portalToken, "/messages?limit=50");
-      return res.data?.messages ?? [];
+      const res = await portalFetch<Message[]>(portalToken, "/messages?limit=50");
+      return (res.data as Message[]) ?? [];
     },
     enabled: !!portalToken,
     refetchInterval: POLL_INTERVAL,
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
     maxHeight: 120,
   },
   sendBtn: {
-    width: 40, height: 40, borderRadius: radius.full,
+    width: 44, height: 44, borderRadius: radius.full,
     backgroundColor: GOLD, alignItems: "center", justifyContent: "center",
   },
   sendBtnDisabled: { backgroundColor: guest.glass },

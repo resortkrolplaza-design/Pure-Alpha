@@ -2,12 +2,11 @@
 // Guest Portal — Points Tab (Transactions, Challenges, Badges, Scratch Cards)
 // =============================================================================
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
@@ -28,8 +27,8 @@ export default function PointsScreen() {
     queryKey: ["transactions", portalToken],
     queryFn: async () => {
       if (!portalToken) return [];
-      const res = await portalFetch<{ transactions: Transaction[] }>(portalToken, "/transactions?limit=50");
-      return res.data?.transactions ?? [];
+      const res = await portalFetch<Transaction[]>(portalToken, "/history?limit=50");
+      return (res.data as Transaction[]) ?? [];
     },
     enabled: !!portalToken,
   });
@@ -38,8 +37,8 @@ export default function PointsScreen() {
     queryKey: ["challenges", portalToken],
     queryFn: async () => {
       if (!portalToken) return [];
-      const res = await portalFetch<{ challenges: ChallengeWithProgress[] }>(portalToken, "/challenges");
-      return res.data?.challenges ?? [];
+      const res = await portalFetch<ChallengeWithProgress[]>(portalToken, "/challenges");
+      return (res.data as ChallengeWithProgress[]) ?? [];
     },
     enabled: !!portalToken,
   });
@@ -67,7 +66,7 @@ export default function PointsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Points Summary */}
-        <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.summaryRow}>
+        <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryValue}>{member?.availablePoints.toLocaleString() ?? "0"}</Text>
             <Text style={styles.summaryLabel}>{t(lang, "stay.availablePoints")}</Text>
@@ -76,10 +75,10 @@ export default function PointsScreen() {
             <Text style={styles.summaryValue}>{member?.lifetimePoints.toLocaleString() ?? "0"}</Text>
             <Text style={styles.summaryLabel}>{t(lang, "stay.lifetimePoints")}</Text>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Section Tabs */}
-        <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.tabs}>
+        <View style={styles.tabs}>
           {SECTIONS.map((s) => (
             <Pressable
               key={s.key}
@@ -91,7 +90,7 @@ export default function PointsScreen() {
               <Text style={[styles.tabText, section === s.key && styles.tabTextActive]}>{s.label}</Text>
             </Pressable>
           ))}
-        </Animated.View>
+        </View>
 
         {/* Content */}
         {section === "history" && (
@@ -160,7 +159,7 @@ export default function PointsScreen() {
   );
 }
 
-function TransactionRow({ tx, lang }: { tx: Transaction; lang: "pl" | "en" }) {
+const TransactionRow = React.memo(function TransactionRow({ tx, lang }: { tx: Transaction; lang: "pl" | "en" }) {
   const isPositive = tx.points > 0;
   const sourceKey = `points.source.${tx.source}` as const;
   return (
@@ -181,9 +180,9 @@ function TransactionRow({ tx, lang }: { tx: Transaction; lang: "pl" | "en" }) {
       </View>
     </View>
   );
-}
+});
 
-function ChallengeCard({ challenge: c, lang, pointsName }: { challenge: ChallengeWithProgress; lang: "pl" | "en"; pointsName: string }) {
+const ChallengeCard = React.memo(function ChallengeCard({ challenge: c, lang, pointsName }: { challenge: ChallengeWithProgress; lang: "pl" | "en"; pointsName: string }) {
   const progress = c.progress?.currentValue ?? 0;
   const pct = c.targetValue > 0 ? Math.min(100, (progress / c.targetValue) * 100) : 0;
   const isComplete = c.progress?.completedAt != null;
@@ -204,7 +203,7 @@ function ChallengeCard({ challenge: c, lang, pointsName }: { challenge: Challeng
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1 },

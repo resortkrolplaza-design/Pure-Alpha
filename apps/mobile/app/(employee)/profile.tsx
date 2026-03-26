@@ -2,25 +2,51 @@
 // Employee App — Profile (Info + Logout)
 // =============================================================================
 
+import { useState, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { employee, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { logout } from "@/lib/auth";
+import { logout, getEmployeeToken } from "@/lib/auth";
+
+interface EmployeeProfile {
+  name: string;
+  department: string;
+  position: string;
+}
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const reset = useAppStore((s) => s.reset);
+  const [profile, setProfile] = useState<EmployeeProfile | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const token = await getEmployeeToken();
+      if (!token) return;
+      try {
+        const parts = token.split(".");
+        if (parts.length < 2) return;
+        const payload = JSON.parse(atob(parts[1]));
+        setProfile({
+          name: payload.employeeName ?? payload.name ?? t(lang, "mode.employee"),
+          department: payload.department ?? "",
+          position: payload.position ?? "",
+        });
+      } catch {
+        // Token decode failed — keep placeholder
+      }
+    })();
+  }, [lang]);
 
   const handleLogout = () => {
     Alert.alert(
       t(lang, "auth.logout"),
-      "Czy na pewno chcesz się wylogować?",
+      t(lang, "emp.logoutConfirm"),
       [
         { text: t(lang, "common.cancel"), style: "cancel" },
         {
@@ -39,23 +65,27 @@ export default function ProfileScreen() {
   return (
     <LinearGradient colors={[employee.bgFrom, employee.bgTo]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 40 }]}>
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
+        <View>
           <Text style={styles.title}>{t(lang, "emp.tab.profile")}</Text>
-        </Animated.View>
+        </View>
 
         {/* Employee Info Card */}
-        <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.card}>
+        <View style={styles.card}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>👤</Text>
           </View>
-          <Text style={styles.name}>Pracownik</Text>
-          <Text style={styles.meta}>Dane profilu załadują się po zalogowaniu</Text>
-        </Animated.View>
+          <Text style={styles.name}>{profile?.name ?? t(lang, "emp.tab.profile")}</Text>
+          <Text style={styles.meta}>
+            {profile
+              ? [profile.position, profile.department].filter(Boolean).join(" · ") || t(lang, "mode.employee")
+              : t(lang, "emp.profilePlaceholder")}
+          </Text>
+        </View>
 
         <View style={styles.spacer} />
 
         {/* Logout */}
-        <Animated.View entering={FadeInDown.delay(300).springify()}>
+        <View>
           <Pressable
             style={({ pressed }) => [styles.logoutBtn, pressed && styles.logoutBtnPressed]}
             onPress={handleLogout}
@@ -66,7 +96,7 @@ export default function ProfileScreen() {
           </Pressable>
 
           <Text style={styles.version}>Pure Alpha Employee App v1.0</Text>
-        </Animated.View>
+        </View>
       </View>
     </LinearGradient>
   );

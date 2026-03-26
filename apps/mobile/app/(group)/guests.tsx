@@ -5,7 +5,6 @@
 import { View, Text, FlatList, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -13,10 +12,16 @@ import { groupFetch } from "@/lib/group-api";
 import type { GroupGuestData } from "@/lib/types";
 import { useCallback } from "react";
 
-const RSVP_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  confirmed: { bg: "rgba(16,185,129,0.1)", text: "#10b981", label: "Potwierdzone" },
-  declined: { bg: "rgba(239,68,68,0.1)", text: "#ef4444", label: "Odrzucone" },
-  pending: { bg: "rgba(245,158,11,0.1)", text: "#f59e0b", label: "Oczekuje" },
+const RSVP_COLORS: Record<string, { bg: string; text: string }> = {
+  confirmed: { bg: "rgba(16,185,129,0.1)", text: "#10b981" },
+  declined: { bg: "rgba(239,68,68,0.1)", text: "#ef4444" },
+  pending: { bg: "rgba(245,158,11,0.1)", text: "#f59e0b" },
+};
+
+const RSVP_LABEL_KEYS: Record<string, string> = {
+  confirmed: "group.rsvp.confirmed",
+  declined: "group.rsvp.declined",
+  pending: "group.rsvp.pending",
 };
 
 export default function GuestsScreen() {
@@ -36,6 +41,7 @@ export default function GuestsScreen() {
 
   const renderGuest = useCallback(({ item: g }: { item: GroupGuestData }) => {
     const rsvp = RSVP_COLORS[g.rsvpStatus] ?? RSVP_COLORS.pending;
+    const rsvpLabelKey = RSVP_LABEL_KEYS[g.rsvpStatus] ?? RSVP_LABEL_KEYS.pending;
     return (
       <View style={styles.guestCard}>
         <View style={styles.guestAvatar}>
@@ -45,21 +51,21 @@ export default function GuestsScreen() {
         </View>
         <View style={styles.guestInfo}>
           <Text style={styles.guestName}>{g.firstName} {g.lastName}</Text>
-          {g.isOrganizer && <Text style={styles.organizerBadge}>Organizator</Text>}
+          {g.isOrganizer && <Text style={styles.organizerBadge}>{t(lang, "group.organizer")}</Text>}
         </View>
         <View style={[styles.rsvpBadge, { backgroundColor: rsvp.bg }]}>
-          <Text style={[styles.rsvpText, { color: rsvp.text }]}>{rsvp.label}</Text>
+          <Text style={[styles.rsvpText, { color: rsvp.text }]}>{t(lang, rsvpLabelKey)}</Text>
         </View>
       </View>
     );
-  }, []);
+  }, [lang]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-      <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.header}>
+      <View style={styles.header}>
         <Text style={styles.title}>{t(lang, "group.tab.guests")}</Text>
         {guests && <Text style={styles.count}>{guests.length} {t(lang, "group.tab.guests").toLowerCase()}</Text>}
-      </Animated.View>
+      </View>
 
       <FlatList
         data={guests ?? []}

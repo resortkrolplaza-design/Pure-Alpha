@@ -5,7 +5,6 @@
 import { View, Text, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { employee, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -17,18 +16,17 @@ export default function ChatScreen() {
   return (
     <LinearGradient colors={[employee.bgFrom, employee.bgTo]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + 20 }]}>
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
+        <View>
           <Text style={styles.title}>{t(lang, "emp.tab.chat")}</Text>
-        </Animated.View>
+        </View>
 
-        <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.card}>
+        <View style={styles.card}>
           <Text style={styles.cardEmoji}>💬</Text>
-          <Text style={styles.cardTitle}>Pure Chat</Text>
+          <Text style={styles.cardTitle}>{t(lang, "emp.chat.title")}</Text>
           <Text style={styles.cardDesc}>
-            Chat z zespołem — kanały, wiadomości bezpośrednie, AI asystent.
-            Wymaga połączenia z serwerem czatu.
+            {t(lang, "emp.chat.desc")}
           </Text>
-        </Animated.View>
+        </View>
       </View>
     </LinearGradient>
   );

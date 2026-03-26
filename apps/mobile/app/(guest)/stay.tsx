@@ -6,14 +6,13 @@ import { useMemo } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, Linking } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { useGuestStore } from "@/lib/store";
 
 function getGreetingKey(): string {
-  const h = new Date().getUTCHours();
+  const h = new Date().getHours();
   if (h >= 5 && h < 12) return "stay.greeting.morning";
   if (h >= 12 && h < 18) return "stay.greeting.afternoon";
   if (h >= 18 && h < 22) return "stay.greeting.evening";
@@ -48,15 +47,15 @@ export default function StayScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Greeting */}
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
+        <View>
           <Text style={styles.greeting}>
             {t(lang, greetingKey)}, {displayName}
           </Text>
           {hotel && <Text style={styles.hotelName}>{hotel.name}</Text>}
-        </Animated.View>
+        </View>
 
         {/* Member Card */}
-        <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.memberCard}>
+        <View style={styles.memberCard}>
           <LinearGradient
             colors={[GOLD, "#c4a030"]}
             start={{ x: 0, y: 0 }}
@@ -84,10 +83,10 @@ export default function StayScreen() {
               )}
             </View>
           </LinearGradient>
-        </Animated.View>
+        </View>
 
         {/* Stats Grid */}
-        <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.statsGrid}>
+        <View style={styles.statsGrid}>
           <StatCard label={t(lang, "stay.totalStays")} value={String(member.totalStays)} />
           <StatCard label={t(lang, "stay.lifetimePoints")} value={member.lifetimePoints.toLocaleString()} />
           <StatCard
@@ -98,11 +97,11 @@ export default function StayScreen() {
             label={t(lang, "stay.totalSpent")}
             value={`${member.totalSpent.toLocaleString()} PLN`}
           />
-        </Animated.View>
+        </View>
 
         {/* Next Tier Progress */}
         {nextTier && (
-          <Animated.View entering={FadeInDown.delay(400).springify()} style={styles.card}>
+          <View style={styles.card}>
             <Text style={styles.cardTitle}>{t(lang, "stay.nextTier")}: {nextTier.name}</Text>
             <View style={styles.progressBar}>
               <View
@@ -122,22 +121,22 @@ export default function StayScreen() {
             <Text style={styles.progressText}>
               {member.lifetimePoints.toLocaleString()} / {nextTier.minPoints.toLocaleString()} {program.pointsName}
             </Text>
-          </Animated.View>
+          </View>
         )}
 
         {/* Expiring Points Warning */}
         {member.expiringPoints && member.expiringPoints.totalPoints > 0 && (
-          <Animated.View entering={FadeInDown.delay(450).springify()} style={styles.warningCard}>
+          <View style={styles.warningCard}>
             <Text style={styles.warningText}>
               ⚠️ {member.expiringPoints.totalPoints.toLocaleString()} {program.pointsName}{" "}
               {t(lang, "stay.expiresOn")} {new Date(member.expiringPoints.earliestExpiry).toLocaleDateString(lang === "pl" ? "pl-PL" : "en-GB")}
             </Text>
-          </Animated.View>
+          </View>
         )}
 
         {/* Tier Benefits */}
         {member.tier?.benefits && member.tier.benefits.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(500).springify()} style={styles.card}>
+          <View style={styles.card}>
             <Text style={styles.cardTitle}>{t(lang, "stay.benefits")}</Text>
             {member.tier.benefits.map((b, i) => (
               <View key={i} style={styles.benefitRow}>
@@ -145,12 +144,12 @@ export default function StayScreen() {
                 <Text style={styles.benefitText}>{b}</Text>
               </View>
             ))}
-          </Animated.View>
+          </View>
         )}
 
         {/* Contact */}
         {hotel && (
-          <Animated.View entering={FadeInDown.delay(600).springify()} style={styles.card}>
+          <View style={styles.card}>
             <Text style={styles.cardTitle}>{t(lang, "stay.contact")}</Text>
             <View style={styles.contactRow}>
               {hotel.phone && (
@@ -176,7 +175,7 @@ export default function StayScreen() {
                 </Pressable>
               )}
             </View>
-          </Animated.View>
+          </View>
         )}
       </ScrollView>
     </LinearGradient>

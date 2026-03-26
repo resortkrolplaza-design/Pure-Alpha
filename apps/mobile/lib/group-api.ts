@@ -3,15 +3,10 @@
 // =============================================================================
 
 import { API_BASE } from "./api";
+import { getGroupToken } from "./auth";
 import type { ApiResponse } from "./types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
-
-let groupToken: string | null = null;
-
-export function setGroupToken(token: string | null) {
-  groupToken = token;
-}
 
 export async function groupFetch<T>(
   trackingId: string,
@@ -22,13 +17,14 @@ export async function groupFetch<T>(
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const url = `${API_BASE}/api/portal/${trackingId}${path}`;
+    const token = await getGroupToken();
+    const url = `${API_BASE}/api/portal/${encodeURIComponent(trackingId)}${path}`;
     const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        ...(groupToken ? { Authorization: `Bearer ${groupToken}` } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers as Record<string, string> ?? {}),
       },
       signal: controller.signal,

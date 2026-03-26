@@ -6,7 +6,6 @@ import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { employee, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -50,13 +49,13 @@ export default function DashboardScreen() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
+        <View>
           <Text style={styles.greeting}>{t(lang, getGreetingKey())} 👋</Text>
           <Text style={styles.subtitle}>Pure Alpha Employee App</Text>
-        </Animated.View>
+        </View>
 
         {/* Today's Shift */}
-        <Animated.View entering={FadeInDown.delay(200).springify()} style={[styles.card, styles.shiftCard]}>
+        <View style={[styles.card, styles.shiftCard]}>
           <View style={styles.shiftHeader}>
             <Text style={styles.shiftTitle}>{t(lang, "emp.todayShift")}</Text>
             {data?.todayShift && (
@@ -77,10 +76,10 @@ export default function DashboardScreen() {
               {isLoading ? t(lang, "common.loading") : t(lang, "emp.noShift")}
             </Text>
           )}
-        </Animated.View>
+        </View>
 
         {/* Week Stats */}
-        <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.statsRow}>
+        <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{data?.weekStats.scheduledHours ?? 0}h</Text>
             <Text style={styles.statLabel}>{t(lang, "emp.hours")}</Text>
@@ -91,10 +90,10 @@ export default function DashboardScreen() {
             </Text>
             <Text style={styles.statLabel}>{t(lang, "emp.shifts")}</Text>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Upcoming Shifts */}
-        <Animated.View entering={FadeInDown.delay(400).springify()}>
+        <View>
           <Text style={styles.sectionTitle}>{t(lang, "emp.upcoming")}</Text>
           {!data?.upcomingShifts?.length ? (
             <View style={styles.card}>
@@ -105,7 +104,7 @@ export default function DashboardScreen() {
               <ShiftRow key={shift.id} shift={shift} />
             ))
           )}
-        </Animated.View>
+        </View>
       </ScrollView>
     </LinearGradient>
   );

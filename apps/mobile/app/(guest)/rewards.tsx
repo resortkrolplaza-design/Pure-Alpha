@@ -4,10 +4,9 @@
 
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Image } from "expo-image";
+import { Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
@@ -27,8 +26,8 @@ export default function RewardsScreen() {
     queryKey: ["rewards", portalToken],
     queryFn: async () => {
       if (!portalToken) return [];
-      const res = await portalFetch<{ rewards: Reward[] }>(portalToken, "/rewards");
-      return res.data?.rewards ?? [];
+      const res = await portalFetch<Reward[]>(portalToken, "/rewards");
+      return (res.data as Reward[]) ?? [];
     },
     enabled: !!portalToken,
   });
@@ -36,7 +35,7 @@ export default function RewardsScreen() {
   const redeemMutation = useMutation({
     mutationFn: async (rewardId: string) => {
       if (!portalToken) throw new Error("No token");
-      const res = await portalFetch<{ redemption: unknown }>(portalToken, "/redeem", {
+      const res = await portalFetch<{ redemption: unknown }>(portalToken, "/rewards/redeem", {
         method: "POST",
         body: JSON.stringify({ rewardId }),
       });
@@ -49,7 +48,7 @@ export default function RewardsScreen() {
       Alert.alert("🎉", t(lang, "rewards.redeemSuccess"));
     },
     onError: (err: Error) => {
-      Alert.alert("Błąd", err.message);
+      Alert.alert(t(lang, "auth.error"), err.message);
     },
   });
 
@@ -74,12 +73,12 @@ export default function RewardsScreen() {
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
+        <View>
           <Text style={styles.title}>{t(lang, "rewards.catalog")}</Text>
           <Text style={styles.pointsBadge}>
             {member?.availablePoints.toLocaleString() ?? 0} {program?.pointsName ?? "pkt"}
           </Text>
-        </Animated.View>
+        </View>
 
         {isLoading ? (
           <ActivityIndicator color={GOLD} style={{ marginTop: 40 }} />
@@ -88,7 +87,7 @@ export default function RewardsScreen() {
         ) : (
           <View style={styles.grid}>
             {rewards.map((r, i) => (
-              <Animated.View key={r.id} entering={FadeInDown.delay(200 + i * 50).springify()}>
+              <View key={r.id}>
                 <RewardCard
                   reward={r}
                   lang={lang}
@@ -96,7 +95,7 @@ export default function RewardsScreen() {
                   onRedeem={() => handleRedeem(r)}
                   isRedeeming={redeemMutation.isPending}
                 />
-              </Animated.View>
+              </View>
             ))}
           </View>
         )}
@@ -119,8 +118,8 @@ function RewardCard({
         <Image
           source={{ uri: r.imageUrl }}
           style={styles.cardImage}
-          contentFit="cover"
-          transition={200}
+          resizeMode="cover"
+          
         />
       )}
       <View style={styles.cardBody}>
@@ -138,7 +137,7 @@ function RewardCard({
           >
             <Text style={[styles.redeemBtnText, blocked && styles.redeemBtnTextDisabled]}>
               {blocked
-                ? (r.reasonsBlocked[0] === "NOT_ENOUGH_POINTS"
+                ? (r.reasonsBlocked?.[0] === "INSUFFICIENT_POINTS"
                   ? t(lang, "rewards.notEnoughPoints")
                   : t(lang, "rewards.tierRequired"))
                 : t(lang, "rewards.redeem")}
@@ -170,7 +169,7 @@ const styles = StyleSheet.create({
   cardCost: { fontSize: fontSize.base, fontFamily: "Inter_700Bold", color: GOLD },
   redeemBtn: {
     backgroundColor: GOLD, borderRadius: radius.full,
-    paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, minHeight: 36,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, minHeight: 44,
     alignItems: "center", justifyContent: "center",
   },
   redeemBtnDisabled: { backgroundColor: guest.glass },

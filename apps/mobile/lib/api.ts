@@ -3,9 +3,14 @@
 // Secure fetch wrapper with JWT auth, 401 intercept, error handling
 // =============================================================================
 
+import { Platform } from "react-native";
 import { ApiResponse } from "./types";
 
-export const API_BASE = "https://app.purehotel.pl";
+// Native apps don't have CORS — call production directly.
+// Web (dev only) uses a local proxy to avoid CORS.
+export const API_BASE = Platform.OS === "web"
+  ? "http://localhost:3999"
+  : "https://purealphahotel.pl";
 const REQUEST_TIMEOUT_MS = 15_000;
 
 type TokenGetter = () => Promise<string | null>;

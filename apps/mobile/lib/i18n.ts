@@ -29,6 +29,10 @@ const pl: Record<string, string> = {
   "auth.invalidCredentials": "Nieprawidłowy email lub hasło",
   "auth.logout": "Wyloguj się",
   "auth.tokenExpired": "Sesja wygasła. Zaloguj się ponownie.",
+  "auth.error": "Błąd",
+  "auth.invalidToken": "Nieprawidłowy token",
+  "auth.tokenLabel": "Token portalu",
+  "auth.tokenPlaceholder": "Wklej token z emaila...",
 
   // ── Guest Portal Tabs ──────────────────────────────────────────────
   "tab.stay": "Pobyt",
@@ -151,6 +155,21 @@ const pl: Record<string, string> = {
   "group.countdown": "Do wydarzenia",
   "group.rsvp": "Potwierdź obecność",
   "group.guestList": "Lista gości",
+  "group.organizer": "Organizator",
+  "group.rsvp.confirmed": "Potwierdzone",
+  "group.rsvp.declined": "Odrzucone",
+  "group.rsvp.pending": "Oczekuje",
+  "group.photosCount": "zdjęć",
+
+  // ── PIN Auth ──────────────────────────────────────────────────────
+  "pin.enterTrackingId": "Wprowadź ID wydarzenia",
+  "pin.invalidPin": "Nieprawidłowy PIN",
+  "pin.employeeComingSoon": "Logowanie pracownika — w budowie",
+  "pin.enterLogin": "Wprowadź login pracownika",
+  "pin.enterHotelSlug": "Wprowadź slug hotelu",
+  "pin.hotelNotFound": "Nie znaleziono hotelu",
+  "pin.loginPlaceholder": "Login pracownika",
+  "pin.hotelSlugPlaceholder": "Slug hotelu (np. krol-plaza)",
 
   // ── Employee App ───────────────────────────────────────────────────
   "emp.tab.home": "Pulpit",
@@ -163,6 +182,19 @@ const pl: Record<string, string> = {
   "emp.upcoming": "Najbliższe zmiany",
   "emp.hours": "Godziny",
   "emp.shifts": "Zmiany",
+  "emp.chat.title": "Pure Chat",
+  "emp.chat.desc": "Chat z zespołem — kanały, wiadomości bezpośrednie, AI asystent.",
+  "emp.logoutConfirm": "Czy na pewno chcesz się wylogować?",
+  "emp.profilePlaceholder": "Dane profilu załadują się po zalogowaniu",
+  "emp.day.mon": "Pon",
+  "emp.day.tue": "Wt",
+  "emp.day.wed": "Śr",
+  "emp.day.thu": "Czw",
+  "emp.day.fri": "Pt",
+  "emp.day.sat": "Sob",
+  "emp.day.sun": "Ndz",
+  "emp.prevWeek": "Poprzedni tydzień",
+  "emp.nextWeek": "Następny tydzień",
 };
 
 const en: Record<string, string> = {
@@ -189,6 +221,10 @@ const en: Record<string, string> = {
   "auth.invalidCredentials": "Invalid email or password",
   "auth.logout": "Log out",
   "auth.tokenExpired": "Session expired. Please log in again.",
+  "auth.error": "Error",
+  "auth.invalidToken": "Invalid token",
+  "auth.tokenLabel": "Portal token",
+  "auth.tokenPlaceholder": "Paste token from email...",
 
   // ── Guest Portal Tabs ──────────────────────────────────────────────
   "tab.stay": "Stay",
@@ -311,6 +347,21 @@ const en: Record<string, string> = {
   "group.countdown": "Until event",
   "group.rsvp": "Confirm attendance",
   "group.guestList": "Guest list",
+  "group.organizer": "Organizer",
+  "group.rsvp.confirmed": "Confirmed",
+  "group.rsvp.declined": "Declined",
+  "group.rsvp.pending": "Pending",
+  "group.photosCount": "photos",
+
+  // ── PIN Auth ──────────────────────────────────────────────────────
+  "pin.enterTrackingId": "Enter event ID",
+  "pin.invalidPin": "Invalid PIN",
+  "pin.employeeComingSoon": "Employee login — coming soon",
+  "pin.enterLogin": "Enter employee login",
+  "pin.enterHotelSlug": "Enter hotel slug",
+  "pin.hotelNotFound": "Hotel not found",
+  "pin.loginPlaceholder": "Employee login",
+  "pin.hotelSlugPlaceholder": "Hotel slug (e.g. krol-plaza)",
 
   // ── Employee App ───────────────────────────────────────────────────
   "emp.tab.home": "Home",
@@ -323,6 +374,19 @@ const en: Record<string, string> = {
   "emp.upcoming": "Upcoming shifts",
   "emp.hours": "Hours",
   "emp.shifts": "Shifts",
+  "emp.chat.title": "Pure Chat",
+  "emp.chat.desc": "Team chat — channels, direct messages, AI assistant.",
+  "emp.logoutConfirm": "Are you sure you want to log out?",
+  "emp.profilePlaceholder": "Profile data will load after login",
+  "emp.day.mon": "Mon",
+  "emp.day.tue": "Tue",
+  "emp.day.wed": "Wed",
+  "emp.day.thu": "Thu",
+  "emp.day.fri": "Fri",
+  "emp.day.sat": "Sat",
+  "emp.day.sun": "Sun",
+  "emp.prevWeek": "Previous week",
+  "emp.nextWeek": "Next week",
 };
 
 const dicts: Record<Lang, Record<string, string>> = { pl, en };

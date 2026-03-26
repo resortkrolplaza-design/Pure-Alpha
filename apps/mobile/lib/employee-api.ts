@@ -3,15 +3,10 @@
 // =============================================================================
 
 import { API_BASE } from "./api";
+import { getEmployeeToken } from "./auth";
 import type { ApiResponse } from "./types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
-
-let employeeToken: string | null = null;
-
-export function setEmployeeToken(token: string | null) {
-  employeeToken = token;
-}
 
 export async function employeeFetch<T>(
   path: string,
@@ -21,13 +16,14 @@ export async function employeeFetch<T>(
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
+    const token = await getEmployeeToken();
     const url = `${API_BASE}/api/employee-app${path}`;
     const res = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        ...(employeeToken ? { Authorization: `Bearer ${employeeToken}` } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(options.headers as Record<string, string> ?? {}),
       },
       signal: controller.signal,

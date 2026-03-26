@@ -5,15 +5,27 @@
 import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, Linking } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Image } from "expo-image";
+import { Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
 import type { FaqData } from "@/lib/types";
 
 type Section = "info" | "gallery" | "services" | "faq" | "attractions";
+
+const getSocialUrl = (platform: string, username: string | null): string | null => {
+  if (!username) return null;
+  switch (platform.toLowerCase()) {
+    case "facebook": return `https://facebook.com/${username}`;
+    case "instagram": return `https://instagram.com/${username}`;
+    case "twitter": case "x": return `https://x.com/${username}`;
+    case "tiktok": return `https://tiktok.com/@${username}`;
+    case "youtube": return `https://youtube.com/${username}`;
+    case "linkedin": return `https://linkedin.com/company/${username}`;
+    default: return null;
+  }
+};
 
 export default function HotelScreen() {
   const insets = useSafeAreaInsets();
@@ -41,10 +53,10 @@ export default function HotelScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hotel Name */}
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
+        <View>
           <Text style={styles.title}>{hotel?.name ?? "Hotel"}</Text>
           {hotel?.address && <Text style={styles.address}>{hotel.address}</Text>}
-        </Animated.View>
+        </View>
 
         {/* Section Tabs (scrollable) */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll}>
@@ -88,9 +100,18 @@ export default function HotelScreen() {
                 <Text style={styles.cardTitle}>{t(lang, "hotel.social")}</Text>
                 <View style={styles.socialRow}>
                   {socialLinks.map((link, i) => (
-                    <View key={i} style={styles.socialBadge}>
+                    <Pressable
+                      key={i}
+                      style={styles.socialBadge}
+                      onPress={() => {
+                        const url = getSocialUrl(link.platform, link.accountUsername);
+                        if (url) Linking.openURL(url);
+                      }}
+                      accessibilityRole="link"
+                      accessibilityLabel={link.platform}
+                    >
                       <Text style={styles.socialText}>{link.platform}</Text>
-                    </View>
+                    </Pressable>
                   ))}
                 </View>
               </View>
@@ -105,8 +126,8 @@ export default function HotelScreen() {
                 key={img.id}
                 source={{ uri: img.url }}
                 style={styles.galleryImage}
-                contentFit="cover"
-                transition={200}
+                resizeMode="cover"
+                
               />
             ))}
             {!gallery.length && (
@@ -149,7 +170,7 @@ export default function HotelScreen() {
           <View style={styles.section}>
             {attractions.map((a) => (
               <View key={a.id} style={styles.attractionCard}>
-                {a.imageUrl && <Image source={{ uri: a.imageUrl }} style={styles.attractionImg} contentFit="cover" />}
+                {a.imageUrl && <Image source={{ uri: a.imageUrl }} style={styles.attractionImg} resizeMode="cover" />}
                 <View style={styles.attractionInfo}>
                   <Text style={styles.attractionName}>{a.name}</Text>
                   {a.distance && <Text style={styles.attractionDist}>📍 {a.distance}</Text>}

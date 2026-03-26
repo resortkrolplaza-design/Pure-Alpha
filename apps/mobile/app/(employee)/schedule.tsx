@@ -7,7 +7,6 @@ import { View, Text, Pressable, FlatList, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { employee, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
@@ -15,7 +14,10 @@ import { useAppStore } from "@/lib/store";
 import { employeeFetch } from "@/lib/employee-api";
 import type { ShiftData } from "@/lib/types";
 
-const DAY_LABELS = ["Pon", "Wt", "Śr", "Czw", "Pt", "Sob", "Ndz"];
+const DAY_LABEL_KEYS = [
+  "emp.day.mon", "emp.day.tue", "emp.day.wed", "emp.day.thu",
+  "emp.day.fri", "emp.day.sat", "emp.day.sun",
+];
 
 const SHIFT_COLORS: Record<string, string> = {
   MORNING: "#fbbf24",
@@ -51,13 +53,15 @@ export default function ScheduleScreen() {
     return ws;
   }, [weekOffset]);
 
+  const dayLabels = useMemo(() => DAY_LABEL_KEYS.map((k) => t(lang, k)), [lang]);
+
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(weekStart);
       d.setDate(d.getDate() + i);
-      return { date: d, dateStr: formatDate(d), dayLabel: DAY_LABELS[i], isToday: formatDate(d) === formatDate(new Date()) };
+      return { date: d, dateStr: formatDate(d), dayLabel: dayLabels[i], isToday: formatDate(d) === formatDate(new Date()) };
     });
-  }, [weekStart]);
+  }, [weekStart, dayLabels]);
 
   const startDate = weekDays[0].dateStr;
   const endDate = weekDays[6].dateStr;
@@ -94,13 +98,13 @@ export default function ScheduleScreen() {
     <LinearGradient colors={[employee.bgFrom, employee.bgTo]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}>
         {/* Header */}
-        <Animated.View entering={FadeInDown.delay(100).springify()}>
+        <View>
           <Text style={styles.title}>{t(lang, "emp.tab.schedule")}</Text>
-        </Animated.View>
+        </View>
 
         {/* Week Navigation */}
         <View style={styles.weekNav}>
-          <Pressable onPress={handlePrev} style={styles.navBtn} accessibilityLabel="Poprzedni tydzień">
+          <Pressable onPress={handlePrev} style={styles.navBtn} accessibilityLabel={t(lang, "emp.prevWeek")}>
             <Text style={styles.navBtnText}>‹</Text>
           </Pressable>
           <Text style={styles.weekLabel}>
@@ -108,7 +112,7 @@ export default function ScheduleScreen() {
             {" — "}
             {weekDays[6].date.toLocaleDateString("pl-PL", { day: "numeric", month: "short" })}
           </Text>
-          <Pressable onPress={handleNext} style={styles.navBtn} accessibilityLabel="Następny tydzień">
+          <Pressable onPress={handleNext} style={styles.navBtn} accessibilityLabel={t(lang, "emp.nextWeek")}>
             <Text style={styles.navBtnText}>›</Text>
           </Pressable>
         </View>

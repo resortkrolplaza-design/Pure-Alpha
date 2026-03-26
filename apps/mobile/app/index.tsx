@@ -7,14 +7,13 @@ import { View, Text, Pressable, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, fontWeight, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
-import { getAppMode, getPortalToken, getGroupTrackingId, getEmployeeToken } from "@/lib/auth";
+import { getAppMode, getPortalToken, getGroupTrackingId, getGroupToken, getEmployeeToken } from "@/lib/auth";
 import { portalFetch } from "@/lib/api";
-import type { PortalInitData } from "@/lib/types";
+import type { PortalInitData, MemberData, TierData, ProgramData, HotelData } from "@/lib/types";
 
 const MODES = [
   { key: "guest" as const, icon: "🏨", route: "/(guest)/stay" },
@@ -33,10 +32,11 @@ export default function ModeSelector() {
   // Auto-resume last session — must hydrate Zustand from SecureStore
   useEffect(() => {
     (async () => {
-      const [savedMode, portalToken, groupId, empToken] = await Promise.all([
+      const [savedMode, portalToken, groupId, groupJwt, empToken] = await Promise.all([
         getAppMode(),
         getPortalToken(),
         getGroupTrackingId(),
+        getGroupToken(),
         getEmployeeToken(),
       ]);
 
@@ -45,15 +45,28 @@ export default function ModeSelector() {
         setMode("guest");
         setStorePortalToken(portalToken);
         try {
-          const initRes = await portalFetch<PortalInitData>(portalToken, "/init");
+          const initRes = await portalFetch<Record<string, unknown>>(portalToken, "");
           if (initRes.status === "success" && initRes.data) {
-            setPortalData(initRes.data);
+            const raw = initRes.data;
+            const portalData: PortalInitData = {
+              member: {
+                ...(raw.member as MemberData),
+                tier: (raw.tier as TierData) ?? null,
+                expiringPoints: (raw.expiringPoints as MemberData["expiringPoints"]) ?? null,
+                cheapestReward: (raw.cheapestReward as MemberData["cheapestReward"]) ?? null,
+              },
+              program: raw.program as ProgramData,
+              hotel: raw.hotel as HotelData,
+              tiers: [],
+              nextTier: null,
+            };
+            setPortalData(portalData);
             router.replace("/(guest)/stay");
             return;
           }
         } catch { /* token expired — fall through to mode selector */ }
       }
-      if (savedMode === "group" && groupId) {
+      if (savedMode === "group" && groupId && groupJwt) {
         setMode("group");
         router.replace("/(group)/overview");
         return;
@@ -86,18 +99,18 @@ export default function ModeSelector() {
     <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}>
         {/* Logo */}
-        <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.logoArea}>
+        <View style={styles.logoArea}>
           <View style={styles.logoCircle}>
             <Text style={styles.logoStar}>★</Text>
           </View>
           <Text style={styles.title}>{t(lang, "mode.title")}</Text>
           <Text style={styles.subtitle}>{t(lang, "mode.subtitle")}</Text>
-        </Animated.View>
+        </View>
 
         {/* Mode Cards */}
         <View style={styles.cards}>
           {MODES.map((mode, i) => (
-            <Animated.View key={mode.key} entering={FadeInDown.delay(200 + i * 100).springify()}>
+            <View key={mode.key}>
               <Pressable
                 style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
                 onPress={() => handleMode(mode)}
@@ -113,14 +126,14 @@ export default function ModeSelector() {
                 </View>
                 <Text style={styles.cardArrow}>›</Text>
               </Pressable>
-            </Animated.View>
+            </View>
           ))}
         </View>
 
         {/* Footer */}
-        <Animated.View entering={FadeInDown.delay(600).springify()}>
+        <View>
           <Text style={styles.footer}>Pure Alpha v1.0</Text>
-        </Animated.View>
+        </View>
       </View>
     </LinearGradient>
   );
