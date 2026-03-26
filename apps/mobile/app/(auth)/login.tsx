@@ -16,7 +16,7 @@ import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
 import { setPortalToken, setAppMode } from "@/lib/auth";
 import { portalFetch, API_BASE } from "@/lib/api";
-import type { PortalInitData, MemberData, TierData, ProgramData, HotelData } from "@/lib/types";
+import { mapInitResponse } from "@/lib/portal-helpers";
 
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
@@ -43,21 +43,7 @@ export default function LoginScreen() {
         return;
       }
 
-      const raw = initRes.data;
-
-      // Map API response to PortalInitData shape
-      const portalData: PortalInitData = {
-        member: {
-          ...(raw.member as MemberData),
-          tier: (raw.tier as TierData) ?? null,
-          expiringPoints: (raw.expiringPoints as MemberData["expiringPoints"]) ?? null,
-          cheapestReward: (raw.cheapestReward as MemberData["cheapestReward"]) ?? null,
-        },
-        program: raw.program as ProgramData,
-        hotel: raw.hotel as HotelData,
-        tiers: [],
-        nextTier: null,
-      };
+      const portalData = mapInitResponse(initRes.data);
 
       // Persist
       await Promise.all([

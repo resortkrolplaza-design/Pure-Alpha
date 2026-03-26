@@ -1,11 +1,11 @@
 // =============================================================================
-// Guest Portal — Messages Tab (Chat with hotel staff)
+// Guest Portal -- Messages Tab (Chat with hotel staff)
 // =============================================================================
 
 import { useState, useRef, useCallback, useMemo } from "react";
 import {
   View, Text, FlatList, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,32 +26,40 @@ export default function MessagesScreen() {
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const flatListRef = useRef<FlatList>(null);
+  const prevCountRef = useRef(0);
 
-  const { data: messages, isLoading } = useQuery({
+  // P0-1.2: Fix response shape -- backend returns { messages, hasMore } wrapped in ApiResponse.data
+  const { data: messages, isLoading, isError, refetch } = useQuery({
     queryKey: ["messages", portalToken],
     queryFn: async () => {
       if (!portalToken) return [];
-      const res = await portalFetch<Message[]>(portalToken, "/messages?limit=50");
-      return (res.data as Message[]) ?? [];
+      const res = await portalFetch<{ messages: Message[]; hasMore: boolean }>(portalToken, "/messages?limit=50");
+      // Handle BOTH shapes for robustness (flat array OR wrapped object)
+      return (res.data as any)?.messages ?? res.data ?? [];
     },
     enabled: !!portalToken,
     refetchInterval: POLL_INTERVAL,
   });
 
+  // P0-1.2: Fix POST -- backend returns flat Message in res.data, not res.data?.message
   const sendMutation = useMutation({
     mutationFn: async (body: string) => {
       if (!portalToken) throw new Error("No token");
-      const res = await portalFetch<{ message: Message }>(portalToken, "/messages", {
+      const res = await portalFetch<Message>(portalToken, "/messages", {
         method: "POST",
         body: JSON.stringify({ body }),
       });
       if (res.status !== "success") throw new Error(res.errorMessage || "Send failed");
-      return res.data?.message;
+      return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["messages"] });
       setText("");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    },
+    // P1-14: Add error handling for send mutation
+    onError: () => {
+      Alert.alert(t(lang, "auth.error"), t(lang, "messages.sendFailed"));
     },
   });
 
@@ -61,7 +69,7 @@ export default function MessagesScreen() {
     sendMutation.mutate(trimmed);
   };
 
-  // Reversed list — newest at bottom (memoized to avoid re-sort on every render)
+  // Reversed list -- newest at bottom (memoized to avoid re-sort on every render)
   const sortedMessages = useMemo(() => [...(messages ?? [])].reverse(), [messages]);
 
   const renderMessage = useCallback(({ item: msg }: { item: Message }) => {
@@ -85,6 +93,15 @@ export default function MessagesScreen() {
     );
   }, [lang]);
 
+  // P2-16: Only scroll to end when message count increases (not on every layout change)
+  const handleContentSizeChange = useCallback(() => {
+    const currentCount = sortedMessages.length;
+    if (currentCount > prevCountRef.current) {
+      flatListRef.current?.scrollToEnd({ animated: false });
+    }
+    prevCountRef.current = currentCount;
+  }, [sortedMessages.length]);
+
   return (
     <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
       <KeyboardAvoidingView
@@ -102,6 +119,19 @@ export default function MessagesScreen() {
           <View style={styles.center}>
             <ActivityIndicator color={GOLD} />
           </View>
+        ) : isError ? (
+          // P1-14: Error state with retry
+          <View style={styles.center}>
+            <Text style={styles.emptyText}>{t(lang, "messages.errorLoading")}</Text>
+            <Pressable
+              style={styles.retryBtn}
+              onPress={() => refetch()}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.retry")}
+            >
+              <Text style={styles.retryBtnText}>{t(lang, "common.retry")}</Text>
+            </Pressable>
+          </View>
         ) : !sortedMessages.length ? (
           <View style={styles.center}>
             <Text style={styles.emptyText}>{t(lang, "messages.empty")}</Text>
@@ -114,7 +144,7 @@ export default function MessagesScreen() {
             keyExtractor={(m) => m.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            onContentSizeChange={handleContentSizeChange}
           />
         )}
 
@@ -141,7 +171,7 @@ export default function MessagesScreen() {
             {sendMutation.isPending ? (
               <ActivityIndicator color={NAVY} size="small" />
             ) : (
-              <Text style={styles.sendBtnText}>↑</Text>
+              <Text style={styles.sendBtnText}>{"^"}</Text>
             )}
           </Pressable>
         </View>
@@ -155,8 +185,14 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   header: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, borderBottomWidth: 0.5, borderBottomColor: guest.glassBorder },
   title: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: guest.text },
-  center: { flex: 1, justifyContent: "center", alignItems: "center" },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", gap: spacing.md },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textMuted, textAlign: "center" },
+  retryBtn: {
+    backgroundColor: GOLD, borderRadius: radius.full,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, minHeight: 44,
+    alignItems: "center", justifyContent: "center",
+  },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: NAVY },
   listContent: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md, gap: spacing.sm },
   msgRow: { alignItems: "flex-start", maxWidth: "80%" },
   msgRowRight: { alignSelf: "flex-end", alignItems: "flex-end" },
@@ -166,7 +202,8 @@ const styles = StyleSheet.create({
   msgSender: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold", color: GOLD, marginBottom: 2 },
   msgText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: guest.text, lineHeight: 20 },
   msgTextMine: { color: NAVY },
-  msgTime: { fontSize: fontSize.xs - 1, fontFamily: "Inter_400Regular", color: guest.textMuted, marginTop: 4, alignSelf: "flex-end" },
+  // P2-10: Fix timestamp font size -- use fontSize.xs without subtracting 1
+  msgTime: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted, marginTop: 4, alignSelf: "flex-end" },
   msgTimeMine: { color: "rgba(13,34,54,0.5)" },
   inputBar: {
     flexDirection: "row", alignItems: "flex-end", gap: spacing.sm,

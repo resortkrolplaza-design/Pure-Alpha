@@ -2,10 +2,10 @@
 // Group Portal — Messages (Chat with organizer/participants)
 // =============================================================================
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import {
   View, Text, FlatList, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -39,6 +39,17 @@ export default function GroupMessagesScreen() {
 
   const messages = useMemo(() => [...(msgData?.replies ?? [])].reverse(), [msgData]);
 
+  // Track previous message count to only auto-scroll when new messages arrive
+  const prevCountRef = useRef(0);
+
+  useEffect(() => {
+    const count = messages.length;
+    if (count > prevCountRef.current) {
+      flatListRef.current?.scrollToEnd({ animated: count - prevCountRef.current <= 2 });
+    }
+    prevCountRef.current = count;
+  }, [messages.length]);
+
   const sendMutation = useMutation({
     mutationFn: async (body: string) => {
       if (!trackingId) throw new Error("No trackingId");
@@ -53,6 +64,9 @@ export default function GroupMessagesScreen() {
       queryClient.invalidateQueries({ queryKey: ["group-messages"] });
       setText("");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    },
+    onError: (err) => {
+      Alert.alert(t(lang, "auth.error"), err instanceof Error ? err.message : t(lang, "messages.sendFailed"));
     },
   });
 
@@ -72,8 +86,8 @@ export default function GroupMessagesScreen() {
               {[msg.sender.firstName, msg.sender.lastName].filter(Boolean).join(" ")}
             </Text>
           )}
-          <Text style={styles.msgText}>{msg.body}</Text>
-          <Text style={styles.msgTime}>
+          <Text style={[styles.msgText, isOrg && styles.msgTextOrg]}>{msg.body}</Text>
+          <Text style={[styles.msgTime, isOrg && styles.msgTimeOrg]}>
             {new Date(msg.createdAt).toLocaleTimeString(lang === "pl" ? "pl-PL" : "en-GB", {
               hour: "2-digit", minute: "2-digit",
             })}
@@ -110,7 +124,6 @@ export default function GroupMessagesScreen() {
             keyExtractor={(m) => m.id}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
           />
         )}
 
@@ -155,7 +168,9 @@ const styles = StyleSheet.create({
   msgSender: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold", color: group.primary, marginBottom: 2 },
   msgSenderOrg: { color: "rgba(255,255,255,0.7)" },
   msgText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, lineHeight: 20 },
+  msgTextOrg: { color: "#FFFFFF" },
   msgTime: { fontSize: 10, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 4, alignSelf: "flex-end" },
+  msgTimeOrg: { color: "rgba(255,255,255,0.6)" },
   inputBar: {
     flexDirection: "row", alignItems: "flex-end", gap: spacing.sm,
     paddingHorizontal: spacing.xl, paddingTop: spacing.sm,

@@ -6,9 +6,9 @@
 import { Platform } from "react-native";
 import { ApiResponse } from "./types";
 
-// Native apps don't have CORS — call production directly.
-// Web (dev only) uses a local proxy to avoid CORS.
-export const API_BASE = Platform.OS === "web"
+// Native apps don't have CORS -- call production directly.
+// Web uses a local proxy to avoid CORS, but ONLY in dev mode.
+export const API_BASE = __DEV__ && Platform.OS === "web"
   ? "http://localhost:3999"
   : "https://purealphahotel.pl";
 const REQUEST_TIMEOUT_MS = 15_000;

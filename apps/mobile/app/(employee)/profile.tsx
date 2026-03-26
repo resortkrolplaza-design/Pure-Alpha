@@ -1,5 +1,5 @@
 // =============================================================================
-// Employee App — Profile (Info + Logout)
+// Employee App -- Profile (Info + Logout)
 // =============================================================================
 
 import { useState, useEffect } from "react";
@@ -11,6 +11,27 @@ import { employee, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { logout, getEmployeeToken } from "@/lib/auth";
+
+// Hermes engine (React Native) has no atob(). Manual base64 decode.
+function base64Decode(str: string): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+  let output = "";
+  let i = 0;
+  const input = str.replace(/[^A-Za-z0-9+/=]/g, "");
+  while (i < input.length) {
+    const enc1 = chars.indexOf(input.charAt(i++));
+    const enc2 = chars.indexOf(input.charAt(i++));
+    const enc3 = chars.indexOf(input.charAt(i++));
+    const enc4 = chars.indexOf(input.charAt(i++));
+    const chr1 = (enc1 << 2) | (enc2 >> 4);
+    const chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+    const chr3 = ((enc3 & 3) << 6) | enc4;
+    output += String.fromCharCode(chr1);
+    if (enc3 !== 64) output += String.fromCharCode(chr2);
+    if (enc4 !== 64) output += String.fromCharCode(chr3);
+  }
+  return decodeURIComponent(escape(output));
+}
 
 interface EmployeeProfile {
   name: string;
@@ -31,17 +52,17 @@ export default function ProfileScreen() {
       try {
         const parts = token.split(".");
         if (parts.length < 2) return;
-        const payload = JSON.parse(atob(parts[1]));
+        const payload = JSON.parse(base64Decode(parts[1]));
         setProfile({
-          name: payload.employeeName ?? payload.name ?? t(lang, "mode.employee"),
+          name: payload.employeeName ?? payload.name ?? "",
           department: payload.department ?? "",
           position: payload.position ?? "",
         });
       } catch {
-        // Token decode failed — keep placeholder
+        // Token decode failed -- keep placeholder
       }
     })();
-  }, [lang]);
+  }, []);
 
   const handleLogout = () => {
     Alert.alert(
@@ -72,9 +93,9 @@ export default function ProfileScreen() {
         {/* Employee Info Card */}
         <View style={styles.card}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>👤</Text>
+            <Text style={styles.avatarText}>{"\u{1F464}"}</Text>
           </View>
-          <Text style={styles.name}>{profile?.name ?? t(lang, "emp.tab.profile")}</Text>
+          <Text style={styles.name}>{profile?.name || t(lang, "emp.tab.profile")}</Text>
           <Text style={styles.meta}>
             {profile
               ? [profile.position, profile.department].filter(Boolean).join(" · ") || t(lang, "mode.employee")

@@ -1,9 +1,9 @@
 // =============================================================================
-// Guest Portal — Hotel Tab (Info, Gallery, Services, FAQ, Attractions)
+// Guest Portal -- Hotel Tab (Info, Gallery, Services, FAQ, Attractions)
 // =============================================================================
 
 import { useState } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, Linking } from "react-native";
+import { View, Text, ScrollView, Pressable, StyleSheet, Linking, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,6 +13,9 @@ import { useAppStore, useGuestStore } from "@/lib/store";
 import type { FaqData } from "@/lib/types";
 
 type Section = "info" | "gallery" | "services" | "faq" | "attractions";
+
+const GALLERY_GAP = spacing.sm;
+const GALLERY_PADDING_H = spacing.xl;
 
 const getSocialUrl = (platform: string, username: string | null): string | null => {
   if (!username) return null;
@@ -37,6 +40,10 @@ export default function HotelScreen() {
   const attractions = useGuestStore((s) => s.attractions);
   const socialLinks = useGuestStore((s) => s.socialLinks);
   const [section, setSection] = useState<Section>("info");
+
+  // P2-27: Calculate exact gallery image width based on screen dimensions
+  const { width: screenWidth } = useWindowDimensions();
+  const galleryImageWidth = (screenWidth - GALLERY_PADDING_H * 2 - GALLERY_GAP) / 2;
 
   const SECTIONS: { key: Section; label: string }[] = [
     { key: "info", label: t(lang, "hotel.info") },
@@ -66,6 +73,9 @@ export default function HotelScreen() {
                 key={s.key}
                 style={[styles.tab, section === s.key && styles.tabActive]}
                 onPress={() => setSection(s.key)}
+                // P2-3: Add accessibility props to section tabs
+                accessibilityRole="tab"
+                accessibilityState={{ selected: section === s.key }}
               >
                 <Text style={[styles.tabText, section === s.key && styles.tabTextActive]}>{s.label}</Text>
               </Pressable>
@@ -80,14 +90,14 @@ export default function HotelScreen() {
             <View style={styles.contactGrid}>
               {hotel.phone && (
                 <Pressable style={styles.contactCard} onPress={() => Linking.openURL(`tel:${hotel.phone}`)}>
-                  <Text style={styles.contactIcon}>📞</Text>
+                  <Text style={styles.contactIcon}>Tel</Text>
                   <Text style={styles.contactLabel}>{t(lang, "hotel.call")}</Text>
                   <Text style={styles.contactValue}>{hotel.phone}</Text>
                 </Pressable>
               )}
               {hotel.email && (
                 <Pressable style={styles.contactCard} onPress={() => Linking.openURL(`mailto:${hotel.email}`)}>
-                  <Text style={styles.contactIcon}>✉️</Text>
+                  <Text style={styles.contactIcon}>@</Text>
                   <Text style={styles.contactLabel}>Email</Text>
                   <Text style={styles.contactValue} numberOfLines={1}>{hotel.email}</Text>
                 </Pressable>
@@ -99,9 +109,10 @@ export default function HotelScreen() {
               <View style={styles.card}>
                 <Text style={styles.cardTitle}>{t(lang, "hotel.social")}</Text>
                 <View style={styles.socialRow}>
-                  {socialLinks.map((link, i) => (
+                  {/* P2-8: Use platform+username as key instead of index */}
+                  {socialLinks.map((link) => (
                     <Pressable
-                      key={i}
+                      key={`${link.platform}-${link.accountUsername}`}
                       style={styles.socialBadge}
                       onPress={() => {
                         const url = getSocialUrl(link.platform, link.accountUsername);
@@ -125,9 +136,9 @@ export default function HotelScreen() {
               <Image
                 key={img.id}
                 source={{ uri: img.url }}
-                style={styles.galleryImage}
+                // P2-27: Use calculated width instead of percentage
+                style={[styles.galleryImage, { width: galleryImageWidth }]}
                 resizeMode="cover"
-                
               />
             ))}
             {!gallery.length && (
@@ -170,10 +181,18 @@ export default function HotelScreen() {
           <View style={styles.section}>
             {attractions.map((a) => (
               <View key={a.id} style={styles.attractionCard}>
-                {a.imageUrl && <Image source={{ uri: a.imageUrl }} style={styles.attractionImg} resizeMode="cover" />}
+                {a.imageUrl && (
+                  <Image
+                    source={{ uri: a.imageUrl }}
+                    style={styles.attractionImg}
+                    resizeMode="cover"
+                    // P3-8: Add accessibilityLabel to attraction image
+                    accessibilityLabel={a.name}
+                  />
+                )}
                 <View style={styles.attractionInfo}>
                   <Text style={styles.attractionName}>{a.name}</Text>
-                  {a.distance && <Text style={styles.attractionDist}>📍 {a.distance}</Text>}
+                  {a.distance && <Text style={styles.attractionDist}>{a.distance}</Text>}
                   {a.description && <Text style={styles.attractionDesc} numberOfLines={2}>{a.description}</Text>}
                 </View>
               </View>
@@ -191,10 +210,16 @@ export default function HotelScreen() {
 function FaqItem({ faq }: { faq: FaqData }) {
   const [open, setOpen] = useState(false);
   return (
-    <Pressable style={styles.faqCard} onPress={() => setOpen(!open)}>
+    <Pressable
+      style={styles.faqCard}
+      onPress={() => setOpen(!open)}
+      // P2-4: Add expandable a11y state
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+    >
       <View style={styles.faqHeader}>
         <Text style={styles.faqQuestion}>{faq.question}</Text>
-        <Text style={styles.faqChevron}>{open ? "▾" : "▸"}</Text>
+        <Text style={styles.faqChevron}>{open ? "v" : ">"}</Text>
       </View>
       {open && <Text style={styles.faqAnswer}>{faq.answer}</Text>}
     </Pressable>
@@ -219,7 +244,7 @@ const styles = StyleSheet.create({
     flex: 1, backgroundColor: guest.card, borderRadius: radius.lg, borderWidth: 1, borderColor: guest.cardBorder,
     padding: spacing.lg, alignItems: "center", gap: spacing.sm, minHeight: 44,
   },
-  contactIcon: { fontSize: 24 },
+  contactIcon: { fontSize: 18, fontFamily: "Inter_700Bold", color: GOLD },
   contactLabel: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: guest.text },
   contactValue: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
   card: { backgroundColor: guest.card, borderRadius: radius.lg, borderWidth: 1, borderColor: guest.cardBorder, padding: spacing.lg, gap: spacing.md },
@@ -227,8 +252,9 @@ const styles = StyleSheet.create({
   socialRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
   socialBadge: { backgroundColor: guest.glass, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
   socialText: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium", color: guest.textSecondary, textTransform: "capitalize" },
-  galleryGrid: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm },
-  galleryImage: { width: "48%", aspectRatio: 4 / 3, borderRadius: radius.md },
+  galleryGrid: { flexDirection: "row", flexWrap: "wrap", gap: GALLERY_GAP },
+  // P2-27: Width set dynamically via inline style; only keep aspect ratio here
+  galleryImage: { aspectRatio: 4 / 3, borderRadius: radius.md },
   serviceCard: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     backgroundColor: guest.card, borderRadius: radius.md, borderWidth: 1, borderColor: guest.cardBorder,

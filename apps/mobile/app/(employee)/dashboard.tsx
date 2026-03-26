@@ -1,8 +1,9 @@
 // =============================================================================
-// Employee App — Dashboard (Today's shift, week stats, upcoming shifts)
+// Employee App -- Dashboard (Today's shift, week stats, upcoming shifts)
 // =============================================================================
 
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { useState } from "react";
+import { View, Text, ScrollView, Pressable, RefreshControl, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -33,8 +34,10 @@ function getGreetingKey(): string {
 export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
+  const employeeName = useAppStore((s) => s.employeeName);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["employee-dashboard"],
     queryFn: async () => {
       const res = await employeeFetch<DashboardData>("/dashboard");
@@ -43,16 +46,42 @@ export default function DashboardScreen() {
     },
   });
 
+  const locale = lang === "pl" ? "pl-PL" : "en-US";
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  };
+
   return (
     <LinearGradient colors={[employee.bgFrom, employee.bgTo]} style={styles.container}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={employee.brand} />}
       >
         <View>
-          <Text style={styles.greeting}>{t(lang, getGreetingKey())} 👋</Text>
+          <Text style={styles.greeting}>
+            {t(lang, getGreetingKey())}{employeeName ? `, ${employeeName}` : ""}
+          </Text>
           <Text style={styles.subtitle}>Pure Alpha Employee App</Text>
         </View>
+
+        {/* Error State */}
+        {isError && (
+          <View style={styles.card}>
+            <Text style={styles.placeholder}>{t(lang, "common.error")}</Text>
+            <Pressable
+              onPress={() => refetch()}
+              style={styles.retryBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.retry")}
+            >
+              <Text style={styles.retryText}>{t(lang, "common.retry")}</Text>
+            </Pressable>
+          </View>
+        )}
 
         {/* Today's Shift */}
         <View style={[styles.card, styles.shiftCard]}>
@@ -60,14 +89,14 @@ export default function DashboardScreen() {
             <Text style={styles.shiftTitle}>{t(lang, "emp.todayShift")}</Text>
             {data?.todayShift && (
               <View style={[styles.shiftBadge, { backgroundColor: SHIFT_TYPE_COLORS[data.todayShift.shiftType] ?? employee.accent }]}>
-                <Text style={styles.shiftBadgeText}>{data.todayShift.shiftType}</Text>
+                <Text style={styles.shiftBadgeText}>{t(lang, `emp.shift.${data.todayShift.shiftType}`)}</Text>
               </View>
             )}
           </View>
           {data?.todayShift ? (
             <View style={styles.shiftDetails}>
               <Text style={styles.shiftTime}>
-                {data.todayShift.startTime} — {data.todayShift.endTime}
+                {data.todayShift.startTime} -- {data.todayShift.endTime}
               </Text>
               <Text style={styles.shiftDept}>{data.todayShift.department}</Text>
             </View>
@@ -81,7 +110,7 @@ export default function DashboardScreen() {
         {/* Week Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{data?.weekStats.scheduledHours ?? 0}h</Text>
+            <Text style={styles.statValue}>{(data?.weekStats.scheduledHours ?? 0).toFixed(1)}h</Text>
             <Text style={styles.statLabel}>{t(lang, "emp.hours")}</Text>
           </View>
           <View style={styles.statCard}>
@@ -101,7 +130,7 @@ export default function DashboardScreen() {
             </View>
           ) : (
             data.upcomingShifts.map((shift) => (
-              <ShiftRow key={shift.id} shift={shift} />
+              <ShiftRow key={shift.id} shift={shift} lang={lang} locale={locale} />
             ))
           )}
         </View>
@@ -110,18 +139,18 @@ export default function DashboardScreen() {
   );
 }
 
-function ShiftRow({ shift }: { shift: ShiftData }) {
+function ShiftRow({ shift, lang, locale }: { shift: ShiftData; lang: "pl" | "en"; locale: string }) {
   const color = SHIFT_TYPE_COLORS[shift.shiftType] ?? employee.accent;
   return (
     <View style={styles.upcomingCard}>
       <View style={[styles.upcomingDot, { backgroundColor: color }]} />
       <View style={styles.upcomingInfo}>
         <Text style={styles.upcomingDate}>
-          {new Date(shift.shiftDate).toLocaleDateString("pl-PL", { weekday: "short", day: "numeric", month: "short" })}
+          {new Date(shift.shiftDate).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" })}
         </Text>
-        <Text style={styles.upcomingTime}>{shift.startTime} — {shift.endTime}</Text>
+        <Text style={styles.upcomingTime}>{shift.startTime} -- {shift.endTime}</Text>
       </View>
-      <Text style={styles.upcomingType}>{shift.shiftType}</Text>
+      <Text style={styles.upcomingType}>{t(lang, `emp.shift.${shift.shiftType}`)}</Text>
     </View>
   );
 }
@@ -162,4 +191,9 @@ const styles = StyleSheet.create({
   upcomingDate: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: employee.text },
   upcomingTime: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: employee.textSecondary },
   upcomingType: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold", color: employee.textMuted },
+  retryBtn: {
+    backgroundColor: employee.accent, borderRadius: radius.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, alignSelf: "center",
+  },
+  retryText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: employee.brand },
 });

@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { useEffect, useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,15 +11,16 @@ import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, fontWeight, radius, spacing, shadow } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
-import { getAppMode, getPortalToken, getGroupTrackingId, getGroupToken, getEmployeeToken } from "@/lib/auth";
+import { getAppMode, getPortalToken, getGroupTrackingId, getGroupToken, getEmployeeToken, logout, isTokenExpired } from "@/lib/auth";
 import { portalFetch } from "@/lib/api";
-import type { PortalInitData, MemberData, TierData, ProgramData, HotelData } from "@/lib/types";
+import { mapInitResponse } from "@/lib/portal-helpers";
 
 const MODES = [
   { key: "guest" as const, icon: "🏨", route: "/(guest)/stay" },
   { key: "group" as const, icon: "👥", route: "/(group)/overview" },
   { key: "employee" as const, icon: "👷", route: "/(employee)/dashboard" },
 ] as const;
+
 
 export default function ModeSelector() {
   const insets = useSafeAreaInsets();
@@ -47,31 +48,30 @@ export default function ModeSelector() {
         try {
           const initRes = await portalFetch<Record<string, unknown>>(portalToken, "");
           if (initRes.status === "success" && initRes.data) {
-            const raw = initRes.data;
-            const portalData: PortalInitData = {
-              member: {
-                ...(raw.member as MemberData),
-                tier: (raw.tier as TierData) ?? null,
-                expiringPoints: (raw.expiringPoints as MemberData["expiringPoints"]) ?? null,
-                cheapestReward: (raw.cheapestReward as MemberData["cheapestReward"]) ?? null,
-              },
-              program: raw.program as ProgramData,
-              hotel: raw.hotel as HotelData,
-              tiers: [],
-              nextTier: null,
-            };
-            setPortalData(portalData);
+            setPortalData(mapInitResponse(initRes.data));
             router.replace("/(guest)/stay");
             return;
           }
-        } catch { /* token expired — fall through to mode selector */ }
+        } catch { /* token expired -- fall through to mode selector */ }
       }
       if (savedMode === "group" && groupId && groupJwt) {
+        // Validate group JWT before resuming
+        if (isTokenExpired(groupJwt)) {
+          await logout();
+          setChecking(false);
+          return;
+        }
         setMode("group");
         router.replace("/(group)/overview");
         return;
       }
       if (savedMode === "employee" && empToken) {
+        // Validate employee token before resuming
+        if (isTokenExpired(empToken)) {
+          await logout();
+          setChecking(false);
+          return;
+        }
         setMode("employee");
         router.replace("/(employee)/dashboard");
         return;
@@ -80,7 +80,13 @@ export default function ModeSelector() {
     })();
   }, [setMode, setStorePortalToken, setPortalData]);
 
-  if (checking) return null;
+  if (checking) {
+    return (
+      <View style={{ flex: 1, backgroundColor: NAVY, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator color={GOLD} size="large" />
+      </View>
+    );
+  }
 
   const handleMode = async (mode: typeof MODES[number]) => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

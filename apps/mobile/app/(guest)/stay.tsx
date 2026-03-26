@@ -1,8 +1,7 @@
 // =============================================================================
-// Guest Portal — Stay Tab (Member Card + Services + Contact)
+// Guest Portal -- Stay Tab (Member Card + Services + Contact)
 // =============================================================================
 
-import { useMemo } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, Linking } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,8 +26,12 @@ export default function StayScreen() {
   const hotel = useGuestStore((s) => s.hotel);
   const nextTier = useGuestStore((s) => s.nextTier);
 
-  const greetingKey = useMemo(() => getGreetingKey(), []);
+  // P1-9: Remove useMemo -- getGreetingKey is cheap and should update on re-render
+  const greetingKey = getGreetingKey();
   const displayName = member?.firstName || member?.email?.split("@")[0] || "";
+
+  // P1-7: Use program currency instead of hardcoded PLN
+  const currency = program?.currency ?? "PLN";
 
   if (!member || !program) {
     return (
@@ -93,9 +96,10 @@ export default function StayScreen() {
             label={t(lang, "stay.multiplier")}
             value={member.tier ? `${member.tier.multiplier}x` : "1x"}
           />
+          {/* P1-7: Use dynamic currency instead of hardcoded PLN */}
           <StatCard
             label={t(lang, "stay.totalSpent")}
-            value={`${member.totalSpent.toLocaleString()} PLN`}
+            value={`${member.totalSpent.toLocaleString()} ${currency}`}
           />
         </View>
 
@@ -128,7 +132,7 @@ export default function StayScreen() {
         {member.expiringPoints && member.expiringPoints.totalPoints > 0 && (
           <View style={styles.warningCard}>
             <Text style={styles.warningText}>
-              ⚠️ {member.expiringPoints.totalPoints.toLocaleString()} {program.pointsName}{" "}
+              {member.expiringPoints.totalPoints.toLocaleString()} {program.pointsName}{" "}
               {t(lang, "stay.expiresOn")} {new Date(member.expiringPoints.earliestExpiry).toLocaleDateString(lang === "pl" ? "pl-PL" : "en-GB")}
             </Text>
           </View>
@@ -138,9 +142,10 @@ export default function StayScreen() {
         {member.tier?.benefits && member.tier.benefits.length > 0 && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>{t(lang, "stay.benefits")}</Text>
-            {member.tier.benefits.map((b, i) => (
-              <View key={i} style={styles.benefitRow}>
-                <Text style={styles.benefitDot}>•</Text>
+            {/* P2-9: Use benefit string as key instead of index */}
+            {member.tier.benefits.map((b) => (
+              <View key={b} style={styles.benefitRow}>
+                <Text style={styles.benefitDot}>*</Text>
                 <Text style={styles.benefitText}>{b}</Text>
               </View>
             ))}
@@ -159,7 +164,7 @@ export default function StayScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={t(lang, "hotel.call")}
                 >
-                  <Text style={styles.contactBtnIcon}>📞</Text>
+                  <Text style={styles.contactBtnIcon}>Tel</Text>
                   <Text style={styles.contactBtnText}>{t(lang, "hotel.call")}</Text>
                 </Pressable>
               )}
@@ -170,7 +175,7 @@ export default function StayScreen() {
                   accessibilityRole="button"
                   accessibilityLabel={t(lang, "hotel.sendEmail")}
                 >
-                  <Text style={styles.contactBtnIcon}>✉️</Text>
+                  <Text style={styles.contactBtnIcon}>@</Text>
                   <Text style={styles.contactBtnText}>Email</Text>
                 </Pressable>
               )}
@@ -248,6 +253,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: guest.glassBorder,
     paddingVertical: spacing.md, minHeight: 44,
   },
-  contactBtnIcon: { fontSize: 18 },
+  contactBtnIcon: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: GOLD },
   contactBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: guest.text },
 });

@@ -1,7 +1,8 @@
 // =============================================================================
-// Guest Portal — Rewards Tab (Catalog + Redeem)
+// Guest Portal -- Rewards Tab (Catalog + Redeem)
 // =============================================================================
 
+import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "react-native";
@@ -9,10 +10,26 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
-import { t } from "@/lib/i18n";
+import { t, type Lang } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
 import { portalFetch } from "@/lib/api";
 import type { Reward } from "@/lib/types";
+
+// P1-12: Map all blocking reasons to i18n keys
+function getBlockReason(reasons: string[] | undefined, lang: Lang): string {
+  if (!reasons?.length) return "";
+  const reason = reasons[0];
+  const map: Record<string, string> = {
+    INSUFFICIENT_POINTS: t(lang, "rewards.notEnoughPoints"),
+    REWARD_TIER_LOCKED: t(lang, "rewards.tierRequired"),
+    REWARD_OUT_OF_STOCK: t(lang, "rewards.outOfStock"),
+    REWARD_LIMIT_REACHED: t(lang, "rewards.limitReached"),
+    REWARD_YEARLY_LIMIT_REACHED: t(lang, "rewards.yearlyLimitReached"),
+    REWARD_NOT_YET_VALID: t(lang, "rewards.notYetValid"),
+    REWARD_EXPIRED: t(lang, "rewards.expired"),
+  };
+  return map[reason] ?? t(lang, "rewards.tierRequired");
+}
 
 export default function RewardsScreen() {
   const insets = useSafeAreaInsets();
@@ -22,7 +39,11 @@ export default function RewardsScreen() {
   const program = useGuestStore((s) => s.program);
   const queryClient = useQueryClient();
 
-  const { data: rewards, isLoading } = useQuery({
+  // P1-11: Track which reward is currently being redeemed
+  const [redeemingId, setRedeemingId] = useState<string | null>(null);
+
+  // P1-14: Destructure isError for error state
+  const { data: rewards, isLoading, isError, refetch } = useQuery({
     queryKey: ["rewards", portalToken],
     queryFn: async () => {
       if (!portalToken) return [];
@@ -43,12 +64,15 @@ export default function RewardsScreen() {
       return res.data;
     },
     onSuccess: () => {
+      setRedeemingId(null);
       queryClient.invalidateQueries({ queryKey: ["rewards"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("🎉", t(lang, "rewards.redeemSuccess"));
+      Alert.alert(t(lang, "rewards.catalog"), t(lang, "rewards.redeemSuccess"));
     },
-    onError: (err: Error) => {
-      Alert.alert(t(lang, "auth.error"), err.message);
+    // P2-7: Wrap error in i18n instead of showing raw error.message
+    onError: () => {
+      setRedeemingId(null);
+      Alert.alert(t(lang, "auth.error"), t(lang, "common.error"));
     },
   });
 
@@ -61,7 +85,11 @@ export default function RewardsScreen() {
         { text: t(lang, "common.cancel"), style: "cancel" },
         {
           text: t(lang, "rewards.redeem"),
-          onPress: () => redeemMutation.mutate(reward.id),
+          onPress: () => {
+            // P1-11: Set the specific reward being redeemed
+            setRedeemingId(reward.id);
+            redeemMutation.mutate(reward.id);
+          },
         },
       ],
     );
@@ -82,18 +110,32 @@ export default function RewardsScreen() {
 
         {isLoading ? (
           <ActivityIndicator color={GOLD} style={{ marginTop: 40 }} />
+        ) : isError ? (
+          // P1-14: Error state with retry
+          <View style={styles.errorContainer}>
+            <Text style={styles.emptyText}>{t(lang, "common.error")}</Text>
+            <Pressable
+              style={styles.retryBtn}
+              onPress={() => refetch()}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.retry")}
+            >
+              <Text style={styles.retryBtnText}>{t(lang, "common.retry")}</Text>
+            </Pressable>
+          </View>
         ) : !rewards?.length ? (
           <Text style={styles.emptyText}>{t(lang, "rewards.noRewards")}</Text>
         ) : (
           <View style={styles.grid}>
-            {rewards.map((r, i) => (
+            {/* P3-2: Remove unused variable i */}
+            {rewards.map((r) => (
               <View key={r.id}>
                 <RewardCard
                   reward={r}
                   lang={lang}
                   pointsName={program?.pointsName ?? "pkt"}
                   onRedeem={() => handleRedeem(r)}
-                  isRedeeming={redeemMutation.isPending}
+                  isRedeeming={redeemingId === r.id}
                 />
               </View>
             ))}
@@ -107,7 +149,7 @@ export default function RewardsScreen() {
 function RewardCard({
   reward: r, lang, pointsName, onRedeem, isRedeeming,
 }: {
-  reward: Reward; lang: "pl" | "en"; pointsName: string; onRedeem: () => void; isRedeeming: boolean;
+  reward: Reward; lang: Lang; pointsName: string; onRedeem: () => void; isRedeeming: boolean;
 }) {
   const catKey = `rewards.cat.${r.category}` as const;
   const blocked = !r.canRedeem;
@@ -119,7 +161,8 @@ function RewardCard({
           source={{ uri: r.imageUrl }}
           style={styles.cardImage}
           resizeMode="cover"
-          
+          // P3-7: Add accessibilityLabel to reward image
+          accessibilityLabel={r.name}
         />
       )}
       <View style={styles.cardBody}>
@@ -136,10 +179,9 @@ function RewardCard({
             accessibilityLabel={`${t(lang, "rewards.redeem")} ${r.name}`}
           >
             <Text style={[styles.redeemBtnText, blocked && styles.redeemBtnTextDisabled]}>
+              {/* P1-12: Use getBlockReason for all blocking reasons */}
               {blocked
-                ? (r.reasonsBlocked?.[0] === "INSUFFICIENT_POINTS"
-                  ? t(lang, "rewards.notEnoughPoints")
-                  : t(lang, "rewards.tierRequired"))
+                ? getBlockReason(r.reasonsBlocked, lang)
                 : t(lang, "rewards.redeem")}
             </Text>
           </Pressable>
@@ -155,6 +197,13 @@ const styles = StyleSheet.create({
   title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text },
   pointsBadge: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: GOLD, marginTop: 4 },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textMuted, textAlign: "center", paddingVertical: spacing["3xl"] },
+  errorContainer: { alignItems: "center", gap: spacing.md, paddingVertical: spacing["3xl"] },
+  retryBtn: {
+    backgroundColor: GOLD, borderRadius: radius.full,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, minHeight: 44,
+    alignItems: "center", justifyContent: "center",
+  },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: NAVY },
   grid: { gap: spacing.lg },
   card: {
     backgroundColor: guest.card, borderRadius: radius.lg, borderWidth: 1, borderColor: guest.cardBorder,

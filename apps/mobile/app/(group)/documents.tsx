@@ -2,7 +2,7 @@
 // Group Portal — Documents Tab (File list + download)
 // =============================================================================
 
-import { View, Text, FlatList, Pressable, StyleSheet, Linking } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, Linking, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
@@ -10,7 +10,19 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupDocumentData } from "@/lib/types";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+
+// SSRF protection: only allow downloads from trusted domains
+const ALLOWED_HOSTS = ["purealphahotel.pl", "supabase.co", "supabase.in"];
+
+function isUrlAllowed(urlStr: string): boolean {
+  try {
+    const url = new URL(urlStr);
+    return url.protocol === "https:" && ALLOWED_HOSTS.some(h => url.hostname === h || url.hostname.endsWith("." + h));
+  } catch {
+    return false;
+  }
+}
 
 const FILE_ICONS: Record<string, string> = {
   "application/pdf": "📄",
@@ -31,7 +43,7 @@ export default function DocumentsScreen() {
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
-  const { data: documents, isLoading } = useQuery({
+  const { data: documents, isLoading, isError, refetch } = useQuery({
     queryKey: ["group-documents", trackingId],
     queryFn: async () => {
       if (!trackingId) return [];
@@ -41,8 +53,15 @@ export default function DocumentsScreen() {
     enabled: !!trackingId,
   });
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
   const handleDownload = useCallback((doc: GroupDocumentData) => {
-    if (doc.fileUrl && doc.fileUrl.startsWith("https://")) {
+    if (doc.fileUrl && isUrlAllowed(doc.fileUrl)) {
       Linking.openURL(doc.fileUrl);
     }
   }, []);
@@ -80,8 +99,11 @@ export default function DocumentsScreen() {
         keyExtractor={(d) => d.id}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={group.primary} />}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>{isLoading ? t(lang, "common.loading") : t(lang, "common.noData")}</Text>
+          <Text style={styles.emptyText}>
+            {isLoading ? t(lang, "common.loading") : isError ? t(lang, "common.error") : t(lang, "common.noData")}
+          </Text>
         }
       />
     </View>

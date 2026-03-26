@@ -2,7 +2,7 @@
 // Group Portal — Guests Tab (Guest list + RSVP status)
 // =============================================================================
 
-import { View, Text, FlatList, StyleSheet } from "react-native";
+import { View, Text, FlatList, StyleSheet, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
@@ -10,7 +10,7 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupGuestData } from "@/lib/types";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 const RSVP_COLORS: Record<string, { bg: string; text: string }> = {
   confirmed: { bg: "rgba(16,185,129,0.1)", text: "#10b981" },
@@ -29,7 +29,7 @@ export default function GuestsScreen() {
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
-  const { data: guests, isLoading } = useQuery({
+  const { data: guests, isLoading, isError, refetch } = useQuery({
     queryKey: ["group-guests", trackingId],
     queryFn: async () => {
       if (!trackingId) return [];
@@ -39,11 +39,18 @@ export default function GuestsScreen() {
     enabled: !!trackingId,
   });
 
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
   const renderGuest = useCallback(({ item: g }: { item: GroupGuestData }) => {
     const rsvp = RSVP_COLORS[g.rsvpStatus] ?? RSVP_COLORS.pending;
     const rsvpLabelKey = RSVP_LABEL_KEYS[g.rsvpStatus] ?? RSVP_LABEL_KEYS.pending;
     return (
-      <View style={styles.guestCard}>
+      <View style={styles.guestCard} accessibilityLabel={`${g.firstName} ${g.lastName}, ${t(lang, rsvpLabelKey)}`}>
         <View style={styles.guestAvatar}>
           <Text style={styles.guestInitials}>
             {(g.firstName?.[0] ?? "").toUpperCase()}{(g.lastName?.[0] ?? "").toUpperCase()}
@@ -73,8 +80,11 @@ export default function GuestsScreen() {
         keyExtractor={(g) => g.id}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={group.primary} />}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>{isLoading ? t(lang, "common.loading") : t(lang, "common.noData")}</Text>
+          <Text style={styles.emptyText}>
+            {isLoading ? t(lang, "common.loading") : isError ? t(lang, "common.error") : t(lang, "common.noData")}
+          </Text>
         }
       />
     </View>

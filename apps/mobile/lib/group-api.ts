@@ -8,6 +8,13 @@ import type { ApiResponse } from "./types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
+// Session expiry callback -- configured from _layout.tsx
+let onGroupSessionExpired: (() => void) | null = null;
+
+export function configureGroupApi(cb: { onSessionExpired: () => void }) {
+  onGroupSessionExpired = cb.onSessionExpired;
+}
+
 export async function groupFetch<T>(
   trackingId: string,
   path: string,
@@ -31,6 +38,7 @@ export async function groupFetch<T>(
     });
 
     if (res.status === 401 || res.status === 403) {
+      onGroupSessionExpired?.();
       return { status: "error", errorMessage: "Session expired" };
     }
 

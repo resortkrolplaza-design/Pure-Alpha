@@ -8,15 +8,23 @@ import type { ApiResponse } from "./types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
+// Session expiry callback -- configured from _layout.tsx
+let onEmployeeSessionExpired: (() => void) | null = null;
+
+export function configureEmployeeApi(cb: { onSessionExpired: () => void }) {
+  onEmployeeSessionExpired = cb.onSessionExpired;
+}
+
 export async function employeeFetch<T>(
   path: string,
   options: RequestInit = {},
+  { authenticated = true }: { authenticated?: boolean } = {},
 ): Promise<ApiResponse<T>> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const token = await getEmployeeToken();
+    const token = authenticated ? await getEmployeeToken() : null;
     const url = `${API_BASE}/api/employee-app${path}`;
     const res = await fetch(url, {
       ...options,
@@ -30,6 +38,7 @@ export async function employeeFetch<T>(
     });
 
     if (res.status === 401) {
+      onEmployeeSessionExpired?.();
       return { status: "error", errorMessage: "Session expired" };
     }
 
@@ -49,7 +58,7 @@ export async function employeeFetch<T>(
 }
 
 export async function resolveHotel(slug: string): Promise<ApiResponse<{ hotelId: string; hotelName: string }>> {
-  return employeeFetch(`/auth/resolve-hotel?slug=${encodeURIComponent(slug)}`);
+  return employeeFetch(`/auth/resolve-hotel?slug=${encodeURIComponent(slug)}`, {}, { authenticated: false });
 }
 
 export async function loginWithPin(
@@ -60,16 +69,5 @@ export async function loginWithPin(
   return employeeFetch("/auth/pin", {
     method: "POST",
     body: JSON.stringify({ login, pin, hotelId }),
-  });
-}
-
-export async function loginWithCredentials(
-  username: string,
-  password: string,
-  hotelId: string,
-): Promise<ApiResponse<{ token: string; employee: { id: string; name: string; department: string; position: string } }>> {
-  return employeeFetch("/auth/credentials", {
-    method: "POST",
-    body: JSON.stringify({ username, password, hotelId }),
-  });
+  }, { authenticated: false });
 }

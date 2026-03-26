@@ -2,8 +2,8 @@
 // Group Portal — Overview (Event info, countdown, agenda, announcements)
 // =============================================================================
 
-import { useMemo } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { useMemo, useState, useCallback } from "react";
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
@@ -17,7 +17,9 @@ export default function OverviewScreen() {
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
-  const { data: agenda } = useQuery({
+  const [showAllAgenda, setShowAllAgenda] = useState(false);
+
+  const { data: agenda, isError: isAgendaError, refetch: refetchAgenda } = useQuery({
     queryKey: ["group-agenda", trackingId],
     queryFn: async () => {
       if (!trackingId) return [];
@@ -27,7 +29,7 @@ export default function OverviewScreen() {
     enabled: !!trackingId,
   });
 
-  const { data: announcements } = useQuery({
+  const { data: announcements, isError: isAnnouncementsError, refetch: refetchAnnouncements } = useQuery({
     queryKey: ["group-announcements", trackingId],
     queryFn: async () => {
       if (!trackingId) return [];
@@ -42,23 +44,73 @@ export default function OverviewScreen() {
     [announcements],
   );
 
+  // Countdown: compute days until earliest agenda date
+  const eventDate = useMemo(() => {
+    if (!agenda?.length) return null;
+    const sorted = [...agenda].sort((a, b) =>
+      new Date(a.date ?? a.startTime ?? "").getTime() - new Date(b.date ?? b.startTime ?? "").getTime(),
+    );
+    return sorted[0]?.date ? new Date(sorted[0].date) : null;
+  }, [agenda]);
+
+  const countdownText = useMemo(() => {
+    if (!eventDate) return "--";
+    const now = new Date();
+    const diffMs = eventDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays > 0) return String(diffDays);
+    if (diffDays === 0) return t(lang, "group.eventInProgress");
+    return t(lang, "group.eventEnded");
+  }, [eventDate, lang]);
+
+  const countdownSubText = useMemo(() => {
+    if (!eventDate) {
+      return trackingId ? "" : t(lang, "group.enterPinPrompt");
+    }
+    const now = new Date();
+    const diffMs = eventDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays > 0) return t(lang, "group.countdownDays");
+    return "";
+  }, [eventDate, trackingId, lang]);
+
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchAgenda(), refetchAnnouncements()]);
+    setRefreshing(false);
+  }, [refetchAgenda, refetchAnnouncements]);
+
+  const isError = isAgendaError || isAnnouncementsError;
+
+  const agendaItems = useMemo(() => {
+    if (!agenda?.length) return [];
+    return showAllAgenda ? agenda : agenda.slice(0, 5);
+  }, [agenda, showAllAgenda]);
+
   return (
     <View style={styles.container}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={group.primary} />}
       >
-        <View>
+        <View accessibilityRole="header">
           <Text style={styles.title}>{t(lang, "group.tab.overview")}</Text>
         </View>
 
+        {/* Error State */}
+        {isError && (
+          <View style={styles.card}>
+            <Text style={styles.emptyText}>{t(lang, "common.error")}</Text>
+          </View>
+        )}
+
         {/* Countdown Card */}
-        <View style={styles.countdownCard}>
+        <View style={styles.countdownCard} accessibilityLabel={`${t(lang, "group.countdown")}: ${countdownText}`}>
           <Text style={styles.countdownLabel}>{t(lang, "group.countdown")}</Text>
-          <Text style={styles.countdownValue}>—</Text>
-          <Text style={styles.countdownSub}>
-            {trackingId ? "" : lang === "pl" ? "Wprowadź PIN aby zobaczyć dane" : "Enter PIN to see event data"}
-          </Text>
+          <Text style={styles.countdownValue}>{countdownText}</Text>
+          {countdownSubText ? <Text style={styles.countdownSub}>{countdownSubText}</Text> : null}
         </View>
 
         {/* Pinned Announcements */}
@@ -87,21 +139,33 @@ export default function OverviewScreen() {
               <Text style={styles.emptyText}>{t(lang, "common.noData")}</Text>
             </View>
           ) : (
-            agenda.slice(0, 5).map((item) => (
-              <View key={item.id} style={styles.agendaItem}>
-                <View style={styles.agendaTime}>
-                  <Text style={styles.agendaTimeText}>
-                    {item.startTime ?? "—"}
-                  </Text>
+            <>
+              {agendaItems.map((item) => (
+                <View key={item.id} style={styles.agendaItem}>
+                  <View style={styles.agendaTime}>
+                    <Text style={styles.agendaTimeText}>
+                      {item.startTime ?? "\u2014"}
+                    </Text>
+                  </View>
+                  <View style={styles.agendaInfo}>
+                    <Text style={styles.agendaTitle}>{item.title}</Text>
+                    {item.location && (
+                      <Text style={styles.agendaLocation}>{item.location}</Text>
+                    )}
+                  </View>
                 </View>
-                <View style={styles.agendaInfo}>
-                  <Text style={styles.agendaTitle}>{item.title}</Text>
-                  {item.location && (
-                    <Text style={styles.agendaLocation}>📍 {item.location}</Text>
-                  )}
-                </View>
-              </View>
-            ))
+              ))}
+              {agenda.length > 5 && !showAllAgenda && (
+                <Pressable
+                  style={styles.seeAllBtn}
+                  onPress={() => setShowAllAgenda(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(lang, "common.seeAll")}
+                >
+                  <Text style={styles.seeAllText}>{t(lang, "common.seeAll")}</Text>
+                </Pressable>
+              )}
+            </>
           )}
         </View>
       </ScrollView>
@@ -147,4 +211,9 @@ const styles = StyleSheet.create({
   agendaInfo: { flex: 1, gap: 2 },
   agendaTitle: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text },
   agendaLocation: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted },
+  seeAllBtn: {
+    alignSelf: "center", paddingVertical: spacing.md, paddingHorizontal: spacing.xl,
+    marginTop: spacing.sm, minHeight: 44,
+  },
+  seeAllText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.primary },
 });

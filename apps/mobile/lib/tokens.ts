@@ -42,7 +42,7 @@ export const employee = {
   brand: "#92400e",
   text: "#0f172a",
   textSecondary: "#475569",
-  textMuted: "#64748b",
+  textMuted: "#526175",
   card: "rgba(255,255,255,0.9)",
   cardBorder: "rgba(0,0,0,0.06)",
   accent: "#fef3c7",

@@ -1,5 +1,5 @@
 // =============================================================================
-// Employee App — Bottom Tab Navigator (Warm Beige theme)
+// Employee App -- Bottom Tab Navigator (Warm Beige theme)
 // =============================================================================
 
 import { Tabs } from "expo-router";
@@ -9,8 +9,8 @@ import { employee, fontSize } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 
-function TabIcon({ emoji }: { emoji: string }) {
-  return <Text style={{ fontSize: 22 }}>{emoji}</Text>;
+function TabIcon({ label }: { label: string }) {
+  return <Text accessible={false} style={{ fontSize: 22 }}>{label}</Text>;
 }
 
 export default function EmployeeLayout() {
@@ -27,10 +27,10 @@ export default function EmployeeLayout() {
       }}
       screenListeners={{ tabPress: () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } }}
     >
-      <Tabs.Screen name="dashboard" options={{ title: t(lang, "emp.tab.home"), tabBarIcon: () => <TabIcon emoji="🏠" /> }} />
-      <Tabs.Screen name="schedule" options={{ title: t(lang, "emp.tab.schedule"), tabBarIcon: () => <TabIcon emoji="📅" /> }} />
-      <Tabs.Screen name="chat" options={{ title: t(lang, "emp.tab.chat"), tabBarIcon: () => <TabIcon emoji="💬" /> }} />
-      <Tabs.Screen name="profile" options={{ title: t(lang, "emp.tab.profile"), tabBarIcon: () => <TabIcon emoji="👤" /> }} />
+      <Tabs.Screen name="dashboard" options={{ title: t(lang, "emp.tab.home"), tabBarIcon: () => <TabIcon label={"\u{1F3E0}"} /> }} />
+      <Tabs.Screen name="schedule" options={{ title: t(lang, "emp.tab.schedule"), tabBarIcon: () => <TabIcon label={"\u{1F4C5}"} /> }} />
+      <Tabs.Screen name="chat" options={{ title: t(lang, "emp.tab.chat"), tabBarIcon: () => <TabIcon label={"\u{1F4AC}"} /> }} />
+      <Tabs.Screen name="profile" options={{ title: t(lang, "emp.tab.profile"), tabBarIcon: () => <TabIcon label={"\u{1F464}"} /> }} />
     </Tabs>
   );
 }

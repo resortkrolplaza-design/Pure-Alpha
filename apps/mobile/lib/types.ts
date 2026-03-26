@@ -55,8 +55,9 @@ export interface ProgramData {
   pointsNameSingular: string;
   portalWelcomeMessage: string | null;
   earningRules: Record<string, unknown>;
-  tierEvaluationField: string;
+  tierEvaluationField?: string;
   portalLanguage: "pl" | "en";
+  currency?: string;
 }
 
 export interface HotelData {
@@ -237,8 +238,8 @@ export interface GroupGuestData {
   id: string;
   firstName: string;
   lastName: string;
-  email: string | null;
-  phone: string | null;
+  email?: string | null;
+  phone?: string | null;
   dietaryNeeds: string | null;
   allergies: string | null;
   specialRequests: string | null;
@@ -264,6 +265,7 @@ export interface GroupAnnouncementData {
   content: string;
   isPinned: boolean;
   createdBy: string;
+  authorType?: "organizer" | "system";
   createdAt: string;
   imageUrl?: string | null;
 }
@@ -301,15 +303,6 @@ export interface GroupMessage {
 }
 
 // ── Employee App ─────────────────────────────────────────────────────────────
-
-export interface EmployeeContext {
-  token: string;
-  employeeId: string;
-  employeeName: string;
-  hotelId: string;
-  department: string;
-  position: string;
-}
 
 export interface ShiftData {
   id: string;

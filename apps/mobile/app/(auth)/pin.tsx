@@ -2,7 +2,7 @@
 // PIN Entry — Group Portal + Employee App
 // =============================================================================
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { View, Text, Pressable, StyleSheet, TextInput, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -24,21 +24,25 @@ export default function PinScreen() {
   const mode = useAppStore((s) => s.mode);
   const setGroupTrackingId = useAppStore((s) => s.setGroupTrackingId);
   const [pin, setPin] = useState("");
+  const pinRef = useRef("");
   const [email, setEmail] = useState("");
   const [trackingId, setTrackingId] = useState("");
   const [hotelSlug, setHotelSlug] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleDigit = useCallback(async (digit: string) => {
-    if (digit === "⌫") {
-      setPin((p) => p.slice(0, -1));
+    if (digit === "\u232B") {
+      const shortened = pinRef.current.slice(0, -1);
+      pinRef.current = shortened;
+      setPin(shortened);
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       return;
     }
-    if (digit === "" || pin.length >= PIN_LENGTH) return;
+    if (digit === "" || pinRef.current.length >= PIN_LENGTH) return;
 
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newPin = pin + digit;
+    const newPin = pinRef.current + digit;
+    pinRef.current = newPin;
     setPin(newPin);
 
     if (newPin.length === PIN_LENGTH) {
@@ -47,6 +51,7 @@ export default function PinScreen() {
         if (mode === "group") {
           if (!trackingId.trim()) {
             Alert.alert(t(lang, "auth.error"), t(lang, "pin.enterTrackingId"));
+            pinRef.current = "";
             setPin("");
             return;
           }
@@ -63,6 +68,7 @@ export default function PinScreen() {
           } else {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t(lang, "auth.error"), res.errorMessage || t(lang, "pin.invalidPin"));
+            pinRef.current = "";
             setPin("");
           }
         } else {
@@ -71,12 +77,14 @@ export default function PinScreen() {
           const slug = hotelSlug.trim();
           if (!login) {
             Alert.alert(t(lang, "auth.error"), t(lang, "pin.enterLogin"));
+            pinRef.current = "";
             setPin("");
             setLoading(false);
             return;
           }
           if (!slug) {
             Alert.alert(t(lang, "auth.error"), t(lang, "pin.enterHotelSlug"));
+            pinRef.current = "";
             setPin("");
             setLoading(false);
             return;
@@ -86,6 +94,7 @@ export default function PinScreen() {
           if (resolveRes.status !== "success" || !resolveRes.data?.hotelId) {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t(lang, "auth.error"), resolveRes.errorMessage || t(lang, "pin.hotelNotFound"));
+            pinRef.current = "";
             setPin("");
             setLoading(false);
             return;
@@ -95,22 +104,29 @@ export default function PinScreen() {
           if (empRes.status === "success" && empRes.data?.token) {
             await persistEmpToken(empRes.data.token);
             await setAppMode("employee");
+            // Save employee name to store for greeting
+            const setEmpName = useAppStore.getState().setEmployeeName;
+            if (empRes.data?.employee?.name) {
+              setEmpName(empRes.data.employee.name);
+            }
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             router.replace("/(employee)/dashboard");
           } else {
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t(lang, "auth.error"), empRes.errorMessage || t(lang, "pin.invalidPin"));
+            pinRef.current = "";
             setPin("");
           }
         }
       } catch {
         Alert.alert(t(lang, "auth.error"), t(lang, "common.error"));
+        pinRef.current = "";
         setPin("");
       } finally {
         setLoading(false);
       }
     }
-  }, [pin, mode, trackingId, email, hotelSlug, lang, setGroupTrackingId]);
+  }, [mode, trackingId, email, hotelSlug, lang, setGroupTrackingId]);
 
   const modeTitle = mode === "group" ? t(lang, "mode.group") : t(lang, "mode.employee");
 
@@ -131,7 +147,7 @@ export default function PinScreen() {
           <View style={styles.inputGroup}>
             <TextInput
               style={styles.input}
-              placeholder="ID wydarzenia (trackingId)"
+              placeholder={t(lang, "pin.trackingIdPlaceholder")}
               placeholderTextColor={guest.textMuted}
               value={trackingId}
               onChangeText={setTrackingId}
@@ -140,7 +156,7 @@ export default function PinScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="Email (opcjonalnie)"
+              placeholder={t(lang, "pin.emailOptionalPlaceholder")}
               placeholderTextColor={guest.textMuted}
               value={email}
               onChangeText={setEmail}
@@ -194,7 +210,7 @@ export default function PinScreen() {
               onPress={() => handleDigit(digit)}
               disabled={digit === "" || loading}
               accessibilityRole="button"
-              accessibilityLabel={digit === "⌫" ? "Delete" : digit}
+              accessibilityLabel={digit === "\u232B" ? t(lang, "common.delete") : digit}
             >
               <Text style={[styles.keyText, digit === "⌫" && styles.keyDelete]}>{digit}</Text>
             </Pressable>
@@ -209,7 +225,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: spacing["2xl"], alignItems: "center" },
   header: { alignItems: "center", gap: spacing.sm, marginBottom: spacing.xl },
-  backBtn: { alignSelf: "flex-start", marginBottom: spacing.xl, minHeight: 44, width: "100%" },
+  backBtn: { alignSelf: "flex-start", marginBottom: spacing.xl, minHeight: 44 },
   backText: { fontSize: fontSize.base, color: GOLD, fontFamily: "Inter_500Medium" },
   title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: guest.text },
   subtitle: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: guest.textSecondary },

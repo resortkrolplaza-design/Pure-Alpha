@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { useEffect } from "react";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
@@ -11,7 +11,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { StyleSheet } from "react-native";
 import { configureApiClient } from "@/lib/api";
-import { getToken } from "@/lib/auth";
+import { configureGroupApi } from "@/lib/group-api";
+import { configureEmployeeApi } from "@/lib/employee-api";
+import { getToken, logout } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
 
 SplashScreen.preventAutoHideAsync();
@@ -27,7 +29,7 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
@@ -37,21 +39,27 @@ export default function RootLayout() {
   const reset = useAppStore((s) => s.reset);
 
   useEffect(() => {
+    const handleSessionExpired = async () => {
+      await logout();
+      reset();
+      router.replace("/");
+    };
+
     configureApiClient({
       getToken,
-      onTokenExpired: () => {
-        reset();
-      },
+      onTokenExpired: handleSessionExpired,
     });
+    configureGroupApi({ onSessionExpired: handleSessionExpired });
+    configureEmployeeApi({ onSessionExpired: handleSessionExpired });
   }, [reset]);
 
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded && !fontError) return null;
 
   return (
     <GestureHandlerRootView style={styles.root}>

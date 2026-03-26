@@ -1,9 +1,9 @@
 // =============================================================================
-// Guest Portal — Points Tab (Transactions, Challenges, Badges, Scratch Cards)
+// Guest Portal -- Points Tab (Transactions, Challenges, Badges, Scratch Cards)
 // =============================================================================
 
-import React, { useState } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator } from "react-native";
+import React, { useState, useCallback } from "react";
+import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -23,7 +23,8 @@ export default function PointsScreen() {
   const program = useGuestStore((s) => s.program);
   const [section, setSection] = useState<Section>("history");
 
-  const { data: transactions, isLoading: loadingTx } = useQuery({
+  // P1-14: Destructure isError from all 3 queries
+  const { data: transactions, isLoading: loadingTx, isError: errorTx, refetch: refetchTx } = useQuery({
     queryKey: ["transactions", portalToken],
     queryFn: async () => {
       if (!portalToken) return [];
@@ -33,7 +34,7 @@ export default function PointsScreen() {
     enabled: !!portalToken,
   });
 
-  const { data: challenges, isLoading: loadingCh } = useQuery({
+  const { data: challenges, isLoading: loadingCh, isError: errorCh, refetch: refetchCh } = useQuery({
     queryKey: ["challenges", portalToken],
     queryFn: async () => {
       if (!portalToken) return [];
@@ -43,7 +44,7 @@ export default function PointsScreen() {
     enabled: !!portalToken,
   });
 
-  const { data: badgeData } = useQuery({
+  const { data: badgeData, isError: errorBadges, refetch: refetchBadges } = useQuery({
     queryKey: ["badges", portalToken],
     queryFn: async () => {
       if (!portalToken) return { earned: [], available: [] };
@@ -59,102 +60,158 @@ export default function PointsScreen() {
     { key: "badges", label: t(lang, "points.badges") },
   ];
 
+  // P1-13: Render item callbacks for FlatList
+  const renderTransaction = useCallback(({ item: tx }: { item: Transaction }) => (
+    <TransactionRow tx={tx} lang={lang} />
+  ), [lang]);
+
+  const renderChallenge = useCallback(({ item: c }: { item: ChallengeWithProgress }) => (
+    <ChallengeCard challenge={c} lang={lang} pointsName={program?.pointsName ?? "pkt"} />
+  ), [lang, program?.pointsName]);
+
+  // Header component for the FlatList (points summary + tabs)
+  const ListHeader = (
+    <>
+      {/* Points Summary */}
+      <View style={styles.summaryRow}>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryValue}>{member?.availablePoints.toLocaleString() ?? "0"}</Text>
+          <Text style={styles.summaryLabel}>{t(lang, "stay.availablePoints")}</Text>
+        </View>
+        <View style={styles.summaryCard}>
+          <Text style={styles.summaryValue}>{member?.lifetimePoints.toLocaleString() ?? "0"}</Text>
+          <Text style={styles.summaryLabel}>{t(lang, "stay.lifetimePoints")}</Text>
+        </View>
+      </View>
+
+      {/* Section Tabs */}
+      <View style={styles.tabs}>
+        {SECTIONS.map((s) => (
+          <Pressable
+            key={s.key}
+            style={[styles.tab, section === s.key && styles.tabActive]}
+            onPress={() => setSection(s.key)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: section === s.key }}
+          >
+            <Text style={[styles.tabText, section === s.key && styles.tabTextActive]}>{s.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </>
+  );
+
+  // P1-14: Error + retry UI helper
+  const ErrorRetry = ({ onRetry }: { onRetry: () => void }) => (
+    <View style={styles.errorContainer}>
+      <Text style={styles.emptyText}>{t(lang, "common.error")}</Text>
+      <Pressable
+        style={styles.retryBtn}
+        onPress={onRetry}
+        accessibilityRole="button"
+        accessibilityLabel={t(lang, "common.retry")}
+      >
+        <Text style={styles.retryBtnText}>{t(lang, "common.retry")}</Text>
+      </Pressable>
+    </View>
+  );
+
+  // Badges section content (not a flat list, so rendered inline)
+  const BadgesContent = () => {
+    if (errorBadges) {
+      return <ErrorRetry onRetry={() => refetchBadges()} />;
+    }
+    return (
+      <View style={styles.section}>
+        {badgeData?.earned.length ? (
+          <>
+            <Text style={styles.sectionLabel}>{t(lang, "points.earnedBadges")}</Text>
+            <View style={styles.badgeGrid}>
+              {badgeData.earned.map((b) => (
+                <View key={b.id} style={styles.badge}>
+                  <Text style={styles.badgeIcon}>{b.emoji || "M"}</Text>
+                  <Text style={styles.badgeName}>{b.name}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+        {badgeData?.available.length ? (
+          <>
+            <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>{t(lang, "points.availableBadges")}</Text>
+            <View style={styles.badgeGrid}>
+              {badgeData.available.map((b) => (
+                <View key={b.id} style={[styles.badge, styles.badgeLocked]}>
+                  <Text style={styles.badgeIcon}>{b.emoji || "?"}</Text>
+                  <Text style={styles.badgeName}>{b.name}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+        {!badgeData?.earned.length && !badgeData?.available.length && (
+          <Text style={styles.emptyText}>{t(lang, "points.noBadges")}</Text>
+        )}
+      </View>
+    );
+  };
+
   return (
     <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Points Summary */}
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{member?.availablePoints.toLocaleString() ?? "0"}</Text>
-            <Text style={styles.summaryLabel}>{t(lang, "stay.availablePoints")}</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryValue}>{member?.lifetimePoints.toLocaleString() ?? "0"}</Text>
-            <Text style={styles.summaryLabel}>{t(lang, "stay.lifetimePoints")}</Text>
-          </View>
-        </View>
-
-        {/* Section Tabs */}
-        <View style={styles.tabs}>
-          {SECTIONS.map((s) => (
-            <Pressable
-              key={s.key}
-              style={[styles.tab, section === s.key && styles.tabActive]}
-              onPress={() => setSection(s.key)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: section === s.key }}
-            >
-              <Text style={[styles.tabText, section === s.key && styles.tabTextActive]}>{s.label}</Text>
-            </Pressable>
-          ))}
-        </View>
-
-        {/* Content */}
-        {section === "history" && (
-          <View style={styles.section}>
-            {loadingTx ? (
-              <ActivityIndicator color={GOLD} />
-            ) : !transactions?.length ? (
+      {/* P1-13: Use FlatList for transactions and challenges (50+ items), badges stays as-is */}
+      {section === "history" ? (
+        <FlatList
+          data={transactions ?? []}
+          renderItem={renderTransaction}
+          keyExtractor={(tx) => tx.id}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={
+            loadingTx ? (
+              <ActivityIndicator color={GOLD} style={{ marginTop: 20 }} />
+            ) : errorTx ? (
+              <ErrorRetry onRetry={() => refetchTx()} />
+            ) : (
               <Text style={styles.emptyText}>{t(lang, "points.noTransactions")}</Text>
+            )
+          }
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        />
+      ) : section === "challenges" ? (
+        <FlatList
+          data={challenges ?? []}
+          renderItem={renderChallenge}
+          keyExtractor={(c) => c.id}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={
+            loadingCh ? (
+              <ActivityIndicator color={GOLD} style={{ marginTop: 20 }} />
+            ) : errorCh ? (
+              <ErrorRetry onRetry={() => refetchCh()} />
             ) : (
-              transactions.map((tx) => (
-                <TransactionRow key={tx.id} tx={tx} lang={lang} />
-              ))
-            )}
-          </View>
-        )}
-
-        {section === "challenges" && (
-          <View style={styles.section}>
-            {loadingCh ? (
-              <ActivityIndicator color={GOLD} />
-            ) : !challenges?.length ? (
               <Text style={styles.emptyText}>{t(lang, "points.noChallenges")}</Text>
-            ) : (
-              challenges.map((c) => (
-                <ChallengeCard key={c.id} challenge={c} lang={lang} pointsName={program?.pointsName ?? "pkt"} />
-              ))
-            )}
-          </View>
-        )}
-
-        {section === "badges" && (
-          <View style={styles.section}>
-            {badgeData?.earned.length ? (
-              <>
-                <Text style={styles.sectionLabel}>{t(lang, "points.earnedBadges")}</Text>
-                <View style={styles.badgeGrid}>
-                  {badgeData.earned.map((b) => (
-                    <View key={b.id} style={styles.badge}>
-                      <Text style={styles.badgeEmoji}>{b.emoji || "🏅"}</Text>
-                      <Text style={styles.badgeName}>{b.name}</Text>
-                    </View>
-                  ))}
-                </View>
-              </>
-            ) : null}
-            {badgeData?.available.length ? (
-              <>
-                <Text style={[styles.sectionLabel, { marginTop: spacing.xl }]}>{t(lang, "points.availableBadges")}</Text>
-                <View style={styles.badgeGrid}>
-                  {badgeData.available.map((b) => (
-                    <View key={b.id} style={[styles.badge, styles.badgeLocked]}>
-                      <Text style={styles.badgeEmoji}>{b.emoji || "🔒"}</Text>
-                      <Text style={styles.badgeName}>{b.name}</Text>
-                    </View>
-                  ))}
-                </View>
-              </>
-            ) : null}
-            {!badgeData?.earned.length && !badgeData?.available.length && (
-              <Text style={styles.emptyText}>{t(lang, "points.noBadges")}</Text>
-            )}
-          </View>
-        )}
-      </ScrollView>
+            )
+          }
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
+          showsVerticalScrollIndicator={false}
+          ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        />
+      ) : (
+        // Badges tab: small number of items, FlatList not needed
+        <FlatList
+          data={[]}
+          renderItem={() => null}
+          ListHeaderComponent={
+            <>
+              {ListHeader}
+              <BadgesContent />
+            </>
+          }
+          contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </LinearGradient>
   );
 }
@@ -191,7 +248,7 @@ const ChallengeCard = React.memo(function ChallengeCard({ challenge: c, lang, po
     <View style={styles.challengeCard}>
       <View style={styles.challengeHeader}>
         <Text style={styles.challengeName}>{c.name}</Text>
-        {isComplete && <Text style={styles.challengeComplete}>✓</Text>}
+        {isComplete && <Text style={styles.challengeComplete}>OK</Text>}
       </View>
       {c.description && <Text style={styles.challengeDesc}>{c.description}</Text>}
       <View style={styles.progressBar}>
@@ -199,7 +256,7 @@ const ChallengeCard = React.memo(function ChallengeCard({ challenge: c, lang, po
       </View>
       <View style={styles.challengeFooter}>
         <Text style={styles.challengeProgress}>{progress} / {c.targetValue}</Text>
-        <Text style={styles.challengeReward}>🎁 {c.rewardPoints} {pointsName}</Text>
+        <Text style={styles.challengeReward}>+{c.rewardPoints} {pointsName}</Text>
       </View>
     </View>
   );
@@ -226,6 +283,13 @@ const styles = StyleSheet.create({
   section: { gap: spacing.md },
   sectionLabel: { fontSize: fontSize.base, fontFamily: "Inter_600SemiBold", color: guest.textSecondary },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: guest.textMuted, textAlign: "center", paddingVertical: spacing["3xl"] },
+  errorContainer: { alignItems: "center", gap: spacing.md, paddingVertical: spacing["3xl"] },
+  retryBtn: {
+    backgroundColor: GOLD, borderRadius: radius.full,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.sm, minHeight: 44,
+    alignItems: "center", justifyContent: "center",
+  },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: NAVY },
   txRow: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
     backgroundColor: guest.card, borderRadius: radius.md, borderWidth: 1, borderColor: guest.cardBorder,
@@ -245,7 +309,7 @@ const styles = StyleSheet.create({
   },
   challengeHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   challengeName: { fontSize: fontSize.base, fontFamily: "Inter_600SemiBold", color: guest.text, flex: 1 },
-  challengeComplete: { fontSize: 18, color: "#6ee7b7" },
+  challengeComplete: { fontSize: 14, fontFamily: "Inter_700Bold", color: "#6ee7b7" },
   challengeDesc: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: guest.textMuted },
   progressBar: { height: 6, borderRadius: 3, backgroundColor: guest.glassBorder, overflow: "hidden" },
   progressFill: { height: "100%", backgroundColor: GOLD, borderRadius: 3 },
@@ -259,6 +323,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
   },
   badgeLocked: { opacity: 0.5 },
-  badgeEmoji: { fontSize: 28 },
+  badgeIcon: { fontSize: 28, fontFamily: "Inter_700Bold", color: GOLD },
   badgeName: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium", color: guest.text, textAlign: "center" },
 });

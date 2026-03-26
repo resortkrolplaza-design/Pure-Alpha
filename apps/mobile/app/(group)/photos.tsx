@@ -2,8 +2,7 @@
 // Group Portal — Photos Tab (Photo wall)
 // =============================================================================
 
-import { View, Text, FlatList, StyleSheet, Dimensions } from "react-native";
-import { Image } from "react-native";
+import { View, Text, FlatList, StyleSheet, RefreshControl, useWindowDimensions, Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { group, fontSize, radius, spacing } from "@/lib/tokens";
@@ -11,19 +10,19 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupPhotoData } from "@/lib/types";
-import { useCallback } from "react";
+import { useCallback, useState, useMemo } from "react";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
 const COLUMN_GAP = 8;
 const NUM_COLUMNS = 3;
-const IMAGE_SIZE = (SCREEN_WIDTH - 40 - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
 export default function PhotosScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
+  const { width: screenWidth } = useWindowDimensions();
+  const imageSize = useMemo(() => (screenWidth - 40 - COLUMN_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS, [screenWidth]);
 
-  const { data: photos, isLoading } = useQuery({
+  const { data: photos, isLoading, isError, refetch } = useQuery({
     queryKey: ["group-photos", trackingId],
     queryFn: async () => {
       if (!trackingId) return [];
@@ -33,19 +32,36 @@ export default function PhotosScreen() {
     enabled: !!trackingId,
   });
 
-  const renderPhoto = useCallback(({ item }: { item: GroupPhotoData }) => (
-    <View style={styles.photoWrapper}>
-      <Image
-        source={{ uri: item.imageUrl }}
-        style={styles.photo}
-        resizeMode="cover"
-        
-      />
-      {item.caption && (
-        <Text style={styles.photoCaption} numberOfLines={1}>{item.caption}</Text>
-      )}
-    </View>
-  ), []);
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refetch();
+    setRefreshing(false);
+  }, [refetch]);
+
+  // Track failed images to show fallback
+  const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
+
+  const renderPhoto = useCallback(({ item }: { item: GroupPhotoData }) => {
+    const isFailed = failedIds.has(item.id);
+    return (
+      <View style={[styles.photoWrapper, { width: imageSize }]} accessibilityLabel={item.caption || t(lang, "group.tab.photos")}>
+        {isFailed ? (
+          <View style={[styles.photoFallback, { width: imageSize, height: imageSize }]} />
+        ) : (
+          <Image
+            source={{ uri: item.imageUrl }}
+            style={{ width: imageSize, height: imageSize, borderRadius: radius.sm }}
+            resizeMode="cover"
+            onError={() => setFailedIds((prev) => new Set(prev).add(item.id))}
+          />
+        )}
+        {item.caption && (
+          <Text style={styles.photoCaption} numberOfLines={1}>{item.caption}</Text>
+        )}
+      </View>
+    );
+  }, [failedIds, imageSize, lang]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
@@ -62,8 +78,11 @@ export default function PhotosScreen() {
         columnWrapperStyle={styles.row}
         contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={group.primary} />}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>{isLoading ? t(lang, "common.loading") : t(lang, "common.noData")}</Text>
+          <Text style={styles.emptyText}>
+            {isLoading ? t(lang, "common.loading") : isError ? t(lang, "common.error") : t(lang, "common.noData")}
+          </Text>
         }
       />
     </View>
@@ -77,8 +96,8 @@ const styles = StyleSheet.create({
   count: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2 },
   list: { paddingHorizontal: spacing.xl },
   row: { gap: COLUMN_GAP, marginBottom: COLUMN_GAP },
-  photoWrapper: { width: IMAGE_SIZE },
-  photo: { width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: radius.sm },
+  photoWrapper: {},
+  photoFallback: { borderRadius: radius.sm, backgroundColor: "rgba(0,0,0,0.06)" },
   photoCaption: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2 },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"] },
 });

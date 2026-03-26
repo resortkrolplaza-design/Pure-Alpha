@@ -9,8 +9,8 @@ import { group, fontSize } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 
-function TabIcon({ emoji }: { emoji: string }) {
-  return <Text style={{ fontSize: 22 }}>{emoji}</Text>;
+function TabIcon({ emoji, label }: { emoji: string; label: string }) {
+  return <Text style={{ fontSize: 22 }} accessibilityLabel={label}>{emoji}</Text>;
 }
 
 export default function GroupLayout() {
@@ -27,11 +27,11 @@ export default function GroupLayout() {
       }}
       screenListeners={{ tabPress: () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } }}
     >
-      <Tabs.Screen name="overview" options={{ title: t(lang, "group.tab.overview"), tabBarIcon: () => <TabIcon emoji="📋" /> }} />
-      <Tabs.Screen name="guests" options={{ title: t(lang, "group.tab.guests"), tabBarIcon: () => <TabIcon emoji="👥" /> }} />
-      <Tabs.Screen name="messages" options={{ title: t(lang, "group.tab.messages"), tabBarIcon: () => <TabIcon emoji="💬" /> }} />
-      <Tabs.Screen name="documents" options={{ title: t(lang, "group.tab.documents"), tabBarIcon: () => <TabIcon emoji="📄" /> }} />
-      <Tabs.Screen name="photos" options={{ title: t(lang, "group.tab.photos"), tabBarIcon: () => <TabIcon emoji="📸" /> }} />
+      <Tabs.Screen name="overview" options={{ title: t(lang, "group.tab.overview"), tabBarIcon: () => <TabIcon emoji="📋" label={t(lang, "group.tab.overview")} /> }} />
+      <Tabs.Screen name="guests" options={{ title: t(lang, "group.tab.guests"), tabBarIcon: () => <TabIcon emoji="👥" label={t(lang, "group.tab.guests")} /> }} />
+      <Tabs.Screen name="messages" options={{ title: t(lang, "group.tab.messages"), tabBarIcon: () => <TabIcon emoji="💬" label={t(lang, "group.tab.messages")} /> }} />
+      <Tabs.Screen name="documents" options={{ title: t(lang, "group.tab.documents"), tabBarIcon: () => <TabIcon emoji="📄" label={t(lang, "group.tab.documents")} /> }} />
+      <Tabs.Screen name="photos" options={{ title: t(lang, "group.tab.photos"), tabBarIcon: () => <TabIcon emoji="📸" label={t(lang, "group.tab.photos")} /> }} />
     </Tabs>
   );
 }

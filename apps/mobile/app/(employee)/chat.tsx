@@ -1,5 +1,5 @@
 // =============================================================================
-// Employee App — Chat (Bridge to Pure Chat)
+// Employee App -- Chat (Bridge to Pure Chat)
 // =============================================================================
 
 import { View, Text, StyleSheet } from "react-native";
@@ -21,11 +21,13 @@ export default function ChatScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardEmoji}>💬</Text>
           <Text style={styles.cardTitle}>{t(lang, "emp.chat.title")}</Text>
           <Text style={styles.cardDesc}>
             {t(lang, "emp.chat.desc")}
           </Text>
+          <View style={styles.comingSoonBadge}>
+            <Text style={styles.comingSoonText}>{t(lang, "emp.chatComingSoon")}</Text>
+          </View>
         </View>
       </View>
     </LinearGradient>
@@ -40,7 +42,11 @@ const styles = StyleSheet.create({
     backgroundColor: employee.card, borderRadius: radius.xl, borderWidth: 1, borderColor: employee.cardBorder,
     padding: spacing["3xl"], alignItems: "center", gap: spacing.md, ...shadow.sm,
   },
-  cardEmoji: { fontSize: 48 },
   cardTitle: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: employee.text },
   cardDesc: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: employee.textSecondary, textAlign: "center", lineHeight: 20 },
+  comingSoonBadge: {
+    backgroundColor: employee.accent, borderRadius: radius.full,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginTop: spacing.sm,
+  },
+  comingSoonText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: employee.brand },
 });
