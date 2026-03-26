@@ -1230,13 +1230,19 @@ export async function scrapeProfitroomCalendarFallback(
       if (unavailable) unavailableSet = new Set(unavailable);
     } catch { /* non-critical */ }
 
-    // Start with 1-night stay for accurate pricing (multi-night stays have lower per-night rates).
-    // If entire batch returns 0 results, escalate to 2+ nights (min-stay restriction).
-    const availableDays = Array.from({ length: daysToFetch }, (_, i) => {
+    // Build all days to check — DON'T filter unavailable days because
+    // unavailable-days API reports 1-night unavailability, but min-stay offers
+    // (e.g., Majówka 2+ nights) ARE available via STAY_LADDER escalation.
+    // Unavailable dates are tried LAST (appended after available dates).
+    const allDays = Array.from({ length: daysToFetch }, (_, i) => {
       const ci = new Date(startDate);
       ci.setUTCDate(ci.getUTCDate() + i);
       return formatDate(ci);
-    }).filter(d => !unavailableSet.has(d));
+    });
+    const availableDays = [
+      ...allDays.filter(d => !unavailableSet.has(d)),
+      ...allDays.filter(d => unavailableSet.has(d)),
+    ];
 
     // Hotels have variable min-stay: off-season 1n, shoulder 2n, summer 3n, peak 5n
     // Start with 1-night to get accurate per-night price (2+ night stays have lower per-night rates)
