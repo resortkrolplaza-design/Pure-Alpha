@@ -7,7 +7,7 @@ import { Tabs } from "expo-router";
 import { Platform, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import { NAVY, GOLD, guest, fontSize } from "@/lib/tokens";
+import { GOLD, guest, fontSize } from "@/lib/tokens";
 import { TabIcon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -27,7 +27,7 @@ export default function GuestLayout() {
         tabBarLabelStyle: styles.tabLabel,
         tabBarBackground: () =>
           Platform.OS === "ios" ? (
-            <BlurView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} />
           ) : null,
       }}
       screenListeners={{
@@ -92,7 +92,7 @@ export default function GuestLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     position: "absolute",
-    backgroundColor: Platform.OS === "ios" ? "transparent" : "rgba(13,34,54,0.95)",
+    backgroundColor: Platform.OS === "ios" ? "transparent" : "rgba(255,255,255,0.95)",
     borderTopColor: guest.glassBorder,
     borderTopWidth: 0.5,
     height: Platform.OS === "ios" ? 88 : 64,

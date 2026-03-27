@@ -8,7 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, fontWeight, radius, spacing, shadow } from "@/lib/tokens";
+import { GOLD, guest, fontSize, fontWeight, radius, spacing, shadow } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import type { IconName } from "@/lib/icons";
 import { useFadeIn, useSlideUp, useScalePress } from "@/lib/animations";
@@ -91,7 +91,7 @@ export default function ModeSelector() {
 
   if (checking) {
     return (
-      <View style={{ flex: 1, backgroundColor: NAVY, justifyContent: "center", alignItems: "center" }}>
+      <View style={{ flex: 1, backgroundColor: guest.bg, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator color={GOLD} size="large" />
       </View>
     );
@@ -111,12 +111,12 @@ export default function ModeSelector() {
   };
 
   return (
-    <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+    <LinearGradient colors={[guest.bg, guest.bgLight, guest.bg]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 40 }]}>
         {/* Logo */}
         <Animated.View style={[styles.logoArea, logoFade]}>
           <View style={styles.logoCircle}>
-            <Icon name="star" size={28} color={NAVY} />
+            <Icon name="star" size={28} color={guest.textOnGold} />
           </View>
           <Text style={styles.title}>{t(lang, "mode.title")}</Text>
           <Text style={styles.subtitle}>{t(lang, "mode.subtitle")}</Text>

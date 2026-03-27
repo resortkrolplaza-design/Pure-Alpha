@@ -11,7 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { NAVY, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
@@ -94,7 +94,7 @@ export default function MessagesScreen() {
   }, [lang]);
 
   return (
-    <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+    <LinearGradient colors={[guest.bg, guest.bgLight, guest.bg]} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}

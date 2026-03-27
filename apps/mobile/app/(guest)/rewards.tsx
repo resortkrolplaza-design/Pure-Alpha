@@ -9,7 +9,7 @@ import { Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { NAVY, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
 import { useScalePress } from "@/lib/animations";
 import { t, type Lang } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
@@ -97,7 +97,7 @@ export default function RewardsScreen() {
   };
 
   return (
-    <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+    <LinearGradient colors={[guest.bg, guest.bgLight, guest.bg]} style={styles.container}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}

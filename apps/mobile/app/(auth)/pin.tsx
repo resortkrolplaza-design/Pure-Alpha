@@ -8,7 +8,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -133,7 +133,7 @@ export default function PinScreen() {
   const modeTitle = mode === "group" ? t(lang, "mode.group") : t(lang, "mode.employee");
 
   return (
-    <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+    <LinearGradient colors={[guest.bg, guest.bgLight, guest.bg]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}>
         {/* Header */}
         <View style={styles.header}>

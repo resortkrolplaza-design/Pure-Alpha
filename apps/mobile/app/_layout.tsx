@@ -79,10 +79,8 @@ export default function RootLayout() {
 }
 
 function DynamicStatusBar() {
-  const mode = useAppStore((s) => s.mode);
-  // Guest portal = dark bg → light status bar; Group/Employee = light bg → dark status bar
-  const style = mode === "guest" || mode === null ? "light" : "dark";
-  return <StatusBar style={style} />;
+  // All modes use light backgrounds → dark status bar icons
+  return <StatusBar style="dark" />;
 }
 
 const styles = StyleSheet.create({

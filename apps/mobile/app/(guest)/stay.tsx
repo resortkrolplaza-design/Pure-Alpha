@@ -5,7 +5,7 @@
 import { View, Text, ScrollView, Pressable, StyleSheet, Linking, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { NAVY, NAVY_LIGHT, GOLD, GOLD_DARK, guest, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { NAVY, GOLD, GOLD_DARK, guest, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { useSlideUp } from "@/lib/animations";
 import { t } from "@/lib/i18n";
@@ -39,7 +39,7 @@ export default function StayScreen() {
 
   if (!member || !program) {
     return (
-      <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+      <LinearGradient colors={[guest.bg, guest.bgLight, guest.bg]} style={styles.container}>
         <View style={[styles.center, { paddingTop: insets.top }]}>
           <Text style={styles.loadingText}>{t(lang, "common.loading")}</Text>
         </View>
@@ -48,7 +48,7 @@ export default function StayScreen() {
   }
 
   return (
-    <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+    <LinearGradient colors={[guest.bg, guest.bgLight, guest.bg]} style={styles.container}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}

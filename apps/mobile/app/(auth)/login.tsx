@@ -11,7 +11,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { NAVY, GOLD, guest, fontSize, radius, spacing, shadow } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { useFadeIn, useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
@@ -67,7 +67,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+    <LinearGradient colors={[guest.bg, guest.bgLight, guest.bg]} style={styles.container}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
@@ -82,7 +82,7 @@ export default function LoginScreen() {
               </View>
             </Pressable>
             <View style={styles.logoCircle}>
-              <Icon name="star" size={24} color={NAVY} />
+              <Icon name="star" size={24} color={guest.textOnGold} />
             </View>
             <Text style={styles.title}>Pure Loyal</Text>
             <Text style={styles.subtitle}>{t(lang, "mode.guestDesc")}</Text>

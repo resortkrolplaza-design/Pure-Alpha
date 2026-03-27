@@ -7,7 +7,7 @@ import { View, Text, ScrollView, Pressable, StyleSheet, Linking, useWindowDimens
 import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
+import { NAVY, GOLD, guest, fontSize, radius, spacing } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { configureListAnimation, useRotation } from "@/lib/animations";
 import { t } from "@/lib/i18n";
@@ -61,7 +61,7 @@ export default function HotelScreen() {
   };
 
   return (
-    <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+    <LinearGradient colors={[guest.bg, guest.bgLight, guest.bg]} style={styles.container}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}

@@ -5,7 +5,7 @@
 
 import { Platform } from "react-native";
 
-// ── Guest Portal: Norwegian Prima ────────────────────────────────────────────
+// ── Guest Portal: Light Theme ────────────────────────────────────────────────
 
 export const NAVY = "#0D2236";
 export const NAVY_LIGHT = "#1a3a5c";
@@ -13,32 +13,32 @@ export const GOLD = "#D4AF37";
 export const GOLD_DARK = "#c4a030";
 
 export const guest = {
-  bg: NAVY,
-  bgLight: NAVY_LIGHT,
+  bg: "#FAFAF8",
+  bgLight: "#F5F3EF",
   accent: GOLD,
   accentDark: GOLD_DARK,
-  text: "#FFFFFF",
-  textSecondary: "rgba(255,255,255,0.6)",
-  textMuted: "rgba(255,255,255,0.4)",
-  card: "rgba(255,255,255,0.05)",
-  cardBorder: "rgba(255,255,255,0.1)",
-  glass: "rgba(255,255,255,0.12)",
-  glassBorder: "rgba(255,255,255,0.18)",
-  goldGlow: "rgba(212,175,55,0.15)",
-  goldBorder: "rgba(212,175,55,0.3)",
-  error: "#fca5a5",
-  errorBg: "rgba(239,68,68,0.1)",
-  success: "#6ee7b7",
-  successBg: "rgba(16,185,129,0.1)",
-  inputBg: "rgba(255,255,255,0.05)",
-  inputBorder: "rgba(255,255,255,0.1)",
-  textOnGold: "rgba(13,34,54,0.6)",
-  tierBadgeBg: "rgba(13,34,54,0.15)",
-  warningBg: "rgba(245,158,11,0.1)",
+  text: "#0f172a",
+  textSecondary: "#475569",
+  textMuted: "#94a3b8",
+  card: "rgba(255,255,255,0.9)",
+  cardBorder: "rgba(0,0,0,0.06)",
+  glass: "rgba(255,255,255,0.7)",
+  glassBorder: "rgba(0,0,0,0.08)",
+  goldGlow: "rgba(212,175,55,0.12)",
+  goldBorder: "rgba(212,175,55,0.25)",
+  error: "#ef4444",
+  errorBg: "rgba(239,68,68,0.08)",
+  success: "#10b981",
+  successBg: "rgba(16,185,129,0.08)",
+  inputBg: "rgba(0,0,0,0.03)",
+  inputBorder: "rgba(0,0,0,0.08)",
+  textOnGold: "#FFFFFF",
+  tierBadgeBg: "rgba(212,175,55,0.12)",
+  warningBg: "rgba(245,158,11,0.08)",
   warningBorder: "rgba(245,158,11,0.2)",
-  warningText: "#fcd34d",
-  inputBarBg: "rgba(13,34,54,0.8)",
-  msgTimeMine: "rgba(13,34,54,0.5)",
+  warningText: "#b45309",
+  inputBarBg: "rgba(255,255,255,0.95)",
+  msgTimeMine: "rgba(255,255,255,0.6)",
 } as const;
 
 // ── Employee App: Warm Beige ─────────────────────────────────────────────────

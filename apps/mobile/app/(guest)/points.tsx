@@ -7,7 +7,7 @@ import { View, Text, FlatList, Pressable, StyleSheet, ActivityIndicator } from "
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { NAVY, NAVY_LIGHT, GOLD, guest, fontSize, radius, spacing, semantic } from "@/lib/tokens";
+import { NAVY, GOLD, guest, fontSize, radius, spacing, semantic } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { configureListAnimation } from "@/lib/animations";
 import { t } from "@/lib/i18n";
@@ -164,7 +164,7 @@ export default function PointsScreen() {
   };
 
   return (
-    <LinearGradient colors={[NAVY, NAVY_LIGHT, NAVY]} style={styles.container}>
+    <LinearGradient colors={[guest.bg, guest.bgLight, guest.bg]} style={styles.container}>
       {/* P1-13: Use FlatList for transactions and challenges (50+ items), badges stays as-is */}
       {section === "history" ? (
         <FlatList
