@@ -20,9 +20,12 @@ import { setPortalToken, setAppMode } from "@/lib/auth";
 import { portalFetch } from "@/lib/api";
 import { mapInitResponse } from "@/lib/portal-helpers";
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
+  const setMode = useAppStore((s) => s.setMode);
   const setStorePortalToken = useAppStore((s) => s.setPortalToken);
   const setPortalData = useGuestStore((s) => s.setPortalData);
 
@@ -38,6 +41,12 @@ export default function LoginScreen() {
   const handleTokenLogin = async () => {
     const token = tokenInput.trim();
     if (!token) return;
+
+    // P1-24: Validate token is a UUID to prevent path traversal
+    if (!UUID_RE.test(token)) {
+      Alert.alert(t(lang, "auth.error"), t(lang, "auth.invalidToken"));
+      return;
+    }
 
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setLoading(true);
@@ -55,6 +64,7 @@ export default function LoginScreen() {
         setPortalToken(token),
         setAppMode("guest"),
       ]);
+      setMode("guest");
       setStorePortalToken(token);
       setPortalData(portalData);
 
@@ -178,7 +188,7 @@ const styles = StyleSheet.create({
 
   // ── Header ──────────────────────────────────────────────────────────────────
   header: { alignItems: "center", gap: spacing.sm },
-  backBtn: { alignSelf: "flex-start", marginBottom: spacing.xl, minHeight: 44 },
+  backBtn: { alignSelf: "flex-start", marginBottom: spacing.xl, minHeight: 44, minWidth: 44 },
   backRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   backText: { fontSize: fontSize.base, color: GOLD, fontFamily: "Inter_500Medium" },
   logoCircle: {

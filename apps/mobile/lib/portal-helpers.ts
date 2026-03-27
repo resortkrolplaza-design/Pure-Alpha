@@ -10,6 +10,12 @@ import type {
 // Map raw API /portal/init response to typed PortalInitData shape.
 // Used in both auto-resume (index.tsx) and guest login (login.tsx).
 export function mapInitResponse(raw: Record<string, unknown>): PortalInitData {
+  if (!raw.member || !raw.program || !raw.hotel) {
+    throw new Error("Invalid init response");
+  }
+
+  const program = raw.program as ProgramData;
+
   return {
     member: {
       ...(raw.member as MemberData),
@@ -17,7 +23,10 @@ export function mapInitResponse(raw: Record<string, unknown>): PortalInitData {
       expiringPoints: (raw.expiringPoints as MemberData["expiringPoints"]) ?? null,
       cheapestReward: (raw.cheapestReward as MemberData["cheapestReward"]) ?? null,
     },
-    program: raw.program as ProgramData,
+    program: {
+      ...program,
+      currency: program.currency ?? undefined,
+    },
     hotel: raw.hotel as HotelData,
     tiers: (raw.tiers as TierData[]) ?? [],
     nextTier: (raw.nextTier as TierData) ?? null,

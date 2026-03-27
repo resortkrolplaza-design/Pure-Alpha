@@ -2,8 +2,8 @@
 // Mode Selector — ONE app, 3 beautiful experiences
 // =============================================================================
 
-import { useEffect, useState, useCallback } from "react";
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, Animated } from "react-native";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, Animated, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -25,6 +25,8 @@ const MODES = [
   { key: "employee" as const, icon: "briefcase-outline" as IconName, route: "/(employee)/dashboard" },
 ] as const;
 
+const UUID_RE = /\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+
 
 export default function ModeSelector() {
   const insets = useSafeAreaInsets();
@@ -42,7 +44,11 @@ export default function ModeSelector() {
 
   // ── Deep Link Handler ────────────────────────────────────────────────────
   // Matches purealpha://p/TOKEN or https://purealphahotel.pl/p/TOKEN
-  const loginWithToken = useCallback(async (token: string) => {
+  const loginInProgress = useRef(false);
+
+  const loginWithToken = useCallback(async (token: string): Promise<boolean> => {
+    if (loginInProgress.current) return false;
+    loginInProgress.current = true;
     setChecking(true);
     try {
       const initRes = await portalFetch<Record<string, unknown>>(token, "");
@@ -52,33 +58,39 @@ export default function ModeSelector() {
         setStorePortalToken(token);
         setPortalData(mapInitResponse(initRes.data));
         router.replace("/(guest)/stay");
-        return;
+        return true;
       }
     } catch {
-      // Invalid token -- fall through to mode selector
+      // Invalid token -- fall through
     }
+    Alert.alert(t(lang, "auth.error"), t(lang, "auth.invalidToken"));
     setChecking(false);
-  }, [setMode, setStorePortalToken, setPortalData]);
+    loginInProgress.current = false;
+    return false;
+  }, [setMode, setStorePortalToken, setPortalData, lang]);
 
   const handleDeepLink = useCallback((url: string | null) => {
     if (!url) return;
-    // Match /p/TOKEN where TOKEN is a UUID (hex + dashes)
-    const match = url.match(/\/p\/([a-f0-9-]+)/i);
+    const match = url.match(UUID_RE);
     if (match?.[1]) {
       loginWithToken(match[1]);
     }
   }, [loginWithToken]);
 
   // Auto-resume last session — must hydrate Zustand from SecureStore
+  // Also defers warm-start deep link listener until AFTER cold-start check (P1-3)
   useEffect(() => {
+    let subscription: ReturnType<typeof Linking.addEventListener> | null = null;
+
     (async () => {
       // Check for deep link on cold start first -- takes priority over saved session
       const initialUrl = await Linking.getInitialURL();
       if (initialUrl) {
-        const match = initialUrl.match(/\/p\/([a-f0-9-]+)/i);
+        const match = initialUrl.match(UUID_RE);
         if (match?.[1]) {
-          loginWithToken(match[1]);
-          return;
+          const success = await loginWithToken(match[1]);
+          if (success) return;
+          // Deep link failed -- fall through to saved-session resume
         }
       }
 
@@ -102,6 +114,8 @@ export default function ModeSelector() {
             return;
           }
         } catch { /* token expired -- fall through to mode selector */ }
+        // P1-26: Clear stale tokens on auto-resume failure
+        await logout();
       }
       if (savedMode === "group" && groupId && groupJwt) {
         // Validate group JWT before resuming
@@ -126,16 +140,17 @@ export default function ModeSelector() {
         return;
       }
       setChecking(false);
-    })();
-  }, [setMode, setStorePortalToken, setPortalData, loginWithToken]);
 
-  // Listen for deep links when app is already open (warm start)
-  useEffect(() => {
-    const subscription = Linking.addEventListener("url", (event) => {
-      handleDeepLink(event.url);
-    });
-    return () => subscription.remove();
-  }, [handleDeepLink]);
+      // Start listening for warm-start deep links only AFTER cold-start check completes
+      subscription = Linking.addEventListener("url", (event) => {
+        handleDeepLink(event.url);
+      });
+    })();
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [setMode, setStorePortalToken, setPortalData, loginWithToken, handleDeepLink]);
 
   if (checking) {
     return (

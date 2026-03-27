@@ -23,6 +23,8 @@ export interface TierData {
   slug: string;
   description?: string | null;
   minPoints: number;
+  minSpent?: number | null;
+  minStays?: number | null;
   multiplier: number;
   discountPercent?: number | null;
   benefits: string[] | null;
@@ -102,16 +104,19 @@ export interface ServiceData {
   id: string;
   name: string;
   description: string | null;
-  publicDescription: string | null;
+  publicDescription?: string | null;
   price: number | null;
-  unit: string | null;
   currency: string | null;
+  images?: unknown;
+  category?: string;
 }
 
 export interface SocialLinkData {
+  id: string;
   platform: string;
   accountUsername: string | null;
-  accountName: string | null;
+  accountName?: string | null;
+  url: string;
 }
 
 export interface Transaction {
