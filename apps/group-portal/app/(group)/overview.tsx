@@ -292,7 +292,11 @@ function TimelineStepper({
           const label = lang === "en" && cp.labelEn ? cp.labelEn : cp.label;
 
           return (
-            <View key={idx} style={styles.stepperStep}>
+            <View
+              key={idx}
+              style={styles.stepperStep}
+              accessibilityLabel={`${label}${cp.date ? `, ${formatDate(cp.date, lang)}` : ""}${isComplete ? ` (${t(lang, "overview.timeline.complete")})` : isCurrent ? ` (${t(lang, "overview.timeline.current")})` : ""}`}
+            >
               {/* Connecting line (before dot, except for first) */}
               {idx > 0 && (
                 <View
@@ -403,6 +407,9 @@ function OverviewScreenInner() {
     salesperson,
     socialLinks,
     faq,
+    gallery,
+    services,
+    attractions,
     agendaItems: agenda,
     announcements,
     totalGuestCount,
@@ -455,7 +462,7 @@ function OverviewScreenInner() {
         (_x: number, y: number) => {
           scrollRef.current?.scrollTo({ y, animated: true });
         },
-        () => {},
+        () => { /* measurement failed -- noop */ },
       );
       return;
     }
@@ -748,7 +755,7 @@ function OverviewScreenInner() {
         {/* F. ANNOUNCEMENTS SECTION                                          */}
         {/* ================================================================= */}
         {!isLoading && !isError && initData && (
-          <View ref={announcementsRef} style={styles.section}>
+          <View ref={announcementsRef} style={styles.section} accessibilityLiveRegion="polite">
             <Text style={styles.sectionTitle}>
               {t(lang, "group.announcements")}
             </Text>
@@ -779,7 +786,7 @@ function OverviewScreenInner() {
         {/* G. AGENDA PREVIEW                                                 */}
         {/* ================================================================= */}
         {!isLoading && !isError && initData && (
-          <View style={styles.section}>
+          <View style={styles.section} accessibilityLiveRegion="polite">
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
                 {t(lang, "group.agenda")}
@@ -862,7 +869,60 @@ function OverviewScreenInner() {
         )}
 
         {/* ================================================================= */}
-        {/* I. HOTEL CONTACT FOOTER                                           */}
+        {/* I. HOTEL GALLERY                                                  */}
+        {/* ================================================================= */}
+        {gallery && gallery.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t(lang, "group.tab.photos")}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: spacing.xl }}>
+              {gallery.map((img) => (
+                <Image key={img.id} source={{ uri: img.url }} style={styles.galleryThumb} resizeMode="cover" />
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ================================================================= */}
+        {/* J. SERVICES                                                       */}
+        {/* ================================================================= */}
+        {services && services.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t(lang, "overview.services")}</Text>
+            {services.map((svc) => (
+              <View key={svc.id} style={styles.serviceCard}>
+                <Text style={styles.serviceCardName}>{svc.name}</Text>
+                {svc.description && <Text style={styles.serviceCardDesc} numberOfLines={2}>{svc.description}</Text>}
+                {svc.price != null && (
+                  <Text style={styles.serviceCardPrice}>
+                    {svc.price} {svc.currency ?? "PLN"}{svc.unit ? ` / ${svc.unit}` : ""}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ================================================================= */}
+        {/* K. ATTRACTIONS                                                    */}
+        {/* ================================================================= */}
+        {attractions && attractions.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t(lang, "overview.attractions")}</Text>
+            {attractions.map((attr) => (
+              <Pressable key={attr.id} style={styles.attractionCard} onPress={() => attr.mapUrl && isExternalUrlSafe(attr.mapUrl) && Linking.openURL(attr.mapUrl)}>
+                <Icon name="location-outline" size={20} color={group.primary} />
+                <View style={styles.attractionInfo}>
+                  <Text style={styles.attractionName}>{attr.name}</Text>
+                  {attr.distance && <Text style={styles.attractionDistance}>{attr.distance}</Text>}
+                </View>
+                {attr.mapUrl && <Icon name="navigate-outline" size={18} color={group.textMuted} />}
+              </Pressable>
+            ))}
+          </View>
+        )}
+
+        {/* ================================================================= */}
+        {/* L. HOTEL CONTACT FOOTER                                           */}
         {/* ================================================================= */}
         {!isLoading && !isError && initData && (
           <View style={styles.contactFooter}>
@@ -943,6 +1003,19 @@ function OverviewScreenInner() {
                   </Pressable>
                 )}
               </View>
+            )}
+
+            {/* Open in Maps */}
+            {hotel?.address && (
+              <Pressable
+                style={styles.openMapsBtn}
+                onPress={() => Linking.openURL(`https://maps.apple.com/?q=${encodeURIComponent(hotel.address!)}`)}
+                accessibilityRole="button"
+                accessibilityLabel={t(lang, "overview.openMaps")}
+              >
+                <Icon name="map-outline" size={20} color={group.primary} />
+                <Text style={styles.openMapsBtnText}>{t(lang, "overview.openMaps")}</Text>
+              </Pressable>
             )}
 
             {/* Social links */}
@@ -1488,6 +1561,81 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
+  },
+
+  // ── Gallery ──
+  galleryThumb: {
+    width: 160,
+    height: 120,
+    borderRadius: radius.lg,
+  },
+
+  // ── Services ──
+  serviceCard: {
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    gap: spacing.xs,
+    marginHorizontal: spacing.xl,
+    ...shadow.sm,
+  },
+  serviceCardName: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  serviceCardDesc: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+  },
+  serviceCardPrice: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_700Bold",
+    color: group.primary,
+  },
+
+  // ── Attractions ──
+  attractionCard: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    gap: spacing.sm,
+    marginHorizontal: spacing.xl,
+    minHeight: 44,
+    ...shadow.sm,
+  },
+  attractionInfo: {
+    flex: 1,
+  },
+  attractionName: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  attractionDistance: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+  },
+
+  // ── Open in Maps ──
+  openMapsBtn: {
+    flexDirection: "row" as const,
+    backgroundColor: group.primaryLight,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+    minHeight: 44,
+    alignItems: "center" as const,
+  },
+  openMapsBtnText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.primary,
   },
 
   // ── Contact Footer ──

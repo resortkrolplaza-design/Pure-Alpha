@@ -65,6 +65,7 @@ function GuestSearchItem({
       onPressOut={onPressOut}
       style={[styles.guestItem, isSelected && styles.guestItemSelected]}
       accessibilityRole="button"
+      accessibilityHint={t(lang, "rsvp.selectHint")}
     >
       <Animated.View style={scaleStyle}>
         <View style={styles.guestRow}>

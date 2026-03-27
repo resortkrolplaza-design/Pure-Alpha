@@ -130,6 +130,11 @@ const pl: Record<string, string> = {
   "overview.quickAnnouncements": "Og\u0142oszenia",
   "overview.guestsLabel": "go\u015Bci",
   "overview.poweredBy": "Powered by Pure Alpha",
+  "overview.services": "Us\u0142ugi dodatkowe",
+  "overview.attractions": "Atrakcje w okolicy",
+  "overview.openMaps": "Otw\u00F3rz w Mapach",
+  "overview.timeline.complete": "ukonczone",
+  "overview.timeline.current": "aktualny",
 
   // ── RSVP ----
   "rsvp.title": "Potwierd\u017A obecno\u015B\u0107",
@@ -147,6 +152,7 @@ const pl: Record<string, string> = {
   "rsvp.noMatch": "Nie znaleziono. Skontaktuj si\u0119 z organizatorem.",
   "rsvp.alreadyConfirmed": "Ju\u017C potwierdzono",
   "rsvp.alreadyDeclined": "Ju\u017C odrzucono",
+  "rsvp.selectHint": "Dotknij dwukrotnie, aby wybrac do RSVP",
 
   // ── Self-Registration ----
   "register.title": "Do\u0142\u0105cz do wydarzenia",
@@ -303,6 +309,11 @@ const en: Record<string, string> = {
   "overview.quickAnnouncements": "Announcements",
   "overview.guestsLabel": "guests",
   "overview.poweredBy": "Powered by Pure Alpha",
+  "overview.services": "Extra services",
+  "overview.attractions": "Nearby attractions",
+  "overview.openMaps": "Open in Maps",
+  "overview.timeline.complete": "complete",
+  "overview.timeline.current": "current",
 
   // ── RSVP ----
   "rsvp.title": "Confirm attendance",
@@ -320,6 +331,7 @@ const en: Record<string, string> = {
   "rsvp.noMatch": "Not found. Contact the organizer.",
   "rsvp.alreadyConfirmed": "Already confirmed",
   "rsvp.alreadyDeclined": "Already declined",
+  "rsvp.selectHint": "Double tap to select for RSVP",
 
   // ── Self-Registration ----
   "register.title": "Join the event",
