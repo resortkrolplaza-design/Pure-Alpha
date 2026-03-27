@@ -353,6 +353,7 @@ function OverviewScreenInner() {
   const lang = useAppStore((s) => s.lang);
   const setLang = useAppStore((s) => s.setLang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
+  const guest = useAppStore((s) => s.guest);
 
   // Register push notifications on first load
   usePushNotifications();
@@ -651,6 +652,19 @@ function OverviewScreenInner() {
               )}
             </View>
           </Animated.View>
+        )}
+
+        {/* ================================================================= */}
+        {/* B2. WELCOME BACK CARD (identified guest, confirmed RSVP)          */}
+        {/* ================================================================= */}
+        {guest && guest.rsvpStatus === "confirmed" && (
+          <View style={styles.welcomeBackCard}>
+            <Icon name="hand-right-outline" size={22} color={group.primary} />
+            <View style={styles.welcomeBackText}>
+              <Text style={styles.welcomeBackName}>{guest.firstName}{guest.lastName ? ` ${guest.lastName}` : ""}</Text>
+              <Text style={styles.welcomeBackStatus}>{t(lang, "rsvp.alreadyConfirmed")}</Text>
+            </View>
+          </View>
         )}
 
         {/* ================================================================= */}
@@ -1342,6 +1356,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginLeft: spacing.xs,
+  },
+
+  // ── Welcome Back Card ──
+  welcomeBackCard: {
+    flexDirection: "row",
+    backgroundColor: group.primaryLight,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    gap: spacing.md,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    alignItems: "center",
+  },
+  welcomeBackText: {
+    flex: 1,
+  },
+  welcomeBackName: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  welcomeBackStatus: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
   },
 
   // ── Quick Actions Grid ──
