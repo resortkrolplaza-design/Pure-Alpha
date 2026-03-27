@@ -1239,9 +1239,10 @@ export async function scrapeProfitroomCalendarFallback(
       ci.setUTCDate(ci.getUTCDate() + i);
       return formatDate(ci);
     });
+    const MAX_UNAVAILABLE_RETRY = 15; // cap to avoid wasting time budget on truly unavailable dates
     const availableDays = [
       ...allDays.filter(d => !unavailableSet.has(d)),
-      ...allDays.filter(d => unavailableSet.has(d)),
+      ...allDays.filter(d => unavailableSet.has(d)).slice(0, MAX_UNAVAILABLE_RETRY),
     ];
 
     // Hotels have variable min-stay: off-season 1n, shoulder 2n, summer 3n, peak 5n
