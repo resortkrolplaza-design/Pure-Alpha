@@ -4,6 +4,7 @@
 // =============================================================================
 
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { group } from "./tokens";
 
 export type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -14,7 +15,7 @@ interface IconProps {
   accessible?: boolean;
 }
 
-export function Icon({ name, size = 24, color = "#FFFFFF", accessible = false }: IconProps) {
+export function Icon({ name, size = 24, color = group.white, accessible = false }: IconProps) {
   return (
     <Ionicons
       name={name}
