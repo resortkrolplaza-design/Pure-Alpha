@@ -60,8 +60,16 @@ const pl: Record<string, string> = {
   // ── PIN Auth ----
   "pin.enterTrackingId": "Wprowadź ID wydarzenia",
   "pin.invalidPin": "Nieprawidłowy PIN",
-  "pin.trackingIdPlaceholder": "ID wydarzenia (trackingId)",
+  "pin.trackingIdPlaceholder": "ID wydarzenia",
   "pin.emailOptionalPlaceholder": "Email (opcjonalnie)",
+  "pin.protectedByPin": "Portal chroniony PIN-em",
+  "pin.enterCodeFromHotel": "Wprowadź 6-cyfrowy kod, który otrzymałeś od hotelu",
+  "pin.yourEmail": "Twój adres email",
+  "pin.emailHint": "Podając email pozwalasz na identyfikację w portalu wydarzenia.",
+  "pin.eventId": "ID wydarzenia",
+  "pin.codeSentByEmail": "Kod PIN został wysłany w wiadomości email od hotelu",
+  "pin.forgotPin": "Nie pamiętam PIN-u",
+  "pin.forgotPinHint": "Skontaktuj się z recepcją hotelu lub organizatorem wydarzenia, aby otrzymać nowy PIN.",
 
   // ── Messages ----
   "messages.title": "Wiadomości",
@@ -131,8 +139,16 @@ const en: Record<string, string> = {
   // ── PIN Auth ----
   "pin.enterTrackingId": "Enter event ID",
   "pin.invalidPin": "Invalid PIN",
-  "pin.trackingIdPlaceholder": "Event ID (trackingId)",
+  "pin.trackingIdPlaceholder": "Event ID",
   "pin.emailOptionalPlaceholder": "Email (optional)",
+  "pin.protectedByPin": "Portal protected by PIN",
+  "pin.enterCodeFromHotel": "Enter the 6-digit code you received from the hotel",
+  "pin.yourEmail": "Your email address",
+  "pin.emailHint": "By providing your email you allow identification in the event portal.",
+  "pin.eventId": "Event ID",
+  "pin.codeSentByEmail": "PIN code was sent in an email from the hotel",
+  "pin.forgotPin": "I forgot my PIN",
+  "pin.forgotPinHint": "Contact the hotel reception or event organizer to receive a new PIN.",
 
   // ── Messages ----
   "messages.title": "Messages",
