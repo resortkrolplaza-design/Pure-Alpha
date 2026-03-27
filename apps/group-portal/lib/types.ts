@@ -1,0 +1,111 @@
+// =============================================================================
+// Group Portal — TypeScript Types (mirrored from web API responses)
+// =============================================================================
+
+// ── API Response Envelope ----
+
+export interface ApiResponse<T> {
+  status: "success" | "error";
+  data?: T;
+  errorMessage?: string;
+  errors?: Record<string, string[]>;
+}
+
+// ── App Mode ----
+
+export type AppMode = "group";
+
+// ── Group Portal ----
+
+export interface GroupPortalData {
+  id: string;
+  trackingId: string;
+  title: string;
+  status: string;
+  guestListEnabled: boolean;
+  dietaryEnabled: boolean;
+  documentsEnabled: boolean;
+  messagingEnabled: boolean;
+  selfRegistrationEnabled: boolean;
+  galleryEnabled: boolean;
+  maxGuests: number | null;
+  portalLanguage: string;
+}
+
+export interface GroupDealData {
+  companyName: string;
+  contactPerson: string | null;
+  eventName: string | null;
+  eventType: string | null;
+  checkInDate: string | null;
+  checkOutDate: string | null;
+  guestCount: number | null;
+}
+
+export interface GroupGuestData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string | null;
+  phone?: string | null;
+  dietaryNeeds: string | null;
+  allergies: string | null;
+  specialRequests: string | null;
+  isOrganizer: boolean;
+  status: string;
+  rsvpStatus: string;
+  rsvpAt: string | null;
+}
+
+export interface GroupDocumentData {
+  id: string;
+  title: string;
+  fileUrl: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  category: string;
+  createdAt: string;
+}
+
+export interface GroupAnnouncementData {
+  id: string;
+  content: string;
+  isPinned: boolean;
+  createdBy: string;
+  authorType?: "organizer" | "system";
+  createdAt: string;
+  imageUrl?: string | null;
+}
+
+export interface GroupPhotoData {
+  id: string;
+  imageUrl: string;
+  caption: string | null;
+  uploadedBy: string;
+  createdAt: string;
+}
+
+export interface AgendaItemData {
+  id: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  title: string;
+  description: string | null;
+  location: string | null;
+  category: string | null;
+}
+
+export interface GroupMessage {
+  id: string;
+  body: string;
+  isOrganizer: boolean;
+  isParticipant?: boolean;
+  sender: {
+    firstName: string | null;
+    lastName: string | null;
+    avatar: string | null;
+  };
+  createdAt: string;
+}

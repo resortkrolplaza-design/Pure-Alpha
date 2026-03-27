@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Pure Alpha Group",
+    "slug": "pure-alpha-group",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "purealpha-group",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f8f6f3"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.purealpha.group"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#f8f6f3",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "package": "com.purealpha.group"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font"
+    ]
+  }
+}
