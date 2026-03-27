@@ -29,6 +29,22 @@ export const group = {
   photoFallback: "rgba(0,0,0,0.06)",
 } as const;
 
+// ── Quick Action Colors (overview grid) ----
+
+export const quickActionColors = {
+  guests: { bg: "#eef2ff", icon: "#6366f1" },
+  documents: { bg: "#ecfdf5", icon: "#10b981" },
+  announcements: { bg: "#fff7ed", icon: "#f97316" },
+  messages: { bg: "#eff6ff", icon: "#3b82f6" },
+  photos: { bg: "#fdf2f8", icon: "#ec4899" },
+} as const;
+
+// ── Timeline Colors ----
+
+export const timeline = {
+  inactive: "#d1d5db",
+} as const;
+
 // ── Shared Semantic Colors ----
 
 export const semantic = {

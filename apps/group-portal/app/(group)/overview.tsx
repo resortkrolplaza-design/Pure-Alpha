@@ -24,6 +24,8 @@ import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import {
   group,
+  quickActionColors,
+  timeline,
   fontSize,
   radius,
   spacing,
@@ -114,11 +116,11 @@ const QUICK_ACTIONS: Array<{
   bg: string;
   color: string;
 }> = [
-  { labelKey: "group.quickGuests", icon: "people", tab: "guests", bg: "#eef2ff", color: "#6366f1" },
-  { labelKey: "group.quickDocuments", icon: "document-text", tab: "documents", bg: "#ecfdf5", color: "#10b981" },
-  { labelKey: "overview.quickAnnouncements", icon: "megaphone", tab: "_announcements", bg: "#fff7ed", color: "#f97316" },
-  { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: "#eff6ff", color: "#3b82f6" },
-  { labelKey: "group.quickPhotos", icon: "images", tab: "photos", bg: "#fdf2f8", color: "#ec4899" },
+  { labelKey: "group.quickGuests", icon: "people", tab: "guests", bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon },
+  { labelKey: "group.quickDocuments", icon: "document-text", tab: "documents", bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon },
+  { labelKey: "overview.quickAnnouncements", icon: "megaphone", tab: "_announcements", bg: quickActionColors.announcements.bg, color: quickActionColors.announcements.icon },
+  { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: quickActionColors.messages.bg, color: quickActionColors.messages.icon },
+  { labelKey: "group.quickPhotos", icon: "images", tab: "photos", bg: quickActionColors.photos.bg, color: quickActionColors.photos.icon },
 ];
 
 // =============================================================================
@@ -291,7 +293,7 @@ function TimelineStepper({
                 <View
                   style={[
                     styles.stepperLine,
-                    { backgroundColor: isComplete || isCurrent ? group.primary : "#d1d5db" },
+                    { backgroundColor: isComplete || isCurrent ? group.primary : timeline.inactive },
                   ]}
                 />
               )}
@@ -1149,7 +1151,7 @@ const styles = StyleSheet.create({
   stepperDotFuture: {
     backgroundColor: group.white,
     borderWidth: 2,
-    borderColor: "#d1d5db",
+    borderColor: timeline.inactive,
   },
   stepperPulseInner: {
     width: 8,
