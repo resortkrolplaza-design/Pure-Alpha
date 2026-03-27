@@ -9,6 +9,7 @@ import { Platform } from "react-native";
 export const group = {
   bg: "#f8f6f3",
   primary: "#6366f1",
+  primaryDark: "#4338ca",
   white: "#FFFFFF",
   tabBarBg: "rgba(255,255,255,0.95)",
   bgLight: "#F5F3EF",
@@ -22,6 +23,8 @@ export const group = {
   disabledBg: "rgba(0,0,0,0.08)",
   overlayWhite70: "rgba(255,255,255,0.7)",
   overlayWhite60: "rgba(255,255,255,0.6)",
+  overlayWhite40: "rgba(255,255,255,0.4)",
+  overlayWhite20: "rgba(255,255,255,0.2)",
   primaryLight: "rgba(99,102,241,0.1)",
   photoFallback: "rgba(0,0,0,0.06)",
 } as const;

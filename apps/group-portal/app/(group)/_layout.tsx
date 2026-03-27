@@ -3,12 +3,63 @@
 // =============================================================================
 
 import { Tabs } from "expo-router";
-import { Platform, StyleSheet } from "react-native";
+import { Platform, StyleSheet, Animated, Text } from "react-native";
+import { useRef, useEffect } from "react";
 import * as Haptics from "expo-haptics";
-import { group, fontSize } from "@/lib/tokens";
-import { TabIcon } from "@/lib/icons";
+import { group, fontSize, spacing } from "@/lib/tokens";
+import { Icon, type IconName } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+
+// -- Animated Tab Icon with scale effect on active state --------------------
+
+function AnimatedTabIcon({
+  focused,
+  activeName,
+  inactiveName,
+}: {
+  focused: boolean;
+  activeName: IconName;
+  inactiveName: IconName;
+}) {
+  const scaleAnim = useRef(new Animated.Value(focused ? 1.1 : 1)).current;
+
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: focused ? 1.1 : 1,
+      damping: 14,
+      stiffness: 180,
+      mass: 0.8,
+      useNativeDriver: true,
+    }).start();
+  }, [focused, scaleAnim]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+      <Icon
+        name={focused ? activeName : inactiveName}
+        size={24}
+        color={focused ? group.primary : group.textMuted}
+      />
+    </Animated.View>
+  );
+}
+
+// -- Custom Tab Label with font weight based on focus -----------------------
+
+function TabLabel({ focused, label }: { focused: boolean; label: string }) {
+  return (
+    <Text
+      style={[
+        styles.tabLabelBase,
+        focused ? styles.tabLabelActive : styles.tabLabelInactive,
+      ]}
+      numberOfLines={1}
+    >
+      {label}
+    </Text>
+  );
+}
 
 export default function GroupLayout() {
   const lang = useAppStore((s) => s.lang);
@@ -20,15 +71,91 @@ export default function GroupLayout() {
         tabBarStyle: styles.tabBar,
         tabBarActiveTintColor: group.primary,
         tabBarInactiveTintColor: group.textMuted,
-        tabBarLabelStyle: styles.tabLabel,
       }}
-      screenListeners={{ tabPress: () => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); } }}
+      screenListeners={{
+        tabPress: () => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        },
+      }}
     >
-      <Tabs.Screen name="overview" options={{ title: t(lang, "group.tab.overview"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="clipboard" inactiveName="clipboard-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
-      <Tabs.Screen name="guests" options={{ title: t(lang, "group.tab.guests"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="people" inactiveName="people-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
-      <Tabs.Screen name="messages" options={{ title: t(lang, "group.tab.messages"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="chatbubbles" inactiveName="chatbubbles-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
-      <Tabs.Screen name="documents" options={{ title: t(lang, "group.tab.documents"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="document-text" inactiveName="document-text-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
-      <Tabs.Screen name="photos" options={{ title: t(lang, "group.tab.photos"), tabBarIcon: ({ focused }) => <TabIcon active={focused} activeName="camera" inactiveName="camera-outline" activeColor={group.primary} inactiveColor={group.textMuted} /> }} />
+      <Tabs.Screen
+        name="overview"
+        options={{
+          tabBarLabel: ({ focused }) => (
+            <TabLabel focused={focused} label={t(lang, "group.tab.overview")} />
+          ),
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon
+              focused={focused}
+              activeName="clipboard"
+              inactiveName="clipboard-outline"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="guests"
+        options={{
+          tabBarLabel: ({ focused }) => (
+            <TabLabel focused={focused} label={t(lang, "group.tab.guests")} />
+          ),
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon
+              focused={focused}
+              activeName="people"
+              inactiveName="people-outline"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          tabBarLabel: ({ focused }) => (
+            <TabLabel focused={focused} label={t(lang, "group.tab.messages")} />
+          ),
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon
+              focused={focused}
+              activeName="chatbubbles"
+              inactiveName="chatbubbles-outline"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="documents"
+        options={{
+          tabBarLabel: ({ focused }) => (
+            <TabLabel
+              focused={focused}
+              label={t(lang, "group.tab.documents")}
+            />
+          ),
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon
+              focused={focused}
+              activeName="document-text"
+              inactiveName="document-text-outline"
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="photos"
+        options={{
+          tabBarLabel: ({ focused }) => (
+            <TabLabel focused={focused} label={t(lang, "group.tab.photos")} />
+          ),
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon
+              focused={focused}
+              activeName="camera"
+              inactiveName="camera-outline"
+            />
+          ),
+        }}
+      />
     </Tabs>
   );
 }
@@ -38,9 +165,19 @@ const styles = StyleSheet.create({
     backgroundColor: group.tabBarBg,
     borderTopColor: group.cardBorder,
     borderTopWidth: 0.5,
-    height: Platform.OS === "ios" ? 88 : 64,
-    paddingBottom: Platform.OS === "ios" ? 28 : 8,
-    paddingTop: 8,
+    height: Platform.select({ ios: 88, android: 64 }),
+    paddingBottom: Platform.select({ ios: 28, android: 8 }),
+    paddingTop: spacing.sm,
   },
-  tabLabel: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium" },
+  tabLabelBase: {
+    fontSize: fontSize.xs,
+  },
+  tabLabelActive: {
+    fontFamily: "Inter_500Medium",
+    color: group.primary,
+  },
+  tabLabelInactive: {
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+  },
 });

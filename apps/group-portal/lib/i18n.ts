@@ -56,6 +56,25 @@ const pl: Record<string, string> = {
   "group.logout": "Wyloguj się",
   "group.logoutConfirm": "Czy na pewno chcesz się wylogować?",
   "group.language": "Język",
+  "group.portalTitle": "Portal Grupy",
+  "group.countdownDaysLabel": "dni do wydarzenia",
+  "group.seeAllAgenda": "Zobacz wszystkie",
+  "group.noAgenda": "Brak punkt\u00F3w agendy",
+  "group.noAnnouncements": "Brak og\u0142osze\u0144",
+  "group.quickGuests": "Lista go\u015Bci",
+  "group.quickMessages": "Wiadomo\u015Bci",
+  "group.quickDocuments": "Dokumenty",
+  "group.quickPhotos": "Zdj\u0119cia",
+  "group.searchGuest": "Szukaj go\u015Bcia...",
+  "group.guestsCount": "go\u015Bci",
+  "group.confirmed": "potwierdzone",
+  "group.pending": "oczekuj\u0105ce",
+  "group.declined": "odrzucone",
+  "group.noGuests": "Brak go\u015Bci",
+  "group.timeAgo.now": "Teraz",
+  "group.timeAgo.minutesAgo": "min temu",
+  "group.timeAgo.hoursAgo": "godz. temu",
+  "group.timeAgo.daysAgo": "dni temu",
 
   // ── PIN Auth ----
   "pin.enterTrackingId": "Wprowadź ID wydarzenia",
@@ -85,6 +104,16 @@ const pl: Record<string, string> = {
   "messages.yesterday": "Wczoraj",
   "messages.sendFailed": "Nie udało się wysłać",
   "messages.errorLoading": "Nie udało się załadować wiadomości",
+  "messages.pinnedMessage": "Przypięta wiadomość",
+
+  // ── Empty states ----
+  "group.noPhotos": "Brak zdjęć",
+  "group.noPhotosDesc": "Zdjęcia z wydarzenia pojawią się tutaj",
+  "group.noDocuments": "Brak dokumentów",
+  "group.noDocumentsDesc": "Dokumenty do pobrania pojawią się tutaj",
+  "group.noMessages": "Brak wiadomości",
+  "group.noMessagesDesc": "Napisz pierwszą wiadomość do organizatora!",
+  "group.documentsCount": "dokumentów",
 };
 
 const en: Record<string, string> = {
@@ -139,6 +168,25 @@ const en: Record<string, string> = {
   "group.logout": "Log out",
   "group.logoutConfirm": "Are you sure you want to log out?",
   "group.language": "Language",
+  "group.portalTitle": "Group Portal",
+  "group.countdownDaysLabel": "days until event",
+  "group.seeAllAgenda": "See all",
+  "group.noAgenda": "No agenda items",
+  "group.noAnnouncements": "No announcements",
+  "group.quickGuests": "Guest list",
+  "group.quickMessages": "Messages",
+  "group.quickDocuments": "Documents",
+  "group.quickPhotos": "Photos",
+  "group.searchGuest": "Search guest...",
+  "group.guestsCount": "guests",
+  "group.confirmed": "confirmed",
+  "group.pending": "pending",
+  "group.declined": "declined",
+  "group.noGuests": "No guests",
+  "group.timeAgo.now": "Now",
+  "group.timeAgo.minutesAgo": "min ago",
+  "group.timeAgo.hoursAgo": "hrs ago",
+  "group.timeAgo.daysAgo": "days ago",
 
   // ── PIN Auth ----
   "pin.enterTrackingId": "Enter event ID",
@@ -168,6 +216,16 @@ const en: Record<string, string> = {
   "messages.yesterday": "Yesterday",
   "messages.sendFailed": "Failed to send message",
   "messages.errorLoading": "Failed to load messages",
+  "messages.pinnedMessage": "Pinned message",
+
+  // ── Empty states ----
+  "group.noPhotos": "No photos",
+  "group.noPhotosDesc": "Photos from the event will appear here",
+  "group.noDocuments": "No documents",
+  "group.noDocumentsDesc": "Downloadable documents will appear here",
+  "group.noMessages": "No messages",
+  "group.noMessagesDesc": "Write the first message to the organizer!",
+  "group.documentsCount": "documents",
 };
 
 const dicts: Record<Lang, Record<string, string>> = { pl, en };
