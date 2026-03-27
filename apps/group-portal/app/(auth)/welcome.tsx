@@ -1,0 +1,410 @@
+// =============================================================================
+// Group Portal — Welcome Screen (inspirational landing, step 1 of login)
+// Animated wave at bottom, fade-in text, pulsing shield icon
+// =============================================================================
+
+import { useEffect, useRef, useMemo } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  Animated,
+  Dimensions,
+  Platform,
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Haptics from "expo-haptics";
+import { group, fontSize, radius, spacing, letterSpacing } from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { t } from "@/lib/i18n";
+import { useAppStore } from "@/lib/store";
+
+const { width: SCREEN_W } = Dimensions.get("window");
+
+// ── Animated sine wave (bottom decorative element) ──────────────────────────
+
+const WAVE_POINTS = 60;
+const WAVE_HEIGHT = 140;
+const WAVE_AMPLITUDE = 18;
+
+function AnimatedWave({
+  color,
+  phaseOffset,
+  speed,
+  yOffset,
+}: {
+  color: string;
+  phaseOffset: number;
+  speed: number;
+  yOffset: number;
+}) {
+  const phase = useRef(new Animated.Value(0)).current;
+  const fadeIn = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeIn, {
+      toValue: 1,
+      duration: 1200,
+      delay: 300,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.loop(
+      Animated.timing(phase, {
+        toValue: 1,
+        duration: speed,
+        useNativeDriver: false,
+      }),
+    ).start();
+  }, [phase, fadeIn, speed]);
+
+  // Build wave dots — each dot animates its Y position based on phase
+  const dots = useMemo(() => {
+    const arr = [];
+    for (let i = 0; i < WAVE_POINTS; i++) {
+      arr.push(i);
+    }
+    return arr;
+  }, []);
+
+  return (
+    <Animated.View style={[styles.waveContainer, { bottom: yOffset, opacity: fadeIn }]}>
+      {dots.map((i) => {
+        const x = (i / WAVE_POINTS) * SCREEN_W;
+        const dotPhase = phaseOffset + (i / WAVE_POINTS) * Math.PI * 2;
+
+        // Interpolate phase to Y offset using sine approximation
+        const translateY = phase.interpolate({
+          inputRange: [0, 0.25, 0.5, 0.75, 1],
+          outputRange: [
+            Math.sin(dotPhase) * WAVE_AMPLITUDE,
+            Math.sin(dotPhase + Math.PI * 0.5) * WAVE_AMPLITUDE,
+            Math.sin(dotPhase + Math.PI) * WAVE_AMPLITUDE,
+            Math.sin(dotPhase + Math.PI * 1.5) * WAVE_AMPLITUDE,
+            Math.sin(dotPhase + Math.PI * 2) * WAVE_AMPLITUDE,
+          ],
+        });
+
+        return (
+          <Animated.View
+            key={i}
+            style={{
+              position: "absolute",
+              left: x,
+              width: SCREEN_W / WAVE_POINTS + 1,
+              height: WAVE_HEIGHT,
+              backgroundColor: color,
+              borderTopLeftRadius: 2,
+              borderTopRightRadius: 2,
+              transform: [{ translateY }],
+            }}
+          />
+        );
+      })}
+    </Animated.View>
+  );
+}
+
+// ── Main Welcome Screen ─────────────────────────────────────────────────────
+
+export default function WelcomeScreen() {
+  const insets = useSafeAreaInsets();
+  const lang = useAppStore((s) => s.lang);
+
+  // Entrance animations
+  const shieldScale = useRef(new Animated.Value(0.3)).current;
+  const shieldOpacity = useRef(new Animated.Value(0)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleTranslateY = useRef(new Animated.Value(24)).current;
+  const descOpacity = useRef(new Animated.Value(0)).current;
+  const descTranslateY = useRef(new Animated.Value(16)).current;
+  const btnOpacity = useRef(new Animated.Value(0)).current;
+  const btnTranslateY = useRef(new Animated.Value(20)).current;
+  const footerOpacity = useRef(new Animated.Value(0)).current;
+
+  // Pulsing shield
+  const shieldPulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(shieldScale, {
+          toValue: 1,
+          damping: 12,
+          stiffness: 150,
+          mass: 0.8,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shieldOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(titleOpacity, {
+          toValue: 1,
+          duration: 500,
+          useNativeDriver: true,
+        }),
+        Animated.spring(titleTranslateY, {
+          toValue: 0,
+          damping: 14,
+          stiffness: 120,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(descOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.spring(descTranslateY, {
+          toValue: 0,
+          damping: 14,
+          stiffness: 120,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(btnOpacity, {
+          toValue: 1,
+          duration: 400,
+          useNativeDriver: true,
+        }),
+        Animated.spring(btnTranslateY, {
+          toValue: 0,
+          damping: 14,
+          stiffness: 120,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.timing(footerOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(shieldPulse, {
+          toValue: 1.08,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(shieldPulse, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, [
+    shieldScale, shieldOpacity, shieldPulse,
+    titleOpacity, titleTranslateY,
+    descOpacity, descTranslateY,
+    btnOpacity, btnTranslateY,
+    footerOpacity,
+  ]);
+
+  const handleContinue = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push("/(auth)/pin");
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Gradient background */}
+      <LinearGradient
+        colors={[group.bg, group.white, group.bg]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      {/* Animated waves at bottom */}
+      <AnimatedWave color="rgba(99,102,241,0.04)" phaseOffset={0} speed={6000} yOffset={0} />
+      <AnimatedWave color="rgba(99,102,241,0.06)" phaseOffset={2} speed={5000} yOffset={30} />
+      <AnimatedWave color="rgba(99,102,241,0.03)" phaseOffset={4} speed={7000} yOffset={60} />
+
+      {/* Content */}
+      <View style={[styles.content, { paddingTop: insets.top, paddingBottom: insets.bottom + 32 }]}>
+        {/* Top spacer */}
+        <View style={styles.spacer} />
+
+        {/* Shield icon */}
+        <Animated.View
+          style={[
+            styles.shieldContainer,
+            {
+              opacity: shieldOpacity,
+              transform: [{ scale: Animated.multiply(shieldScale, shieldPulse) }],
+            },
+          ]}
+        >
+          <LinearGradient
+            colors={[group.primary, group.primaryDark]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.shieldGradient}
+          >
+            <Icon name="shield-checkmark" size={44} color={group.white} />
+          </LinearGradient>
+        </Animated.View>
+
+        {/* Title */}
+        <Animated.Text
+          style={[
+            styles.title,
+            {
+              opacity: titleOpacity,
+              transform: [{ translateY: titleTranslateY }],
+            },
+          ]}
+        >
+          {t(lang, "welcome.title")}
+        </Animated.Text>
+
+        {/* Description */}
+        <Animated.Text
+          style={[
+            styles.description,
+            {
+              opacity: descOpacity,
+              transform: [{ translateY: descTranslateY }],
+            },
+          ]}
+        >
+          {t(lang, "pin.welcomeDesc")}
+        </Animated.Text>
+
+        {/* Bottom spacer */}
+        <View style={styles.spacer} />
+
+        {/* CTA Button */}
+        <Animated.View
+          style={{
+            opacity: btnOpacity,
+            transform: [{ translateY: btnTranslateY }],
+            width: "100%",
+            maxWidth: 400,
+          }}
+        >
+          <Pressable
+            style={styles.ctaButton}
+            onPress={handleContinue}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "welcome.continue")}
+          >
+            <Text style={styles.ctaText}>{t(lang, "welcome.continue")}</Text>
+            <Icon name="arrow-forward" size={20} color={group.white} />
+          </Pressable>
+        </Animated.View>
+
+        {/* Footer */}
+        <Animated.Text style={[styles.footer, { opacity: footerOpacity }]}>
+          Powered by Pure Alpha
+        </Animated.Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: group.bg,
+  },
+  waveContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: WAVE_HEIGHT,
+    overflow: "hidden",
+  },
+  content: {
+    flex: 1,
+    alignItems: "center",
+    paddingHorizontal: spacing["2xl"],
+  },
+
+  shieldContainer: {
+    marginBottom: spacing["3xl"],
+  },
+  shieldGradient: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    ...Platform.select({
+      ios: {
+        shadowColor: group.primary,
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+      },
+      android: { elevation: 12 },
+    }),
+  },
+
+  title: {
+    fontSize: fontSize["3xl"],
+    fontFamily: "Inter_700Bold",
+    color: group.text,
+    letterSpacing: letterSpacing.snug,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+    lineHeight: 38,
+  },
+
+  description: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
+    textAlign: "center",
+    lineHeight: 24,
+    maxWidth: 320,
+    paddingHorizontal: spacing.md,
+  },
+
+  spacer: { flex: 1 },
+
+  ctaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: group.primary,
+    borderRadius: radius["2xl"],
+    paddingVertical: spacing.lg,
+    minHeight: 56,
+    ...Platform.select({
+      ios: {
+        shadowColor: group.primary,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+      },
+      android: { elevation: 8 },
+    }),
+  },
+  ctaText: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_700Bold",
+    color: group.white,
+    letterSpacing: letterSpacing.tight,
+  },
+
+  footer: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    marginTop: spacing.xl,
+  },
+});

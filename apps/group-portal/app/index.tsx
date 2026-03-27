@@ -93,7 +93,7 @@ export default function EntryScreen() {
 
   useEffect(() => {
     if (ready) {
-      router.replace("/(auth)/pin");
+      router.replace("/(auth)/welcome");
     }
   }, [ready]);
 
