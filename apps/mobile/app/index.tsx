@@ -2,19 +2,20 @@
 // Mode Selector — ONE app, 3 beautiful experiences
 // =============================================================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Animated } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 import { GOLD, guest, fontSize, fontWeight, radius, spacing, shadow } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import type { IconName } from "@/lib/icons";
 import { useFadeIn, useSlideUp, useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore, useGuestStore } from "@/lib/store";
-import { getAppMode, getPortalToken, getGroupTrackingId, getGroupToken, getEmployeeToken, logout, isTokenExpired } from "@/lib/auth";
+import { getAppMode, getPortalToken, getGroupTrackingId, getGroupToken, getEmployeeToken, setPortalToken, setAppMode, logout, isTokenExpired } from "@/lib/auth";
 import { portalFetch } from "@/lib/api";
 import { mapInitResponse } from "@/lib/portal-helpers";
 
@@ -39,9 +40,48 @@ export default function ModeSelector() {
   const card2Slide = useSlideUp(300);
   const cardSlides = [card0Slide, card1Slide, card2Slide];
 
+  // ── Deep Link Handler ────────────────────────────────────────────────────
+  // Matches purealpha://p/TOKEN or https://purealphahotel.pl/p/TOKEN
+  const loginWithToken = useCallback(async (token: string) => {
+    setChecking(true);
+    try {
+      const initRes = await portalFetch<Record<string, unknown>>(token, "");
+      if (initRes.status === "success" && initRes.data) {
+        await Promise.all([setPortalToken(token), setAppMode("guest")]);
+        setMode("guest");
+        setStorePortalToken(token);
+        setPortalData(mapInitResponse(initRes.data));
+        router.replace("/(guest)/stay");
+        return;
+      }
+    } catch {
+      // Invalid token -- fall through to mode selector
+    }
+    setChecking(false);
+  }, [setMode, setStorePortalToken, setPortalData]);
+
+  const handleDeepLink = useCallback((url: string | null) => {
+    if (!url) return;
+    // Match /p/TOKEN where TOKEN is a UUID (hex + dashes)
+    const match = url.match(/\/p\/([a-f0-9-]+)/i);
+    if (match?.[1]) {
+      loginWithToken(match[1]);
+    }
+  }, [loginWithToken]);
+
   // Auto-resume last session — must hydrate Zustand from SecureStore
   useEffect(() => {
     (async () => {
+      // Check for deep link on cold start first -- takes priority over saved session
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        const match = initialUrl.match(/\/p\/([a-f0-9-]+)/i);
+        if (match?.[1]) {
+          loginWithToken(match[1]);
+          return;
+        }
+      }
+
       const [savedMode, portalToken, groupId, groupJwt, empToken] = await Promise.all([
         getAppMode(),
         getPortalToken(),
@@ -87,7 +127,15 @@ export default function ModeSelector() {
       }
       setChecking(false);
     })();
-  }, [setMode, setStorePortalToken, setPortalData]);
+  }, [setMode, setStorePortalToken, setPortalData, loginWithToken]);
+
+  // Listen for deep links when app is already open (warm start)
+  useEffect(() => {
+    const subscription = Linking.addEventListener("url", (event) => {
+      handleDeepLink(event.url);
+    });
+    return () => subscription.remove();
+  }, [handleDeepLink]);
 
   if (checking) {
     return (

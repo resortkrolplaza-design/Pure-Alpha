@@ -33,6 +33,11 @@ const pl: Record<string, string> = {
   "auth.invalidToken": "Nieprawidłowy token",
   "auth.tokenLabel": "Token portalu",
   "auth.tokenPlaceholder": "Wklej token z emaila...",
+  "auth.deepLinkPrimary": "Otwórz link z emaila",
+  "auth.deepLinkHint": "Kliknij link otrzymany w wiadomości email -- aplikacja otworzy się automatycznie.",
+  "auth.orPasteToken": "Lub wklej token ręcznie",
+  "auth.tokenHint": "Token znajdziesz w wiadomości email z zaproszeniem do programu lojalnościowego.",
+  "auth.deepLinkProcessing": "Logowanie przez link...",
 
   // ── Guest Portal Tabs ──────────────────────────────────────────────
   "tab.stay": "Pobyt",
@@ -251,6 +256,11 @@ const en: Record<string, string> = {
   "auth.invalidToken": "Invalid token",
   "auth.tokenLabel": "Portal token",
   "auth.tokenPlaceholder": "Paste token from email...",
+  "auth.deepLinkPrimary": "Open link from email",
+  "auth.deepLinkHint": "Tap the link in your email -- the app will open automatically.",
+  "auth.orPasteToken": "Or paste token manually",
+  "auth.tokenHint": "You can find the token in the loyalty program invitation email.",
+  "auth.deepLinkProcessing": "Logging in via link...",
 
   // ── Guest Portal Tabs ──────────────────────────────────────────────
   "tab.stay": "Stay",
