@@ -42,7 +42,6 @@ export interface GroupDocumentData {
   id: string;
   title: string;
   fileUrl: string;
-  fileName: string;
   fileType: string;
   fileSize: number;
   category: string;
@@ -53,8 +52,7 @@ export interface GroupAnnouncementData {
   id: string;
   content: string;
   isPinned: boolean;
-  createdBy: string;
-  authorType?: string;
+  authorType: string;
   createdAt: string;
   imageUrl?: string | null;
 }
@@ -89,6 +87,9 @@ export interface PortalInitData {
     messagingEnabled: boolean;
     galleryEnabled: boolean;
     selfRegistrationEnabled: boolean;
+    servicesEnabled: boolean;
+    upsellEnabled: boolean;
+    dietaryEnabled: boolean;
     timelineCheckpoints: Array<{
       label: string;
       labelEn?: string;
@@ -128,6 +129,9 @@ export interface PortalInitData {
     imageUrl: string | null;
     category: string | null;
     distance: string | null;
+    address: string | null;
+    mapUrl: string | null;
+    websiteUrl: string | null;
   }>;
   gallery: Array<{
     id: string;
@@ -135,13 +139,16 @@ export interface PortalInitData {
     thumbnailUrl: string | null;
     alt: string | null;
     caption: string | null;
+    category: string | null;
   }>;
   services: Array<{
     id: string;
     name: string;
     description: string | null;
     price: number | null;
+    unit: string | null;
     currency: string | null;
+    publicImages: unknown;
   }>;
   agendaItems: AgendaItemData[];
   announcements: GroupAnnouncementData[];

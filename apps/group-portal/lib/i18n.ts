@@ -166,9 +166,15 @@ const pl: Record<string, string> = {
 
   // ── Photo Viewer ----
   "photos.viewer.of": "z",
+  "photos.previous": "Poprzednie",
+  "photos.next": "Nast\u0119pne",
   "photos.upload": "Dodaj zdj\u0119cie",
   "photos.uploadName": "Twoje imi\u0119",
   "photos.caption": "Podpis (opcjonalnie)",
+
+  // ── Error Boundary ----
+  "error.fallback": "Co\u015B posz\u0142o nie tak",
+  "error.retry": "Spr\u00F3buj ponownie",
 };
 
 const en: Record<string, string> = {
@@ -333,9 +339,15 @@ const en: Record<string, string> = {
 
   // ── Photo Viewer ----
   "photos.viewer.of": "of",
+  "photos.previous": "Previous",
+  "photos.next": "Next",
   "photos.upload": "Add photo",
   "photos.uploadName": "Your name",
   "photos.caption": "Caption (optional)",
+
+  // ── Error Boundary ----
+  "error.fallback": "Something went wrong",
+  "error.retry": "Try again",
 };
 
 const dicts: Record<Lang, Record<string, string>> = { pl, en };

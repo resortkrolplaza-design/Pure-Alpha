@@ -40,6 +40,23 @@ const GROUP_ID_KEY = "pa_group_tracking_id";
 const GROUP_TOKEN_KEY = "pa_group_jwt_token";
 const RSVP_TOKEN_KEY = "pa_rsvp_token";
 const GUEST_IDENTITY_KEY = "pa_guest_identity";
+const LANG_KEY = "pa_lang";
+
+// ── Language Persistence ----
+
+export async function getPersistedLang(): Promise<"pl" | "en" | null> {
+  try {
+    const lang = await getItem(LANG_KEY);
+    if (lang === "pl" || lang === "en") return lang;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setPersistedLang(lang: "pl" | "en"): Promise<void> {
+  await setItem(LANG_KEY, lang);
+}
 
 // ── Group Token (JWT from group portal verify-pin) ----
 

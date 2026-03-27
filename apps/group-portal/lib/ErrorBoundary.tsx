@@ -6,10 +6,13 @@ import { Component, type ReactNode } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { group, fontSize, radius, spacing } from "./tokens";
 import { Icon } from "./icons";
+import { t } from "./i18n";
+import type { Lang } from "./i18n";
 
 interface Props {
   children: ReactNode;
   fallbackMessage?: string;
+  lang?: Lang;
 }
 
 interface State {
@@ -33,15 +36,15 @@ export class ErrorBoundary extends Component<Props, State> {
         <View style={styles.container}>
           <Icon name="alert-circle-outline" size={40} color={group.textMuted} />
           <Text style={styles.title}>
-            {this.props.fallbackMessage ?? "Cos poszlo nie tak"}
+            {this.props.fallbackMessage ?? t(this.props.lang ?? "pl", "error.fallback")}
           </Text>
           <Pressable
             style={styles.retryBtn}
             onPress={this.handleRetry}
             accessibilityRole="button"
-            accessibilityLabel="Sprobuj ponownie"
+            accessibilityLabel={t(this.props.lang ?? "pl", "error.retry")}
           >
-            <Text style={styles.retryText}>Sprobuj ponownie</Text>
+            <Text style={styles.retryText}>{t(this.props.lang ?? "pl", "error.retry")}</Text>
           </Pressable>
         </View>
       );

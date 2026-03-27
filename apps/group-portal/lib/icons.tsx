@@ -15,7 +15,7 @@ interface IconProps {
   accessible?: boolean;
 }
 
-export function Icon({ name, size = 24, color = group.white, accessible = false }: IconProps) {
+export function Icon({ name, size = 24, color = group.white, accessible = true }: IconProps) {
   return (
     <Ionicons
       name={name}

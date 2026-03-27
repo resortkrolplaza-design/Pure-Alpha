@@ -38,7 +38,8 @@ import type { IconName } from "@/lib/icons";
 import { useSlideUp, useScalePress, configureListAnimation } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { logout } from "@/lib/auth";
+import { logout, setPersistedLang } from "@/lib/auth";
+import { isImageUrlSafe, isExternalUrlSafe, sanitizePhone, sanitizeEmail } from "@/lib/url-safety";
 import { fetchPortalInit } from "@/lib/group-api";
 import { usePushNotifications } from "@/lib/usePushNotifications";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
@@ -243,6 +244,7 @@ function FaqItem({
         onPress={toggle}
         accessibilityRole="button"
         accessibilityLabel={question}
+        accessibilityState={{ expanded }}
         style={styles.faqHeader}
       >
         <Text style={styles.faqQuestion}>{question}</Text>
@@ -509,7 +511,11 @@ function OverviewScreenInner() {
             </View>
             <View style={styles.headerActions}>
               <Pressable
-                onPress={() => setLang(lang === "pl" ? "en" : "pl")}
+                onPress={() => {
+                  const newLang = lang === "pl" ? "en" : "pl";
+                  setLang(newLang);
+                  setPersistedLang(newLang);
+                }}
                 style={styles.langToggle}
                 accessibilityRole="button"
                 accessibilityLabel={t(lang, "group.language")}
@@ -592,7 +598,11 @@ function OverviewScreenInner() {
 
               {/* Countdown badge (top-left) */}
               {diffDays !== null && (
-                <View style={styles.heroCountdownBadge}>
+                <View
+                  style={styles.heroCountdownBadge}
+                  accessibilityLabel={countdownLabel(diffDays, lang)}
+                  accessibilityRole="text"
+                >
                   <Text style={styles.heroCountdownText}>
                     {countdownLabel(diffDays, lang)}
                   </Text>
@@ -1215,11 +1225,11 @@ const styles = StyleSheet.create({
     color: group.text,
   },
   stepperDate: {
-    fontSize: 10,
+    fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: group.textMuted,
     textAlign: "center",
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
 
   // ── CTA Alert ──

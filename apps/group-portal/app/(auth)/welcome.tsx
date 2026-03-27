@@ -46,20 +46,27 @@ function AnimatedWave({
   const fadeIn = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(fadeIn, {
+    const fadeAnim = Animated.timing(fadeIn, {
       toValue: 1,
       duration: 1200,
       delay: 300,
       useNativeDriver: true,
-    }).start();
+    });
+    fadeAnim.start();
 
-    Animated.loop(
+    const loopAnim = Animated.loop(
       Animated.timing(phase, {
         toValue: 1,
         duration: speed,
         useNativeDriver: false,
       }),
-    ).start();
+    );
+    loopAnim.start();
+
+    return () => {
+      fadeAnim.stop();
+      loopAnim.stop();
+    };
   }, [phase, fadeIn, speed]);
 
   // Build wave dots — each dot animates its Y position based on phase
@@ -130,7 +137,7 @@ function WelcomeScreenInner() {
   const shieldPulse = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.sequence([
+    const entranceAnim = Animated.sequence([
       Animated.parallel([
         Animated.spring(shieldScale, {
           toValue: 1,
@@ -189,9 +196,10 @@ function WelcomeScreenInner() {
         duration: 300,
         useNativeDriver: true,
       }),
-    ]).start();
+    ]);
+    entranceAnim.start();
 
-    Animated.loop(
+    const pulseAnim = Animated.loop(
       Animated.sequence([
         Animated.timing(shieldPulse, {
           toValue: 1.08,
@@ -204,7 +212,13 @@ function WelcomeScreenInner() {
           useNativeDriver: true,
         }),
       ]),
-    ).start();
+    );
+    pulseAnim.start();
+
+    return () => {
+      entranceAnim.stop();
+      pulseAnim.stop();
+    };
   }, [
     shieldScale, shieldOpacity, shieldPulse,
     titleOpacity, titleTranslateY,

@@ -42,5 +42,5 @@ export const useAppStore = create<AppState>((set) => ({
   setLang: (lang) => set({ lang }),
   setGuest: (guest) => set({ guest }),
   setRsvpTokenState: (rsvpToken) => set({ rsvpToken }),
-  reset: () => set({ mode: null, isAuthenticated: false, groupTrackingId: null, guest: null, rsvpToken: null }),
+  reset: () => set({ mode: null, isAuthenticated: false, groupTrackingId: null, lang: "pl", guest: null, rsvpToken: null }),
 }));

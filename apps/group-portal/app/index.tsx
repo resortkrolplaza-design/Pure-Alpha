@@ -8,7 +8,7 @@ import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { group } from "@/lib/tokens";
 import { useAppStore } from "@/lib/store";
-import { getAppMode, getGroupTrackingId, getGroupToken, isTokenExpired, logout, setGroupToken, setGroupTrackingId as persistGroupId, setAppMode, setRsvpToken, getRsvpToken, getGuestIdentity, setGuestIdentity } from "@/lib/auth";
+import { getAppMode, getGroupTrackingId, getGroupToken, isTokenExpired, logout, setGroupToken, setGroupTrackingId as persistGroupId, setAppMode, setRsvpToken, getRsvpToken, getGuestIdentity, setGuestIdentity, getPersistedLang } from "@/lib/auth";
 import { loginByLink } from "@/lib/group-api";
 
 export default function EntryScreen() {
@@ -59,13 +59,17 @@ export default function EntryScreen() {
       }
 
       // Check saved session
-      const [savedMode, groupId, groupJwt, savedRsvpToken, savedGuest] = await Promise.all([
+      const [savedMode, groupId, groupJwt, savedRsvpToken, savedGuest, savedLang] = await Promise.all([
         getAppMode(),
         getGroupTrackingId(),
         getGroupToken(),
         getRsvpToken(),
         getGuestIdentity(),
+        getPersistedLang(),
       ]);
+
+      // Restore language preference regardless of auth state
+      if (savedLang) useAppStore.getState().setLang(savedLang);
 
       if (savedMode === "group" && groupId && groupJwt) {
         if (isTokenExpired(groupJwt)) {

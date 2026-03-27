@@ -45,8 +45,12 @@ async function getExpoPushToken(): Promise<string | null> {
 }
 
 function getDeviceId(): string {
-  // Stable-ish device identifier
-  return Constants.installationId ?? `${Platform.OS}-${Date.now()}`;
+  // Use installationId from Constants (deprecated but still works in Expo Go)
+  // Falls back to platform + timestamp for uniqueness
+  const id = Constants.installationId
+    ?? Constants.expoConfig?.extra?.installationId
+    ?? null;
+  return id ?? `${Platform.OS}-${Date.now()}`;
 }
 
 export function usePushNotifications() {

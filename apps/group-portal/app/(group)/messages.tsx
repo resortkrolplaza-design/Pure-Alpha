@@ -158,7 +158,7 @@ function GroupMessagesScreenInner() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     onError: (err) => {
-      Alert.alert(t(lang, "common.error"), err instanceof Error ? err.message : t(lang, "messages.sendFailed"));
+      Alert.alert(t(lang, "common.error"), t(lang, "messages.sendFailed"));
     },
   });
 
@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 2,
+    marginBottom: spacing.xxs,
   },
   avatarText: {
     fontSize: fontSize.xs,
@@ -466,8 +466,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: "Inter_500Medium",
     color: group.textMuted,
-    marginBottom: 2,
-    marginLeft: 2,
+    marginBottom: spacing.xxs,
+    marginLeft: spacing.xxs,
   },
 
   // Bubbles — iOS Messages style
@@ -505,14 +505,14 @@ const styles = StyleSheet.create({
 
   // Time
   msgTime: {
-    fontSize: 10,
+    fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: group.textMuted,
-    marginTop: 3,
-    marginLeft: 2,
+    marginTop: spacing.xxs,
+    marginLeft: spacing.xxs,
   },
   msgTimeMine: {
-    marginRight: 2,
+    marginRight: spacing.xxs,
     marginLeft: 0,
   },
 
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   },
   input: {
     paddingHorizontal: spacing.lg,
-    paddingVertical: 10,
+    paddingVertical: spacing.md,
     fontSize: fontSize.base,
     fontFamily: "Inter_400Regular",
     color: group.text,

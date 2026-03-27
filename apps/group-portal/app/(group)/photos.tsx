@@ -261,7 +261,7 @@ function PhotoViewerModal({
             onPress={goToPrev}
             style={[viewerStyles.navBtn, viewerStyles.navBtnLeft]}
             accessibilityRole="button"
-            accessibilityLabel="Previous"
+            accessibilityLabel={t(lang, "photos.previous")}
             hitSlop={8}
           >
             <Icon name="chevron-back" size={28} color={group.white} />
@@ -274,7 +274,7 @@ function PhotoViewerModal({
             onPress={goToNext}
             style={[viewerStyles.navBtn, viewerStyles.navBtnRight]}
             accessibilityRole="button"
-            accessibilityLabel="Next"
+            accessibilityLabel={t(lang, "photos.next")}
             hitSlop={8}
           >
             <Icon name="chevron-forward" size={28} color={group.white} />
