@@ -1,5 +1,5 @@
 // =============================================================================
-// PIN Entry -- Group Portal (2-section: link instruction + collapsible PIN)
+// PIN Entry -- Group Portal (sequential flow: ID -> email -> PIN if needed)
 // =============================================================================
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -15,17 +15,17 @@ import { group, fontSize, radius, spacing, letterSpacing, shadow } from "@/lib/t
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { setGroupTrackingId as persistGroupId, setGroupToken, setAppMode, setRsvpToken } from "@/lib/auth";
-import { verifyPin } from "@/lib/group-api";
+import { setGroupTrackingId as persistGroupId, setGroupToken, setAppMode, setRsvpToken, setGuestIdentity } from "@/lib/auth";
+import { verifyPin, fetchPortalInfo, loginByLink } from "@/lib/group-api";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 const PIN_LENGTH = 6;
 
-// Enable LayoutAnimation on Android
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-export default function PinScreen() {
+function PinScreenInner() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack();
@@ -37,33 +37,62 @@ export default function PinScreen() {
   const [email, setEmail] = useState("");
   const [trackingId, setTrackingId] = useState(params.trackingId ?? "");
   const [loading, setLoading] = useState(false);
-  const [pinFormExpanded, setPinFormExpanded] = useState(false);
+  const [checkingInfo, setCheckingInfo] = useState(false);
+  const [pinRequired, setPinRequired] = useState<boolean | null>(null);
+  const [hotelName, setHotelName] = useState(params.hotelName ?? "");
+  const [portalFound, setPortalFound] = useState(false);
   const pinInputRef = useRef<TextInput>(null);
+  const infoFetchedRef = useRef("");
 
-  useEffect(() => {
-    if (params.trackingId) setTrackingId(params.trackingId);
-  }, [params.trackingId]);
-
-  // If we arrived with a trackingId (from deep link fallback), expand PIN form
   useEffect(() => {
     if (params.trackingId) {
-      setPinFormExpanded(true);
+      setTrackingId(params.trackingId);
     }
   }, [params.trackingId]);
 
-  const hotelName = params.hotelName ?? "";
-  const hasTrackingId = !!trackingId.trim();
+  // Auto-check portal info when arriving with trackingId from deep link
+  useEffect(() => {
+    if (params.trackingId && params.trackingId.length >= 6) {
+      checkPortalInfo(params.trackingId);
+    }
+  }, [params.trackingId]);
 
-  const togglePinForm = useCallback(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setPinFormExpanded((prev) => !prev);
-  }, []);
+  const checkPortalInfo = useCallback(async (id: string) => {
+    if (infoFetchedRef.current === id) return;
+    infoFetchedRef.current = id;
+    setCheckingInfo(true);
+    try {
+      const res = await fetchPortalInfo(id);
+      if (res.status === "success" && res.data) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setPinRequired(res.data.pinRequired);
+        setPortalFound(true);
+        if (res.data.hotelName) setHotelName(res.data.hotelName);
+      } else {
+        setPinRequired(null);
+        setPortalFound(false);
+        Alert.alert(t(lang, "auth.error"), res.errorMessage || t(lang, "common.error"));
+      }
+    } catch {
+      setPinRequired(null);
+      setPortalFound(false);
+    } finally {
+      setCheckingInfo(false);
+    }
+  }, [lang]);
+
+  const handleCheckId = useCallback(() => {
+    const id = trackingId.trim();
+    if (id.length < 6) {
+      Alert.alert(t(lang, "auth.error"), t(lang, "pin.enterTrackingId"));
+      return;
+    }
+    checkPortalInfo(id);
+  }, [trackingId, checkPortalInfo, lang]);
 
   const handlePinChange = (text: string) => {
-    // Only allow digits, max PIN_LENGTH
     const digits = text.replace(/\D/g, "").slice(0, PIN_LENGTH);
     setPin(digits);
-
     if (digits.length === PIN_LENGTH) {
       handleSubmit(digits);
     }
@@ -89,6 +118,7 @@ export default function PinScreen() {
         if (res.data.rsvpToken) {
           persistOps.push(setRsvpToken(res.data.rsvpToken));
         }
+        if (res.data.guest) persistOps.push(setGuestIdentity(res.data.guest));
         await Promise.all(persistOps);
         const store = useAppStore.getState();
         store.setAuthenticated(true);
@@ -133,6 +163,7 @@ export default function PinScreen() {
             </Pressable>
           )}
 
+          {/* Hotel name (resolved from portal info) */}
           {hotelName ? (
             <Text style={styles.hotelName}>{hotelName}</Text>
           ) : null}
@@ -153,29 +184,57 @@ export default function PinScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Card 2: PIN login (collapsible) */}
+          {/* Card 2: Sequential login form */}
           <View style={styles.card}>
-            <Pressable
-              onPress={togglePinForm}
-              style={styles.expandHeader}
-              accessibilityRole="button"
-              accessibilityLabel={t(lang, "pin.loginWithPin")}
-              accessibilityState={{ expanded: pinFormExpanded }}
-            >
-              <View style={styles.lockCircle}>
-                <Icon name="lock-closed-outline" size={22} color={group.primary} />
-              </View>
-              <Text style={styles.expandTitle}>{t(lang, "pin.loginWithPin")}</Text>
-              <Icon
-                name={pinFormExpanded ? "chevron-up" : "chevron-down"}
-                size={20}
-                color={group.textMuted}
-              />
-            </Pressable>
+            <View style={styles.lockCircle}>
+              <Icon name="lock-closed-outline" size={22} color={group.primary} />
+            </View>
+            <Text style={styles.cardTitle}>{t(lang, "pin.loginWithPin")}</Text>
 
-            {pinFormExpanded && (
-              <View style={styles.pinFormBody}>
-                {/* Email input */}
+            {/* Step 1: Event ID */}
+            <View style={styles.inputSection}>
+              <Text style={styles.inputLabel}>{t(lang, "pin.eventId")}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={t(lang, "pin.trackingIdPlaceholder")}
+                placeholderTextColor={group.textMuted}
+                value={trackingId}
+                onChangeText={(text) => {
+                  setTrackingId(text);
+                  // Reset portal state when ID changes
+                  if (infoFetchedRef.current && infoFetchedRef.current !== text.trim()) {
+                    setPinRequired(null);
+                    setPortalFound(false);
+                    infoFetchedRef.current = "";
+                  }
+                }}
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={200}
+                editable={!loading}
+              />
+            </View>
+
+            {/* Check ID button (before portal is found) */}
+            {!portalFound && !checkingInfo && trackingId.trim().length >= 6 && (
+              <Pressable
+                style={styles.checkIdBtn}
+                onPress={handleCheckId}
+                accessibilityRole="button"
+              >
+                <Text style={styles.checkIdBtnText}>{t(lang, "common.confirm")}</Text>
+                <Icon name="arrow-forward" size={18} color={group.white} />
+              </Pressable>
+            )}
+
+            {checkingInfo && (
+              <ActivityIndicator color={group.primary} style={styles.loader} />
+            )}
+
+            {/* Step 2: Email + PIN (only after portal found) */}
+            {portalFound && (
+              <View style={styles.step2}>
+                {/* Email */}
                 <View style={styles.inputSection}>
                   <Text style={styles.inputLabel}>{t(lang, "pin.yourEmail")}</Text>
                   <TextInput
@@ -187,66 +246,95 @@ export default function PinScreen() {
                     autoCapitalize="none"
                     keyboardType="email-address"
                     maxLength={320}
+                    editable={!loading}
                   />
                   <Text style={styles.inputHint}>{t(lang, "pin.emailHint")}</Text>
                 </View>
 
-                {/* TrackingId input (hidden when pre-filled from deep link) */}
-                {!hasTrackingId && (
-                  <View style={styles.inputSection}>
-                    <Text style={styles.inputLabel}>{t(lang, "pin.eventId")}</Text>
+                {/* PIN dots (only if pinRequired) */}
+                {pinRequired === true && (
+                  <View style={styles.dotsContainer}>
+                    <Text style={styles.pinLabel}>{t(lang, "pin.protectedByPin")}</Text>
+                    <Pressable
+                      onPress={() => pinInputRef.current?.focus()}
+                      style={styles.dots}
+                      accessibilityRole="button"
+                      accessibilityLabel={t(lang, "auth.enterPin")}
+                    >
+                      {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+                        <View
+                          key={i}
+                          style={[styles.dot, i < pin.length && styles.dotFilled]}
+                        />
+                      ))}
+                    </Pressable>
                     <TextInput
-                      style={styles.input}
-                      placeholder={t(lang, "pin.trackingIdPlaceholder")}
-                      placeholderTextColor={group.textMuted}
-                      value={trackingId}
-                      onChangeText={setTrackingId}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      maxLength={200}
+                      ref={pinInputRef}
+                      style={styles.hiddenInput}
+                      value={pin}
+                      onChangeText={handlePinChange}
+                      keyboardType="number-pad"
+                      maxLength={PIN_LENGTH}
+                      autoFocus={false}
+                      caretHidden
+                      contextMenuHidden
                     />
+                    <Text style={styles.pinHint}>{t(lang, "pin.codeSentByEmail")}</Text>
+                    <Pressable
+                      onPress={() => Alert.alert(t(lang, "pin.forgotPin"), t(lang, "pin.forgotPinHint"))}
+                      accessibilityRole="button"
+                      style={styles.forgotBtn}
+                    >
+                      <Text style={styles.forgotLink}>{t(lang, "pin.forgotPin")}</Text>
+                    </Pressable>
                   </View>
                 )}
 
-                {/* PIN dots -- tap to focus hidden input */}
-                <View style={styles.dotsContainer}>
-                  <Text style={styles.pinLabel}>{t(lang, "pin.protectedByPin")}</Text>
+                {/* Login button (when PIN not required -- use auth-by-link) */}
+                {pinRequired === false && (
                   <Pressable
-                    onPress={() => pinInputRef.current?.focus()}
-                    style={styles.dots}
+                    style={[styles.loginBtn, loading && styles.loginBtnDisabled]}
+                    onPress={async () => {
+                      if (loading) return;
+                      setLoading(true);
+                      try {
+                        const res = await loginByLink(trackingId.trim());
+                        if (res.status === "success" && res.data?.token) {
+                          setGroupTrackingId(trackingId.trim());
+                          const ops = [
+                            setGroupToken(res.data.token),
+                            persistGroupId(trackingId.trim()),
+                            setAppMode("group"),
+                            ...(res.data.rsvpToken ? [setRsvpToken(res.data.rsvpToken)] : []),
+                            ...(res.data.guest ? [setGuestIdentity(res.data.guest)] : []),
+                          ];
+                          await Promise.all(ops);
+                          const store = useAppStore.getState();
+                          store.setAuthenticated(true);
+                          if (res.data.guest) store.setGuest(res.data.guest);
+                          if (res.data.rsvpToken) store.setRsvpTokenState(res.data.rsvpToken);
+                          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                          router.replace("/(group)/overview");
+                        } else {
+                          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                          Alert.alert(t(lang, "auth.error"), res.errorMessage || t(lang, "common.error"));
+                        }
+                      } catch {
+                        Alert.alert(t(lang, "auth.error"), t(lang, "common.error"));
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading || !trackingId.trim()}
                     accessibilityRole="button"
-                    accessibilityLabel={t(lang, "auth.enterPin")}
                   >
-                    {Array.from({ length: PIN_LENGTH }).map((_, i) => (
-                      <View
-                        key={i}
-                        style={[styles.dot, i < pin.length && styles.dotFilled]}
-                      />
-                    ))}
+                    {loading ? (
+                      <ActivityIndicator color={group.white} />
+                    ) : (
+                      <Text style={styles.loginBtnText}>{t(lang, "auth.login")}</Text>
+                    )}
                   </Pressable>
-
-                  {/* Hidden TextInput that captures keyboard input */}
-                  <TextInput
-                    ref={pinInputRef}
-                    style={styles.hiddenInput}
-                    value={pin}
-                    onChangeText={handlePinChange}
-                    keyboardType="number-pad"
-                    maxLength={PIN_LENGTH}
-                    autoFocus={false}
-                    caretHidden
-                    contextMenuHidden
-                  />
-
-                  <Text style={styles.pinHint}>{t(lang, "pin.codeSentByEmail")}</Text>
-                  <Pressable
-                    onPress={() => Alert.alert(t(lang, "pin.forgotPin"), t(lang, "pin.forgotPinHint"))}
-                    accessibilityRole="button"
-                    style={styles.forgotBtn}
-                  >
-                    <Text style={styles.forgotLink}>{t(lang, "pin.forgotPin")}</Text>
-                  </Pressable>
-                </View>
+                )}
               </View>
             )}
           </View>
@@ -257,7 +345,7 @@ export default function PinScreen() {
             </View>
           )}
 
-          <Text style={styles.footer}>Powered by Pure Alpha</Text>
+          <Text style={styles.footer}>{t(lang, "overview.poweredBy")}</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -294,7 +382,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
 
-  // -- Card shared --
+  // Card shared
   card: {
     width: "100%",
     maxWidth: 400,
@@ -308,7 +396,7 @@ const styles = StyleSheet.create({
     ...shadow.md,
   },
 
-  // -- Card 1: Open link instruction --
+  // Card 1: Open link
   mailCircle: {
     width: 56,
     height: 56,
@@ -332,7 +420,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // -- Divider --
+  // Divider
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -341,25 +429,14 @@ const styles = StyleSheet.create({
     marginVertical: spacing.xl,
     gap: spacing.md,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: group.cardBorder,
-  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: group.cardBorder },
   dividerText: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_400Regular",
     color: group.textMuted,
   },
 
-  // -- Card 2: Collapsible PIN form --
-  expandHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    gap: spacing.md,
-    minHeight: 44,
-  },
+  // Card 2: Login form
   lockCircle: {
     width: 40,
     height: 40,
@@ -367,18 +444,6 @@ const styles = StyleSheet.create({
     backgroundColor: group.primaryLight,
     alignItems: "center",
     justifyContent: "center",
-  },
-  expandTitle: {
-    flex: 1,
-    fontSize: fontSize.base,
-    fontFamily: "Inter_600SemiBold",
-    color: group.text,
-  },
-
-  pinFormBody: {
-    width: "100%",
-    gap: spacing.md,
-    marginTop: spacing.sm,
   },
 
   inputSection: { width: "100%", gap: spacing.xs },
@@ -407,6 +472,34 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 
+  // Check ID button
+  checkIdBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: group.primary,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: 48,
+    width: "100%",
+    ...shadow.sm,
+  },
+  checkIdBtnText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
+  },
+  loader: { marginVertical: spacing.md },
+
+  // Step 2 (email + PIN/login)
+  step2: {
+    width: "100%",
+    gap: spacing.md,
+  },
+
+  // PIN dots
   dotsContainer: { alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
   pinLabel: {
     fontSize: fontSize.sm,
@@ -449,6 +542,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  // Login button (no PIN)
+  loginBtn: {
+    backgroundColor: group.primary,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 52,
+    marginTop: spacing.sm,
+    ...shadow.sm,
+  },
+  loginBtnDisabled: {
+    backgroundColor: group.disabledBg,
+  },
+  loginBtnText: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_700Bold",
+    color: group.white,
+  },
+
   loadingOverlay: { marginTop: spacing.lg },
   footer: {
     fontSize: fontSize.xs,
@@ -458,3 +571,13 @@ const styles = StyleSheet.create({
     marginTop: spacing["2xl"],
   },
 });
+
+// ── Default export wrapped in ErrorBoundary ──────────────────────────────────
+
+export default function PinScreen() {
+  return (
+    <ErrorBoundary>
+      <PinScreenInner />
+    </ErrorBoundary>
+  );
+}

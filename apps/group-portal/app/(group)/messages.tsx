@@ -17,6 +17,7 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupMessage } from "@/lib/types";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 // P1-17: Strip bidi control characters to prevent XSS text spoofing
 function stripBidiChars(str: string): string {
@@ -75,7 +76,7 @@ type ListItem =
   | { type: "date"; key: string; label: string }
   | { type: "message"; key: string; msg: GroupMessage; isPinned: boolean };
 
-export default function GroupMessagesScreen() {
+function GroupMessagesScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -95,6 +96,7 @@ export default function GroupMessagesScreen() {
     },
     enabled: !!trackingId,
     refetchInterval: POLL_INTERVAL,
+    refetchIntervalInBackground: false,
   });
 
   // Build flat list with date separators
@@ -573,3 +575,13 @@ const styles = StyleSheet.create({
     color: group.white,
   },
 });
+
+// ── Default export wrapped in ErrorBoundary ──────────────────────────────────
+
+export default function GroupMessagesScreen() {
+  return (
+    <ErrorBoundary>
+      <GroupMessagesScreenInner />
+    </ErrorBoundary>
+  );
+}

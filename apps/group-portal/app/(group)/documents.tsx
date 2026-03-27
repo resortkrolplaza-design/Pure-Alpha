@@ -14,6 +14,7 @@ import { groupFetch } from "@/lib/group-api";
 import type { GroupDocumentData } from "@/lib/types";
 import { useCallback, useState } from "react";
 import { useScalePress, useSlideUp } from "@/lib/animations";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 // SSRF protection: only allow downloads from trusted domains
 const ALLOWED_HOSTS = ["purealphahotel.pl", "supabase.co", "supabase.in"];
@@ -110,7 +111,7 @@ function AnimatedDocCard({
           onPress={() => onDownload(doc)}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel={`Download ${doc.title}`}
+          accessibilityLabel={`${t(lang, "common.save")} ${doc.title}`}
         >
           <Icon name="download-outline" size={20} color={group.textMuted} />
         </Pressable>
@@ -121,7 +122,7 @@ function AnimatedDocCard({
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-export default function DocumentsScreen() {
+function DocumentsScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -331,3 +332,13 @@ const styles = StyleSheet.create({
     color: group.white,
   },
 });
+
+// ── Default export wrapped in ErrorBoundary ──────────────────────────────────
+
+export default function DocumentsScreen() {
+  return (
+    <ErrorBoundary>
+      <DocumentsScreenInner />
+    </ErrorBoundary>
+  );
+}

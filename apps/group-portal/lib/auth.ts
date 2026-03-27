@@ -39,6 +39,7 @@ const MODE_KEY = "pa_app_mode";
 const GROUP_ID_KEY = "pa_group_tracking_id";
 const GROUP_TOKEN_KEY = "pa_group_jwt_token";
 const RSVP_TOKEN_KEY = "pa_rsvp_token";
+const GUEST_IDENTITY_KEY = "pa_guest_identity";
 
 // ── Group Token (JWT from group portal verify-pin) ----
 
@@ -94,6 +95,33 @@ export async function clearRsvpToken(): Promise<void> {
   await deleteItem(RSVP_TOKEN_KEY);
 }
 
+// ── Guest Identity (persisted JSON) ----
+
+export interface PersistedGuest {
+  id: string;
+  firstName: string;
+  lastName?: string;
+  rsvpStatus: string;
+}
+
+export async function getGuestIdentity(): Promise<PersistedGuest | null> {
+  try {
+    const json = await getItem(GUEST_IDENTITY_KEY);
+    if (!json) return null;
+    return JSON.parse(json) as PersistedGuest;
+  } catch {
+    return null;
+  }
+}
+
+export async function setGuestIdentity(guest: PersistedGuest): Promise<void> {
+  await setItem(GUEST_IDENTITY_KEY, JSON.stringify(guest));
+}
+
+export async function clearGuestIdentity(): Promise<void> {
+  await deleteItem(GUEST_IDENTITY_KEY);
+}
+
 // ── App Mode ----
 
 export type { AppMode };
@@ -119,6 +147,7 @@ export async function logout(): Promise<void> {
     clearGroupToken(),
     clearGroupTrackingId(),
     clearRsvpToken(),
+    clearGuestIdentity(),
     deleteItem(MODE_KEY),
   ]);
 }

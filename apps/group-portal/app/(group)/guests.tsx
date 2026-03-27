@@ -31,6 +31,7 @@ import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupGuestData } from "@/lib/types";
 import { useCallback, useMemo, useState } from "react";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 // -- Avatar gradient presets ------------------------------------------------
 
@@ -112,7 +113,7 @@ function GuestCard({
 
 // -- Main Screen ------------------------------------------------------------
 
-export default function GuestsScreen() {
+function GuestsScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -524,3 +525,13 @@ const styles = StyleSheet.create({
     color: group.white,
   },
 });
+
+// ── Default export wrapped in ErrorBoundary ──────────────────────────────────
+
+export default function GuestsScreen() {
+  return (
+    <ErrorBoundary>
+      <GuestsScreenInner />
+    </ErrorBoundary>
+  );
+}

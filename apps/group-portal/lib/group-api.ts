@@ -91,6 +91,28 @@ export async function verifyPin(
   });
 }
 
+// ── Portal Info (public, no auth) ----
+
+export async function fetchPortalInfo(
+  trackingId: string,
+): Promise<ApiResponse<{ pinRequired: boolean; hotelName: string; eventName: string | null }>> {
+  // This endpoint doesn't need JWT -- call directly
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const url = `${API_BASE}/api/portal/${encodeURIComponent(trackingId)}/info`;
+    const res = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    return await res.json() as ApiResponse<{ pinRequired: boolean; hotelName: string; eventName: string | null }>;
+  } catch {
+    return { status: "error", errorMessage: "Network error" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 // ── RSVP ----
 
 export async function submitRsvp(

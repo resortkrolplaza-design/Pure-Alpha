@@ -21,6 +21,7 @@ import { group, fontSize, radius, spacing, letterSpacing } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -110,7 +111,7 @@ function AnimatedWave({
 
 // ── Main Welcome Screen ─────────────────────────────────────────────────────
 
-export default function WelcomeScreen() {
+function WelcomeScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
 
@@ -308,7 +309,7 @@ export default function WelcomeScreen() {
 
         {/* Footer */}
         <Animated.Text style={[styles.footer, { opacity: footerOpacity }]}>
-          Powered by Pure Alpha
+          {t(lang, "overview.poweredBy")}
         </Animated.Text>
       </View>
     </View>
@@ -408,3 +409,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
 });
+
+// ── Default export wrapped in ErrorBoundary ──────────────────────────────────
+
+export default function WelcomeScreen() {
+  return (
+    <ErrorBoundary>
+      <WelcomeScreenInner />
+    </ErrorBoundary>
+  );
+}

@@ -41,6 +41,7 @@ import { useAppStore } from "@/lib/store";
 import { logout } from "@/lib/auth";
 import { fetchPortalInit } from "@/lib/group-api";
 import { usePushNotifications } from "@/lib/usePushNotifications";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { AgendaItemData, GroupAnnouncementData, PortalInitData } from "@/lib/types";
 
 // =============================================================================
@@ -341,7 +342,7 @@ function TimelineStepper({
 // Main Screen
 // =============================================================================
 
-export default function OverviewScreen() {
+function OverviewScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const setLang = useAppStore((s) => s.setLang);
@@ -1244,17 +1245,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   ctaBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: group.white,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: spacing.sm,
   },
   ctaDismiss: {
-    width: 28,
-    height: 28,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
     marginLeft: spacing.xs,
@@ -1500,7 +1501,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    minHeight: 32,
+    minHeight: 44,
   },
   contactText: {
     fontSize: fontSize.sm,
@@ -1586,3 +1587,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+// ── Default export wrapped in ErrorBoundary ──────────────────────────────────
+
+export default function OverviewScreen() {
+  return (
+    <ErrorBoundary>
+      <OverviewScreenInner />
+    </ErrorBoundary>
+  );
+}
