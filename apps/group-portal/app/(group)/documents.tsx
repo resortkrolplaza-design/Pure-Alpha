@@ -2,10 +2,10 @@
 // Group Portal — Documents Tab (File list + download)
 // =============================================================================
 
-import { View, Text, FlatList, Pressable, StyleSheet, Linking, RefreshControl } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, Linking, RefreshControl, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { group, fontSize, radius, spacing, shadow, letterSpacing } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import type { IconName } from "@/lib/icons";
 import { t } from "@/lib/i18n";
@@ -35,6 +35,7 @@ const FILE_ICONS: Record<string, IconName> = {
 };
 
 function formatFileSize(bytes: number): string {
+  if (bytes === 0) return "";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -65,8 +66,10 @@ export default function DocumentsScreen() {
   const handleDownload = useCallback((doc: GroupDocumentData) => {
     if (doc.fileUrl && isUrlAllowed(doc.fileUrl)) {
       Linking.openURL(doc.fileUrl);
+    } else {
+      Alert.alert(t(lang, "auth.error"), t(lang, "common.error"));
     }
-  }, []);
+  }, [lang]);
 
   const renderDocument = useCallback(({ item: doc }: { item: GroupDocumentData }) => {
     const iconName = FILE_ICONS[doc.fileType] ?? "attach-outline";
@@ -129,7 +132,7 @@ export default function DocumentsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
   header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: -0.3 },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: letterSpacing.tight },
   list: { paddingHorizontal: spacing.xl, gap: spacing.sm },
   docCard: {
     flexDirection: "row", alignItems: "center",
@@ -137,7 +140,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg, gap: spacing.md, ...shadow.sm, minHeight: 44,
   },
   docCardPressed: { opacity: 0.7 },
-  docInfo: { flex: 1, gap: 2 },
+  docInfo: { flex: 1, gap: spacing.xxs },
   docTitle: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text, lineHeight: 21 },
   docMeta: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"], lineHeight: 18 },
@@ -147,5 +150,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
     minHeight: 44, justifyContent: "center", alignItems: "center",
   },
-  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.white },
 });

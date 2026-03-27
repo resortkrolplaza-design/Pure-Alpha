@@ -18,6 +18,11 @@ import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupMessage } from "@/lib/types";
 
+// P1-17: Strip bidi control characters to prevent XSS text spoofing
+function stripBidiChars(str: string): string {
+  return str.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
+}
+
 const POLL_INTERVAL = 10_000;
 
 export default function GroupMessagesScreen() {
@@ -33,15 +38,21 @@ export default function GroupMessagesScreen() {
   const { data: msgData, isLoading, isError, refetch } = useQuery({
     queryKey: ["group-messages", trackingId],
     queryFn: async () => {
-      if (!trackingId) return { replies: [] };
-      const res = await groupFetch<{ replies: GroupMessage[] }>(trackingId, "/messages");
-      return res.data ?? { replies: [] };
+      if (!trackingId) return { replies: [], anchorMessage: null };
+      const res = await groupFetch<{ replies: GroupMessage[]; anchorMessage: GroupMessage | null; unreadCount?: number }>(trackingId, "/messages");
+      return res.data ?? { replies: [], anchorMessage: null };
     },
     enabled: !!trackingId,
     refetchInterval: POLL_INTERVAL,
   });
 
-  const messages = useMemo(() => [...(msgData?.replies ?? [])].reverse(), [msgData]);
+  const messages = useMemo(() => {
+    const replies = [...(msgData?.replies ?? [])].reverse();
+    if (msgData?.anchorMessage) {
+      return [msgData.anchorMessage, ...replies];
+    }
+    return replies;
+  }, [msgData]);
 
   // Track previous message count to only auto-scroll when new messages arrive
   const prevCountRef = useRef(0);
@@ -70,7 +81,7 @@ export default function GroupMessagesScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     onError: (err) => {
-      Alert.alert(t(lang, "auth.error"), err instanceof Error ? err.message : t(lang, "messages.sendFailed"));
+      Alert.alert(t(lang, "common.error"), err instanceof Error ? err.message : t(lang, "messages.sendFailed"));
     },
   });
 
@@ -82,15 +93,19 @@ export default function GroupMessagesScreen() {
 
   const renderMessage = useCallback(({ item: msg }: { item: GroupMessage }) => {
     const isOrg = msg.isOrganizer;
+    // P1-17: Strip bidi chars from user-generated content
+    const safeFirstName = msg.sender.firstName ? stripBidiChars(msg.sender.firstName) : null;
+    const safeLastName = msg.sender.lastName ? stripBidiChars(msg.sender.lastName) : null;
+    const safeBody = stripBidiChars(msg.body);
     return (
       <View style={[styles.msgRow, isOrg && styles.msgRowOrg]}>
         <View style={[styles.msgBubble, isOrg ? styles.bubbleOrg : styles.bubbleParticipant]}>
-          {msg.sender.firstName && (
+          {safeFirstName && (
             <Text style={[styles.msgSender, isOrg && styles.msgSenderOrg]}>
-              {[msg.sender.firstName, msg.sender.lastName].filter(Boolean).join(" ")}
+              {[safeFirstName, safeLastName].filter(Boolean).join(" ")}
             </Text>
           )}
-          <Text style={[styles.msgText, isOrg && styles.msgTextOrg]}>{msg.body}</Text>
+          <Text style={[styles.msgText, isOrg && styles.msgTextOrg]}>{safeBody}</Text>
           <Text style={[styles.msgTime, isOrg && styles.msgTimeOrg]}>
             {new Date(msg.createdAt).toLocaleTimeString(lang === "pl" ? "pl-PL" : "en-GB", {
               hour: "2-digit", minute: "2-digit",
@@ -163,7 +178,7 @@ export default function GroupMessagesScreen() {
               accessibilityRole="button"
               accessibilityLabel={t(lang, "messages.send")}
             >
-              <Icon name="arrow-up" size={20} color="#FFFFFF" />
+              <Icon name="arrow-up" size={20} color={group.white} />
             </Pressable>
           </Animated.View>
         </View>
@@ -176,7 +191,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
   keyboardView: { flex: 1 },
   header: { paddingHorizontal: spacing.xl, paddingBottom: spacing.md, borderBottomWidth: 0.5, borderBottomColor: group.cardBorder },
-  title: { fontSize: fontSize.xl, fontFamily: "Inter_700Bold", color: group.text },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, lineHeight: 18 },
   listContent: { paddingHorizontal: spacing.xl, paddingVertical: spacing.md, gap: spacing.sm },
@@ -188,7 +203,7 @@ const styles = StyleSheet.create({
   msgSender: { fontSize: fontSize.xs, fontFamily: "Inter_600SemiBold", color: group.primary, marginBottom: 2 },
   msgSenderOrg: { color: group.overlayWhite70 },
   msgText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, lineHeight: 21 },
-  msgTextOrg: { color: "#FFFFFF" },
+  msgTextOrg: { color: group.white },
   msgTime: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 4, alignSelf: "flex-end" },
   msgTimeOrg: { color: group.overlayWhite60 },
   inputBar: {
@@ -199,7 +214,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1, backgroundColor: group.inputBg, borderWidth: 1, borderColor: group.cardBorder,
     borderRadius: radius.xl, paddingHorizontal: spacing.lg, paddingVertical: 10,
-    fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, maxHeight: 120, lineHeight: 21,
+    fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, maxHeight: 120, minHeight: 44, lineHeight: 21,
   },
   sendBtn: {
     width: 44, height: 44, borderRadius: 22,
@@ -211,5 +226,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
     minHeight: 44, justifyContent: "center", alignItems: "center", marginTop: spacing.md,
   },
-  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.white },
 });

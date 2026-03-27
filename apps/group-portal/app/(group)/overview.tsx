@@ -2,28 +2,46 @@
 // Group Portal — Overview (Event info, countdown, agenda, announcements)
 // =============================================================================
 
-import { useMemo, useState, useCallback } from "react";
-import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable, Animated } from "react-native";
+import { useMemo, useState, useCallback, useEffect } from "react";
+import { View, Text, ScrollView, StyleSheet, RefreshControl, Pressable, Animated, ActivityIndicator, Image, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { router } from "expo-router";
+import { group, fontSize, radius, spacing, shadow, letterSpacing } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { useSlideUp, configureListAnimation } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { logout } from "@/lib/auth";
 import { groupFetch } from "@/lib/group-api";
 import type { AgendaItemData, GroupAnnouncementData } from "@/lib/types";
 
 export default function OverviewScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
+  const setLang = useAppStore((s) => s.setLang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
   const [showAllAgenda, setShowAllAgenda] = useState(false);
 
+  const handleLogout = useCallback(() => {
+    Alert.alert(t(lang, "group.logout"), t(lang, "group.logoutConfirm"), [
+      { text: t(lang, "common.cancel"), style: "cancel" },
+      {
+        text: t(lang, "group.logout"),
+        style: "destructive",
+        onPress: async () => {
+          await logout();
+          useAppStore.getState().reset();
+          router.replace("/");
+        },
+      },
+    ]);
+  }, [lang]);
+
   const countdownSlide = useSlideUp(100);
 
-  const { data: agenda, isError: isAgendaError, refetch: refetchAgenda } = useQuery({
+  const { data: agenda, isLoading: isAgendaLoading, isError: isAgendaError, refetch: refetchAgenda } = useQuery({
     queryKey: ["group-agenda", trackingId],
     queryFn: async () => {
       if (!trackingId) return [];
@@ -33,7 +51,7 @@ export default function OverviewScreen() {
     enabled: !!trackingId,
   });
 
-  const { data: announcements, isError: isAnnouncementsError, refetch: refetchAnnouncements } = useQuery({
+  const { data: announcements, isLoading: isAnnouncementsLoading, isError: isAnnouncementsError, refetch: refetchAnnouncements } = useQuery({
     queryKey: ["group-announcements", trackingId],
     queryFn: async () => {
       if (!trackingId) return [];
@@ -48,6 +66,13 @@ export default function OverviewScreen() {
     [announcements],
   );
 
+  // P2-35: tick counter to force countdown re-render every 60s
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => setTick((prev) => prev + 1), 60_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Countdown: compute days until earliest agenda date
   const eventDate = useMemo(() => {
     if (!agenda?.length) return null;
@@ -57,26 +82,31 @@ export default function OverviewScreen() {
     return sorted[0]?.date ? new Date(sorted[0].date) : null;
   }, [agenda]);
 
+  // P1-14: strip time from both dates for accurate day-level countdown
   const countdownText = useMemo(() => {
     if (!eventDate) return "--";
     const now = new Date();
-    const diffMs = eventDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    now.setHours(0, 0, 0, 0);
+    const target = new Date(eventDate);
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((target.getTime() - now.getTime()) / 86400000);
     if (diffDays > 0) return String(diffDays);
     if (diffDays === 0) return t(lang, "group.eventInProgress");
     return t(lang, "group.eventEnded");
-  }, [eventDate, lang]);
+  }, [eventDate, lang, tick]);
 
   const countdownSubText = useMemo(() => {
     if (!eventDate) {
       return trackingId ? "" : t(lang, "group.enterPinPrompt");
     }
     const now = new Date();
-    const diffMs = eventDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    now.setHours(0, 0, 0, 0);
+    const target = new Date(eventDate);
+    target.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((target.getTime() - now.getTime()) / 86400000);
     if (diffDays > 0) return t(lang, "group.countdownDays");
     return "";
-  }, [eventDate, trackingId, lang]);
+  }, [eventDate, trackingId, lang, tick]);
 
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
@@ -104,9 +134,34 @@ export default function OverviewScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={group.primary} />}
       >
-        <View accessibilityRole="header">
+        <View accessibilityRole="header" style={styles.headerRow}>
           <Text style={styles.title}>{t(lang, "group.tab.overview")}</Text>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() => setLang(lang === "pl" ? "en" : "pl")}
+              style={styles.langToggle}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "group.language")}
+            >
+              <Text style={styles.langText}>{lang === "pl" ? "EN" : "PL"}</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleLogout}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "group.logout")}
+              style={styles.logoutBtn}
+            >
+              <Icon name="log-out-outline" size={22} color={group.textMuted} />
+            </Pressable>
+          </View>
         </View>
+
+        {/* P2-26: Loading State */}
+        {isAgendaLoading && isAnnouncementsLoading && (
+          <View style={styles.card}>
+            <ActivityIndicator color={group.primary} />
+          </View>
+        )}
 
         {/* Error State */}
         {isError && (
@@ -142,6 +197,14 @@ export default function OverviewScreen() {
                   <Icon name="pin" size={14} color={group.primary} />
                 </View>
                 <Text style={styles.announcementText}>{a.content}</Text>
+                {a.imageUrl && (
+                  <Image
+                    source={{ uri: a.imageUrl }}
+                    style={styles.announcementImage}
+                    resizeMode="cover"
+                    accessibilityLabel={a.content}
+                  />
+                )}
                 <Text style={styles.announcementDate}>
                   {new Date(a.createdAt).toLocaleDateString(lang === "pl" ? "pl-PL" : "en-GB")}
                 </Text>
@@ -195,13 +258,21 @@ export default function OverviewScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
   scroll: { paddingHorizontal: spacing.xl, gap: spacing.xl },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: -0.3 },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
+  langToggle: {
+    minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center",
+    borderRadius: radius.md, backgroundColor: group.surface,
+  },
+  langText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.primary },
+  logoutBtn: { minWidth: 44, minHeight: 44, alignItems: "center", justifyContent: "center" },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: letterSpacing.tight },
   countdownCard: {
     backgroundColor: group.primary, borderRadius: radius.xl, padding: spacing.xl,
     alignItems: "center", gap: spacing.sm, ...shadow.md,
   },
   countdownLabel: { fontSize: fontSize.sm, fontFamily: "Inter_500Medium", color: group.overlayWhite70, lineHeight: 18 },
-  countdownValue: { fontSize: fontSize["4xl"], fontFamily: "Inter_700Bold", color: "#FFFFFF" },
+  countdownValue: { fontSize: fontSize["4xl"], fontFamily: "Inter_700Bold", color: group.white },
   countdownSub: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.overlayWhite60, textAlign: "center" },
   sectionTitle: { fontSize: fontSize.lg, fontFamily: "Inter_600SemiBold", color: group.text, marginBottom: spacing.sm, lineHeight: 24 },
   card: {
@@ -219,13 +290,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
     minHeight: 44, justifyContent: "center", alignItems: "center",
   },
-  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.white },
   announcementCard: {
     backgroundColor: group.card, borderRadius: radius.lg, borderWidth: 1, borderColor: group.cardBorder,
     padding: spacing.lg, marginBottom: spacing.sm, ...shadow.sm,
   },
   pinBadge: { position: "absolute", top: spacing.sm, right: spacing.sm },
   announcementText: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text, lineHeight: 21 },
+  announcementImage: { width: "100%", height: 180, borderRadius: radius.sm, marginTop: spacing.sm },
   announcementDate: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: spacing.sm },
   agendaItem: {
     flexDirection: "row", backgroundColor: group.card, borderRadius: radius.md,
@@ -237,7 +309,7 @@ const styles = StyleSheet.create({
     backgroundColor: group.primaryLight, borderRadius: radius.sm, paddingVertical: spacing.xs,
   },
   agendaTimeText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.primary },
-  agendaInfo: { flex: 1, gap: 2 },
+  agendaInfo: { flex: 1, gap: spacing.xxs },
   agendaTitle: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text, lineHeight: 21 },
   agendaLocation: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted },
   seeAllBtn: {

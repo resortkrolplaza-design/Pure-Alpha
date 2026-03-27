@@ -5,14 +5,14 @@
 import { useState, useCallback, useRef } from "react";
 import { View, Text, Pressable, StyleSheet, TextInput, Alert } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { group, fontSize, radius, spacing } from "@/lib/tokens";
+import { group, fontSize, radius, spacing, letterSpacing } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { setGroupTrackingId as persistGroupId, setGroupToken, setAppMode } from "@/lib/auth";
+import { setGroupTrackingId as persistGroupId, setGroupToken, setAppMode, setRsvpToken } from "@/lib/auth";
 import { verifyPin } from "@/lib/group-api";
 
 const PIN_LENGTH = 4;
@@ -21,6 +21,8 @@ const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "DEL"] as 
 
 export default function PinScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const canGoBack = navigation.canGoBack();
   const lang = useAppStore((s) => s.lang);
   const setGroupTrackingId = useAppStore((s) => s.setGroupTrackingId);
   const [pin, setPin] = useState("");
@@ -56,11 +58,16 @@ export default function PinScreen() {
         const res = await verifyPin(trackingId.trim(), newPin, email.trim().toLowerCase());
         if (res.status === "success" && res.data?.token) {
           setGroupTrackingId(trackingId.trim());
-          await Promise.all([
+          const persistOps = [
             setGroupToken(res.data.token),
             persistGroupId(trackingId.trim()),
             setAppMode("group"),
-          ]);
+          ];
+          if (res.data.rsvpToken) {
+            persistOps.push(setRsvpToken(res.data.rsvpToken));
+          }
+          await Promise.all(persistOps);
+          useAppStore.getState().setAuthenticated(true);
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           router.replace("/(group)/overview");
         } else {
@@ -80,16 +87,18 @@ export default function PinScreen() {
   }, [trackingId, email, lang, setGroupTrackingId]);
 
   return (
-    <LinearGradient colors={[group.bg, "#F5F3EF", group.bg]} style={styles.container}>
+    <LinearGradient colors={[group.bg, group.bgLight, group.bg]} style={styles.container}>
       <View style={[styles.content, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 20 }]}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityLabel={t(lang, "common.back")}>
-            <View style={styles.backRow}>
-              <Icon name="chevron-back" size={20} color={group.primary} />
-              <Text style={styles.backText}>{t(lang, "common.back")}</Text>
-            </View>
-          </Pressable>
+          {canGoBack && (
+            <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel={t(lang, "common.back")}>
+              <View style={styles.backRow}>
+                <Icon name="chevron-back" size={20} color={group.primary} />
+                <Text style={styles.backText}>{t(lang, "common.back")}</Text>
+              </View>
+            </Pressable>
+          )}
           <Text style={styles.title}>{t(lang, "mode.group")}</Text>
           <Text style={styles.subtitle}>{t(lang, "auth.enterPin")}</Text>
         </View>
@@ -162,7 +171,7 @@ const styles = StyleSheet.create({
   backText: { fontSize: fontSize.base, color: group.primary, fontFamily: "Inter_500Medium" },
   title: {
     fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text,
-    letterSpacing: -0.3,
+    letterSpacing: letterSpacing.tight,
   },
   subtitle: { fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.textSecondary, lineHeight: 21 },
   inputGroup: { gap: spacing.sm, width: "100%", marginBottom: spacing.xl },
@@ -170,6 +179,7 @@ const styles = StyleSheet.create({
     backgroundColor: group.inputBg, borderWidth: 1, borderColor: group.cardBorder,
     borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: 12,
     fontSize: fontSize.base, fontFamily: "Inter_400Regular", color: group.text,
+    minHeight: 44,
   },
   dots: { flexDirection: "row", gap: spacing.lg, marginBottom: spacing["3xl"] },
   dot: {

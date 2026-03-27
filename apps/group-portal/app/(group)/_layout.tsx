@@ -35,7 +35,7 @@ export default function GroupLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: "rgba(255,255,255,0.95)",
+    backgroundColor: group.tabBarBg,
     borderTopColor: group.cardBorder,
     borderTopWidth: 0.5,
     height: Platform.OS === "ios" ? 88 : 64,

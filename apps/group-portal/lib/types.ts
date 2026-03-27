@@ -15,32 +15,7 @@ export interface ApiResponse<T> {
 
 export type AppMode = "group";
 
-// ── Group Portal ----
-
-export interface GroupPortalData {
-  id: string;
-  trackingId: string;
-  title: string;
-  status: string;
-  guestListEnabled: boolean;
-  dietaryEnabled: boolean;
-  documentsEnabled: boolean;
-  messagingEnabled: boolean;
-  selfRegistrationEnabled: boolean;
-  galleryEnabled: boolean;
-  maxGuests: number | null;
-  portalLanguage: string;
-}
-
-export interface GroupDealData {
-  companyName: string;
-  contactPerson: string | null;
-  eventName: string | null;
-  eventType: string | null;
-  checkInDate: string | null;
-  checkOutDate: string | null;
-  guestCount: number | null;
-}
+// ── Group Guest ----
 
 export interface GroupGuestData {
   id: string;
@@ -54,7 +29,13 @@ export interface GroupGuestData {
   isOrganizer: boolean;
   status: string;
   rsvpStatus: string;
-  rsvpAt: string | null;
+  rsvpAt?: string | null;
+  roomPreference?: string | null;
+  roomNote?: string | null;
+  checkInDate?: string | null;
+  checkOutDate?: string | null;
+  addedBy?: string | null;
+  createdAt?: string;
 }
 
 export interface GroupDocumentData {
@@ -73,7 +54,7 @@ export interface GroupAnnouncementData {
   content: string;
   isPinned: boolean;
   createdBy: string;
-  authorType?: "organizer" | "system";
+  authorType?: string;
   createdAt: string;
   imageUrl?: string | null;
 }
@@ -100,6 +81,7 @@ export interface AgendaItemData {
 export interface GroupMessage {
   id: string;
   body: string;
+  bodyType?: string;
   isOrganizer: boolean;
   isParticipant?: boolean;
   sender: {

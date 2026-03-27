@@ -4,6 +4,7 @@
 
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import type { AppMode } from "./types";
 
 // Web fallback -- SecureStore doesn't work on web.
 // Use localStorage so tokens survive page refreshes.
@@ -37,6 +38,7 @@ async function deleteItem(key: string): Promise<void> {
 const MODE_KEY = "pa_app_mode";
 const GROUP_ID_KEY = "pa_group_tracking_id";
 const GROUP_TOKEN_KEY = "pa_group_jwt_token";
+const RSVP_TOKEN_KEY = "pa_rsvp_token";
 
 // ── Group Token (JWT from group portal verify-pin) ----
 
@@ -74,9 +76,27 @@ export async function clearGroupTrackingId(): Promise<void> {
   await deleteItem(GROUP_ID_KEY);
 }
 
+// ── RSVP Token ----
+
+export async function getRsvpToken(): Promise<string | null> {
+  try {
+    return await getItem(RSVP_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function setRsvpToken(token: string): Promise<void> {
+  await setItem(RSVP_TOKEN_KEY, token);
+}
+
+export async function clearRsvpToken(): Promise<void> {
+  await deleteItem(RSVP_TOKEN_KEY);
+}
+
 // ── App Mode ----
 
-export type AppMode = "group";
+export type { AppMode };
 
 export async function getAppMode(): Promise<AppMode | null> {
   try {
@@ -98,6 +118,7 @@ export async function logout(): Promise<void> {
   await Promise.all([
     clearGroupToken(),
     clearGroupTrackingId(),
+    clearRsvpToken(),
     deleteItem(MODE_KEY),
   ]);
 }

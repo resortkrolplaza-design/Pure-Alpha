@@ -2,15 +2,27 @@
 // Group Portal — Photos Tab (Photo wall)
 // =============================================================================
 
-import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, useWindowDimensions, Image } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, useWindowDimensions, Image, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { group, fontSize, radius, spacing } from "@/lib/tokens";
+import { group, fontSize, radius, spacing, letterSpacing } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupPhotoData } from "@/lib/types";
 import { useCallback, useState, useMemo } from "react";
+
+// P2-30: SSRF protection — same pattern as documents.tsx
+const ALLOWED_HOSTS = ["purealphahotel.pl", "supabase.co", "supabase.in"];
+
+function isUrlAllowed(urlStr: string): boolean {
+  try {
+    const url = new URL(urlStr);
+    return url.protocol === "https:" && ALLOWED_HOSTS.some(h => url.hostname === h || url.hostname.endsWith("." + h));
+  } catch {
+    return false;
+  }
+}
 
 const COLUMN_GAP = 8;
 const NUM_COLUMNS = 3;
@@ -41,27 +53,40 @@ export default function PhotosScreen() {
 
   // Track failed images to show fallback
   const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
+  // P1-15: Track loaded images for loading indicator
+  const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
 
   const renderPhoto = useCallback(({ item }: { item: GroupPhotoData }) => {
     const isFailed = failedIds.has(item.id);
+    // P2-30: SSRF filter
+    if (!isUrlAllowed(item.imageUrl)) return null;
     return (
       <View style={[styles.photoWrapper, { width: imageSize }]} accessibilityLabel={item.caption || t(lang, "group.tab.photos")}>
         {isFailed ? (
           <View style={[styles.photoFallback, { width: imageSize, height: imageSize }]} />
         ) : (
-          <Image
-            source={{ uri: item.imageUrl }}
-            style={{ width: imageSize, height: imageSize, borderRadius: radius.sm }}
-            resizeMode="cover"
-            onError={() => setFailedIds((prev) => new Set(prev).add(item.id))}
-          />
+          <>
+            {/* P1-15: Loading placeholder behind image */}
+            {!loadedIds.has(item.id) && (
+              <View style={[styles.photoPlaceholder, { width: imageSize, height: imageSize }]}>
+                <ActivityIndicator size="small" color={group.primary} />
+              </View>
+            )}
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={{ width: imageSize, height: imageSize, borderRadius: radius.sm }}
+              resizeMode="cover"
+              onError={() => setFailedIds((prev) => new Set(prev).add(item.id))}
+              onLoad={() => setLoadedIds((prev) => new Set([...prev, item.id]))}
+            />
+          </>
         )}
         {item.caption && (
           <Text style={styles.photoCaption} numberOfLines={1}>{item.caption}</Text>
         )}
       </View>
     );
-  }, [failedIds, imageSize, lang]);
+  }, [failedIds, loadedIds, imageSize, lang]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
@@ -106,12 +131,13 @@ export default function PhotosScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
   header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: -0.3 },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: letterSpacing.tight },
   count: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2, lineHeight: 18 },
   list: { paddingHorizontal: spacing.xl },
   row: { gap: COLUMN_GAP, marginBottom: COLUMN_GAP },
   photoWrapper: {},
   photoFallback: { borderRadius: radius.sm, backgroundColor: group.photoFallback },
+  photoPlaceholder: { position: "absolute", borderRadius: radius.sm, backgroundColor: group.photoFallback, alignItems: "center", justifyContent: "center", zIndex: 0 },
   photoCaption: { fontSize: fontSize.xs, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2 },
   emptyText: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, textAlign: "center", paddingVertical: spacing["3xl"], lineHeight: 18 },
   errorContainer: { alignItems: "center", gap: spacing.md, paddingVertical: spacing["3xl"] },
@@ -120,5 +146,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
     minHeight: 44, justifyContent: "center", alignItems: "center",
   },
-  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.white },
 });

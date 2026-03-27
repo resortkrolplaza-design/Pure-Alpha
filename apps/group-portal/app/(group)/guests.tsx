@@ -5,7 +5,7 @@
 import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { group, fontSize, radius, spacing, shadow, rsvpColors } from "@/lib/tokens";
+import { group, fontSize, radius, spacing, shadow, rsvpColors, letterSpacing } from "@/lib/tokens";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
@@ -102,7 +102,7 @@ export default function GuestsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
   header: { paddingHorizontal: spacing.xl, marginBottom: spacing.lg },
-  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: -0.3 },
+  title: { fontSize: fontSize["2xl"], fontFamily: "Inter_700Bold", color: group.text, letterSpacing: letterSpacing.tight },
   count: { fontSize: fontSize.sm, fontFamily: "Inter_400Regular", color: group.textMuted, marginTop: 2, lineHeight: 18 },
   list: { paddingHorizontal: spacing.xl, gap: spacing.sm },
   guestCard: {
@@ -111,11 +111,11 @@ const styles = StyleSheet.create({
     padding: spacing.md, gap: spacing.md, ...shadow.sm,
   },
   guestAvatar: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: group.primaryLight, alignItems: "center", justifyContent: "center",
   },
   guestInitials: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.primary },
-  guestInfo: { flex: 1, gap: 2 },
+  guestInfo: { flex: 1, gap: spacing.xxs },
   guestName: { fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: group.text, lineHeight: 21 },
   organizerBadge: { fontSize: fontSize.xs, fontFamily: "Inter_500Medium", color: group.primary },
   rsvpBadge: { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xs },
@@ -127,5 +127,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
     minHeight: 44, justifyContent: "center", alignItems: "center",
   },
-  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: "#FFFFFF" },
+  retryBtnText: { fontSize: fontSize.sm, fontFamily: "Inter_600SemiBold", color: group.white },
 });

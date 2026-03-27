@@ -46,25 +46,6 @@ export function useScalePress(toValue = 0.97) {
   return { scaleStyle, onPressIn, onPressOut };
 }
 
-// -- Fade In on Mount --------------------------------------------------------
-// Usage: const fadeStyle = useFadeIn(200);
-//        <Animated.View style={fadeStyle}>...</Animated.View>
-
-export function useFadeIn(delay = 0) {
-  const opacity = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: animation.normal,
-      delay,
-      useNativeDriver: true,
-    }).start();
-  }, [opacity, delay]);
-
-  return { opacity };
-}
-
 // -- Slide Up + Fade In on Mount ---------------------------------------------
 // Usage: const slideStyle = useSlideUp(100);
 //        <Animated.View style={slideStyle}>...</Animated.View>
@@ -107,23 +88,3 @@ export function configureListAnimation() {
   });
 }
 
-// -- Rotation Animation (for FAQ chevrons, expand/collapse) -------------------
-// Usage: const rotation = useRotation(isExpanded);
-//        <Animated.View style={{ transform: [{ rotate: rotation }] }}>
-
-export function useRotation(expanded: boolean) {
-  const anim = useRef(new Animated.Value(expanded ? 1 : 0)).current;
-
-  useEffect(() => {
-    Animated.timing(anim, {
-      toValue: expanded ? 1 : 0,
-      duration: animation.fast,
-      useNativeDriver: true,
-    }).start();
-  }, [expanded, anim]);
-
-  return anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "90deg"],
-  });
-}

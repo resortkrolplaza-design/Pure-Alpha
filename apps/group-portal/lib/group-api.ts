@@ -61,7 +61,7 @@ export async function verifyPin(
   trackingId: string,
   pin: string,
   email: string,
-): Promise<ApiResponse<{ token: string; role: string; guest: { id: string; firstName: string; rsvpStatus: string } | null }>> {
+): Promise<ApiResponse<{ token: string; role: string; email?: string | null; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
   return groupFetch(trackingId, "/verify-pin", {
     method: "POST",
     body: JSON.stringify({ pin, email }),

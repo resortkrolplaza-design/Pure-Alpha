@@ -9,7 +9,9 @@ import { Platform } from "react-native";
 export const group = {
   bg: "#f8f6f3",
   primary: "#6366f1",
-  primaryDark: "#4f46e5",
+  white: "#FFFFFF",
+  tabBarBg: "rgba(255,255,255,0.95)",
+  bgLight: "#F5F3EF",
   text: "#0f172a",
   textSecondary: "#475569",
   textMuted: "#64748b",
@@ -31,8 +33,6 @@ export const semantic = {
   warning: "#f59e0b",
   danger: "#ef4444",
   info: "#3b82f6",
-  successLight: "#6ee7b7",
-  dangerLight: "#fca5a5",
 } as const;
 
 // ── RSVP Status Colors (SSOT -- used by group guests) ----
@@ -46,6 +46,7 @@ export const rsvpColors: Record<string, { bg: string; text: string }> = {
 // ── Spacing (px values, NOT rem) ----
 
 export const spacing = {
+  xxs: 2,
   xs: 4,
   sm: 8,
   md: 12,
@@ -89,6 +90,8 @@ export const fontWeight = {
   semibold: "600" as const,
   bold: "700" as const,
 };
+
+export const letterSpacing = { tight: -0.3, snug: -0.5 } as const;
 
 // ── Shadows (platform-specific) ----
 
