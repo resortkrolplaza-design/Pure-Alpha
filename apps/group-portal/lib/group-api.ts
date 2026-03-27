@@ -4,7 +4,15 @@
 
 import { API_BASE } from "./api";
 import { getGroupToken } from "./auth";
-import type { ApiResponse, PortalInitData } from "./types";
+import type {
+  ApiResponse,
+  PortalInitData,
+  RsvpPayload,
+  RsvpResponse,
+  SelfRegisterPayload,
+  SelfRegisterResponse,
+  GroupPhotoData,
+} from "./types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -81,4 +89,37 @@ export async function verifyPin(
     method: "POST",
     body: JSON.stringify({ pin, email }),
   });
+}
+
+// ── RSVP ----
+
+export async function submitRsvp(
+  trackingId: string,
+  guestId: string,
+  payload: RsvpPayload,
+): Promise<ApiResponse<RsvpResponse>> {
+  return groupFetch(trackingId, `/guests/${encodeURIComponent(guestId)}/rsvp`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Self-Registration ----
+
+export async function selfRegister(
+  trackingId: string,
+  payload: SelfRegisterPayload,
+): Promise<ApiResponse<SelfRegisterResponse>> {
+  return groupFetch(trackingId, "/guests/self-register", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Photos ----
+
+export async function fetchPhotos(
+  trackingId: string,
+): Promise<ApiResponse<GroupPhotoData[]>> {
+  return groupFetch(trackingId, "/photos");
 }

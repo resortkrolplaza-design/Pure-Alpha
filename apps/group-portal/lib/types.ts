@@ -149,6 +149,47 @@ export interface PortalInitData {
   documents: GroupDocumentData[];
 }
 
+// ── RSVP ----
+
+export interface RsvpPayload {
+  rsvpStatus: "confirmed" | "declined";
+  dietaryNeeds?: string;
+  allergies?: string;
+  rsvpNote?: string;
+  rsvpToken?: string;
+  emailVerify?: string;
+  marketingConsent?: boolean;
+}
+
+export interface RsvpResponse {
+  id: string;
+  rsvpStatus: string;
+  rsvpAt: string;
+}
+
+// ── Self-Registration ----
+
+export interface SelfRegisterPayload {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  dietaryNeeds?: string;
+  allergies?: string;
+  specialRequests?: string;
+  marketingConsent?: boolean;
+}
+
+export interface SelfRegisterResponse {
+  guest: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string | null;
+  };
+  rsvpToken: string;
+}
+
 export interface GroupMessage {
   id: string;
   body: string;

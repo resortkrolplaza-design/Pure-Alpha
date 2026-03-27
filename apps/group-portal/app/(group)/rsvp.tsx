@@ -1,0 +1,730 @@
+// =============================================================================
+// Group Portal — RSVP Screen (Confirm / Decline attendance)
+// Identity verification via rsvpToken (from login) or email match.
+// =============================================================================
+
+import { useState, useCallback, useMemo } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  Alert,
+  Animated,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "expo-router";
+import * as Haptics from "expo-haptics";
+import {
+  group,
+  semantic,
+  fontSize,
+  radius,
+  spacing,
+  shadow,
+  letterSpacing,
+  rsvpColors,
+} from "@/lib/tokens";
+import { Icon } from "@/lib/icons";
+import { useScalePress, useSlideUp } from "@/lib/animations";
+import { t } from "@/lib/i18n";
+import { useAppStore } from "@/lib/store";
+import { groupFetch, submitRsvp } from "@/lib/group-api";
+import type { GroupGuestData, RsvpPayload } from "@/lib/types";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
+
+// =============================================================================
+// Sub-components
+// =============================================================================
+
+function GuestSearchItem({
+  guest,
+  lang,
+  isSelected,
+  onSelect,
+}: {
+  guest: GroupGuestData;
+  lang: "pl" | "en";
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const { scaleStyle, onPressIn, onPressOut } = useScalePress(0.98);
+  const initials = `${(guest.firstName?.[0] ?? "").toUpperCase()}${(guest.lastName?.[0] ?? "").toUpperCase()}`;
+  const rsvp = rsvpColors[guest.rsvpStatus] ?? rsvpColors.pending;
+
+  return (
+    <Pressable
+      onPress={onSelect}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      style={[styles.guestItem, isSelected && styles.guestItemSelected]}
+      accessibilityRole="button"
+    >
+      <Animated.View style={scaleStyle}>
+        <View style={styles.guestRow}>
+          <View style={[styles.avatar, { backgroundColor: group.primary }]}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={styles.guestInfo}>
+            <Text style={styles.guestName}>
+              {guest.firstName} {guest.lastName}
+            </Text>
+            <View style={[styles.rsvpBadge, { backgroundColor: rsvp.bg }]}>
+              <Text style={[styles.rsvpBadgeText, { color: rsvp.text }]}>
+                {t(lang, `group.rsvp.${guest.rsvpStatus}`)}
+              </Text>
+            </View>
+          </View>
+          {isSelected && (
+            <Icon name="checkmark-circle" size={24} color={group.primary} />
+          )}
+        </View>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
+// =============================================================================
+// Main Screen
+// =============================================================================
+
+function RsvpScreenInner() {
+  const insets = useSafeAreaInsets();
+  const lang = useAppStore((s) => s.lang);
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
+  const storedGuest = useAppStore((s) => s.guest);
+  const storedRsvpToken = useAppStore((s) => s.rsvpToken);
+  const queryClient = useQueryClient();
+
+  const [search, setSearch] = useState("");
+  const [selectedGuestId, setSelectedGuestId] = useState<string | null>(
+    storedGuest?.id ?? null,
+  );
+  const [emailVerify, setEmailVerify] = useState("");
+  const [rsvpStatus, setRsvpStatus] = useState<"confirmed" | "declined" | null>(null);
+  const [dietaryNeeds, setDietaryNeeds] = useState("");
+  const [allergies, setAllergies] = useState("");
+  const [rsvpNote, setRsvpNote] = useState("");
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const headerSlide = useSlideUp(0, 12);
+  const formSlide = useSlideUp(80, 16);
+  const { scaleStyle, onPressIn, onPressOut } = useScalePress();
+
+  // Fetch guest list for selection
+  const { data: guests, isLoading } = useQuery({
+    queryKey: ["group-guests-rsvp", trackingId],
+    queryFn: async () => {
+      if (!trackingId) return [];
+      const res = await groupFetch<GroupGuestData[]>(trackingId, "/guests");
+      return res.data ?? [];
+    },
+    enabled: !!trackingId,
+  });
+
+  // Filter guests by search
+  const filteredGuests = useMemo(() => {
+    if (!guests?.length) return [];
+    if (!search.trim()) return guests;
+    const q = search.trim().toLowerCase();
+    return guests.filter(
+      (g) =>
+        g.firstName.toLowerCase().includes(q) ||
+        g.lastName.toLowerCase().includes(q),
+    );
+  }, [guests, search]);
+
+  const selectedGuest = useMemo(
+    () => guests?.find((g) => g.id === selectedGuestId) ?? null,
+    [guests, selectedGuestId],
+  );
+
+  // Pre-identified: user logged in and we know their guest record
+  const isPreIdentified = !!storedGuest && !!storedRsvpToken;
+
+  // Can submit: guest selected + status chosen + identity verified
+  const canSubmit =
+    !!selectedGuestId &&
+    !!rsvpStatus &&
+    (isPreIdentified || emailVerify.trim().length > 0);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedGuestId || !rsvpStatus) throw new Error("Invalid state");
+      const payload: RsvpPayload = { rsvpStatus };
+      if (rsvpStatus === "confirmed") {
+        if (dietaryNeeds.trim()) payload.dietaryNeeds = dietaryNeeds.trim();
+        if (allergies.trim()) payload.allergies = allergies.trim();
+        if (marketingConsent) payload.marketingConsent = true;
+      }
+      if (rsvpNote.trim()) payload.rsvpNote = rsvpNote.trim();
+
+      // Identity: prefer rsvpToken, fallback to email
+      if (storedRsvpToken) {
+        payload.rsvpToken = storedRsvpToken;
+      } else if (emailVerify.trim()) {
+        payload.emailVerify = emailVerify.trim().toLowerCase();
+      }
+
+      const res = await submitRsvp(trackingId, selectedGuestId, payload);
+      if (res.status !== "success") {
+        throw new Error(res.errorMessage || t(lang, "common.error"));
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      setSubmitted(true);
+      queryClient.invalidateQueries({ queryKey: ["group-guests"] });
+      queryClient.invalidateQueries({ queryKey: ["portal-init"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+    onError: (err) => {
+      Alert.alert(
+        t(lang, "common.error"),
+        err instanceof Error ? err.message : t(lang, "common.error"),
+      );
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    },
+  });
+
+  const handleSubmit = useCallback(() => {
+    if (!canSubmit || mutation.isPending) return;
+    mutation.mutate();
+  }, [canSubmit, mutation]);
+
+  // ── Success state ────────────────────────────────────────────────────────────
+  if (submitted) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.successContainer}>
+          <View style={styles.successCircle}>
+            <Icon
+              name={rsvpStatus === "confirmed" ? "checkmark" : "close"}
+              size={40}
+              color={group.white}
+            />
+          </View>
+          <Text style={styles.successTitle}>
+            {t(lang, rsvpStatus === "confirmed" ? "rsvp.success" : "rsvp.declineSuccess")}
+          </Text>
+          <Pressable
+            style={styles.backBtn}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+          >
+            <Text style={styles.backBtnText}>{t(lang, "common.back")}</Text>
+          </Pressable>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Main form ────────────────────────────────────────────────────────────────
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.flex}
+      >
+        <ScrollView
+          contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 100 }]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <Animated.View style={[styles.header, headerSlide]}>
+            <Pressable
+              onPress={() => router.back()}
+              style={styles.headerBack}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.back")}
+            >
+              <Icon name="chevron-back" size={20} color={group.primary} />
+            </Pressable>
+            <Text style={styles.title}>{t(lang, "rsvp.title")}</Text>
+          </Animated.View>
+
+          <Animated.View style={formSlide}>
+            {/* Step 1: Select guest (skip if pre-identified) */}
+            {!isPreIdentified && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  {t(lang, "rsvp.selectGuest")}
+                </Text>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder={t(lang, "rsvp.searchGuest")}
+                  placeholderTextColor={group.textMuted}
+                  value={search}
+                  onChangeText={setSearch}
+                  autoCapitalize="words"
+                />
+                {isLoading ? (
+                  <ActivityIndicator color={group.primary} style={styles.loader} />
+                ) : filteredGuests.length === 0 ? (
+                  <Text style={styles.emptyText}>{t(lang, "rsvp.noMatch")}</Text>
+                ) : (
+                  filteredGuests.slice(0, 20).map((g) => (
+                    <GuestSearchItem
+                      key={g.id}
+                      guest={g}
+                      lang={lang}
+                      isSelected={g.id === selectedGuestId}
+                      onSelect={() => setSelectedGuestId(g.id)}
+                    />
+                  ))
+                )}
+              </View>
+            )}
+
+            {/* Pre-identified banner */}
+            {isPreIdentified && storedGuest && (
+              <View style={styles.identifiedBanner}>
+                <Icon name="person-circle-outline" size={24} color={group.primary} />
+                <Text style={styles.identifiedText}>
+                  {storedGuest.firstName} {storedGuest.lastName ?? ""}
+                </Text>
+              </View>
+            )}
+
+            {/* Email verification (only if not pre-identified and guest selected) */}
+            {!isPreIdentified && selectedGuestId && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  {t(lang, "rsvp.verifyEmail")}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="jan@example.com"
+                  placeholderTextColor={group.textMuted}
+                  value={emailVerify}
+                  onChangeText={setEmailVerify}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  maxLength={320}
+                />
+              </View>
+            )}
+
+            {/* Step 2: Confirm / Decline */}
+            {(isPreIdentified || selectedGuestId) && (
+              <View style={styles.section}>
+                <View style={styles.statusRow}>
+                  <Pressable
+                    style={[
+                      styles.statusBtn,
+                      rsvpStatus === "confirmed" && styles.statusBtnConfirmed,
+                    ]}
+                    onPress={() => setRsvpStatus("confirmed")}
+                    accessibilityRole="button"
+                  >
+                    <Icon
+                      name="checkmark-circle-outline"
+                      size={22}
+                      color={rsvpStatus === "confirmed" ? group.white : semantic.success}
+                    />
+                    <Text
+                      style={[
+                        styles.statusBtnText,
+                        rsvpStatus === "confirmed" && styles.statusBtnTextActive,
+                      ]}
+                    >
+                      {t(lang, "rsvp.confirm")}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.statusBtn,
+                      rsvpStatus === "declined" && styles.statusBtnDeclined,
+                    ]}
+                    onPress={() => setRsvpStatus("declined")}
+                    accessibilityRole="button"
+                  >
+                    <Icon
+                      name="close-circle-outline"
+                      size={22}
+                      color={rsvpStatus === "declined" ? group.white : semantic.danger}
+                    />
+                    <Text
+                      style={[
+                        styles.statusBtnText,
+                        rsvpStatus === "declined" && styles.statusBtnTextActive,
+                      ]}
+                    >
+                      {t(lang, "rsvp.decline")}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {/* Step 3: Dietary + Note (only when confirming) */}
+            {rsvpStatus === "confirmed" && (
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{t(lang, "rsvp.dietary")}</Text>
+                <TextInput
+                  style={styles.input}
+                  value={dietaryNeeds}
+                  onChangeText={setDietaryNeeds}
+                  placeholder={t(lang, "rsvp.dietary")}
+                  placeholderTextColor={group.textMuted}
+                  maxLength={500}
+                />
+
+                <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>
+                  {t(lang, "rsvp.allergies")}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={allergies}
+                  onChangeText={setAllergies}
+                  placeholder={t(lang, "rsvp.allergies")}
+                  placeholderTextColor={group.textMuted}
+                  maxLength={500}
+                />
+
+                <Pressable
+                  style={styles.consentRow}
+                  onPress={() => setMarketingConsent(!marketingConsent)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: marketingConsent }}
+                >
+                  <Icon
+                    name={marketingConsent ? "checkbox" : "square-outline"}
+                    size={22}
+                    color={marketingConsent ? group.primary : group.textMuted}
+                  />
+                  <Text style={styles.consentText}>
+                    {t(lang, "rsvp.marketingConsent")}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+
+            {/* Note (both confirm and decline) */}
+            {rsvpStatus && (
+              <View style={styles.section}>
+                <Text style={styles.inputLabel}>{t(lang, "rsvp.note")}</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={rsvpNote}
+                  onChangeText={setRsvpNote}
+                  placeholder={t(lang, "rsvp.note")}
+                  placeholderTextColor={group.textMuted}
+                  multiline
+                  maxLength={500}
+                />
+              </View>
+            )}
+
+            {/* Submit */}
+            {canSubmit && (
+              <Animated.View style={scaleStyle}>
+                <Pressable
+                  style={[
+                    styles.submitBtn,
+                    mutation.isPending && styles.submitBtnDisabled,
+                  ]}
+                  onPress={handleSubmit}
+                  onPressIn={onPressIn}
+                  onPressOut={onPressOut}
+                  disabled={mutation.isPending}
+                  accessibilityRole="button"
+                >
+                  {mutation.isPending ? (
+                    <ActivityIndicator color={group.white} />
+                  ) : (
+                    <Text style={styles.submitBtnText}>
+                      {rsvpStatus === "confirmed"
+                        ? t(lang, "rsvp.confirm")
+                        : t(lang, "rsvp.decline")}
+                    </Text>
+                  )}
+                </Pressable>
+              </Animated.View>
+            )}
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
+  );
+}
+
+export default function RsvpScreen() {
+  return (
+    <ErrorBoundary>
+      <RsvpScreenInner />
+    </ErrorBoundary>
+  );
+}
+
+// =============================================================================
+// Styles
+// =============================================================================
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: group.bg },
+  flex: { flex: 1 },
+  scroll: {
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+  },
+
+  // Header
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  headerBack: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: fontSize["2xl"],
+    fontFamily: "Inter_700Bold",
+    color: group.text,
+    letterSpacing: letterSpacing.tight,
+  },
+
+  // Sections
+  section: {
+    marginBottom: spacing.xl,
+  },
+  sectionTitle: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+    marginBottom: spacing.md,
+  },
+
+  // Search
+  searchInput: {
+    backgroundColor: group.white,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.text,
+    minHeight: 48,
+    marginBottom: spacing.md,
+  },
+  loader: { marginVertical: spacing.xl },
+  emptyText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    textAlign: "center",
+    marginVertical: spacing.lg,
+  },
+
+  // Guest list items
+  guestItem: {
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+  },
+  guestItemSelected: {
+    borderColor: group.primary,
+    borderWidth: 2,
+  },
+  guestRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
+  },
+  guestInfo: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  guestName: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  rsvpBadge: {
+    alignSelf: "flex-start",
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  rsvpBadgeText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_500Medium",
+  },
+
+  // Identified banner
+  identifiedBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: group.primaryLight,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  identifiedText: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+
+  // Status buttons
+  statusRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  statusBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    minHeight: 56,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    ...shadow.sm,
+  },
+  statusBtnConfirmed: {
+    backgroundColor: semantic.success,
+    borderColor: semantic.success,
+  },
+  statusBtnDeclined: {
+    backgroundColor: semantic.danger,
+    borderColor: semantic.danger,
+  },
+  statusBtnText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  statusBtnTextActive: {
+    color: group.white,
+  },
+
+  // Form inputs
+  inputLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    backgroundColor: group.white,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.text,
+    minHeight: 48,
+  },
+  textArea: {
+    minHeight: 80,
+    paddingTop: spacing.md,
+    textAlignVertical: "top",
+  },
+
+  // Consent
+  consentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    minHeight: 44,
+  },
+  consentText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
+    lineHeight: 18,
+  },
+
+  // Submit
+  submitBtn: {
+    backgroundColor: group.primary,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 56,
+    ...shadow.md,
+  },
+  submitBtnDisabled: {
+    backgroundColor: group.disabledBg,
+  },
+  submitBtnText: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_700Bold",
+    color: group.white,
+  },
+
+  // Success
+  successContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.xl,
+    padding: spacing["3xl"],
+  },
+  successCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: semantic.success,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  successTitle: {
+    fontSize: fontSize.xl,
+    fontFamily: "Inter_700Bold",
+    color: group.text,
+    textAlign: "center",
+  },
+  backBtn: {
+    backgroundColor: group.primary,
+    borderRadius: radius.full,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing["2xl"],
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  backBtnText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
+  },
+});

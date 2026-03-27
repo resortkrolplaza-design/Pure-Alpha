@@ -1,19 +1,20 @@
 // =============================================================================
-// Group Portal — Photos Tab (2-column gallery with captions)
+// Group Portal — Photos Tab (2-column gallery with captions + fullscreen viewer)
 // =============================================================================
 
-import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, useWindowDimensions, Image, ActivityIndicator, Animated } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, useWindowDimensions, Image, ActivityIndicator, Animated, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { group, fontSize, radius, spacing, shadow, letterSpacing } from "@/lib/tokens";
+import { group, fontSize, radius, spacing, shadow, letterSpacing, TOUCH_TARGET } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupPhotoData } from "@/lib/types";
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useState, useMemo, useRef, useEffect } from "react";
 import { useScalePress, useSlideUp } from "@/lib/animations";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 // P2-30: SSRF protection — same pattern as documents.tsx
 const ALLOWED_HOSTS = ["purealphahotel.pl", "supabase.co", "supabase.in"];
@@ -47,6 +48,9 @@ const NUM_COLUMNS = 2;
 const GRID_GAP = spacing.sm; // 8px
 const HORIZONTAL_PADDING = spacing.xl; // 20px
 
+// ── Auto-hide timer duration (ms) ────────────────────────────────────────────
+const NAV_AUTO_HIDE_MS = 3000;
+
 // ── Animated photo card ───────────────────────────────────────────────────────
 
 function AnimatedPhotoCard({
@@ -57,6 +61,7 @@ function AnimatedPhotoCard({
   isLoaded,
   onImageError,
   onImageLoad,
+  onPress,
 }: {
   item: GroupPhotoData;
   photoSize: number;
@@ -65,6 +70,7 @@ function AnimatedPhotoCard({
   isLoaded: boolean;
   onImageError: () => void;
   onImageLoad: () => void;
+  onPress: () => void;
 }) {
   const { scaleStyle, onPressIn, onPressOut } = useScalePress(0.97);
 
@@ -76,6 +82,7 @@ function AnimatedPhotoCard({
       <Pressable
         onPressIn={onPressIn}
         onPressOut={onPressOut}
+        onPress={onPress}
         style={[styles.photoCard, { width: photoSize, height: photoSize }]}
         accessibilityLabel={item.caption || t(lang, "group.tab.photos")}
         accessibilityRole="image"
@@ -113,9 +120,174 @@ function AnimatedPhotoCard({
   );
 }
 
+// ── Fullscreen photo viewer modal ────────────────────────────────────────────
+
+function PhotoViewerModal({
+  photos,
+  viewerIndex,
+  onClose,
+  lang,
+}: {
+  photos: GroupPhotoData[];
+  viewerIndex: number | null;
+  onClose: () => void;
+  lang: Lang;
+}) {
+  const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const [navVisible, setNavVisible] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(viewerIndex ?? 0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync currentIndex when viewerIndex changes (modal opened on a new photo)
+  useEffect(() => {
+    if (viewerIndex !== null) {
+      setCurrentIndex(viewerIndex);
+      setNavVisible(true);
+      resetAutoHide();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewerIndex]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  function resetAutoHide() {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      setNavVisible(false);
+    }, NAV_AUTO_HIDE_MS);
+  }
+
+  function toggleNav() {
+    if (navVisible) {
+      setNavVisible(false);
+      if (timerRef.current) clearTimeout(timerRef.current);
+    } else {
+      setNavVisible(true);
+      resetAutoHide();
+    }
+  }
+
+  function goToPrev() {
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      resetAutoHide();
+    }
+  }
+
+  function goToNext() {
+    if (currentIndex < photos.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      resetAutoHide();
+    }
+  }
+
+  if (viewerIndex === null || photos.length === 0) return null;
+
+  const photo = photos[currentIndex];
+  if (!photo) return null;
+
+  const hasPrev = currentIndex > 0;
+  const hasNext = currentIndex < photos.length - 1;
+  const counterText = `${currentIndex + 1} ${t(lang, "photos.viewer.of")} ${photos.length}`;
+
+  return (
+    <Modal
+      visible={viewerIndex !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View style={viewerStyles.backdrop}>
+        {/* Tap area to toggle nav */}
+        <Pressable
+          style={viewerStyles.tapArea}
+          onPress={toggleNav}
+          accessibilityLabel={navVisible ? t(lang, "common.close") : t(lang, "group.tab.photos")}
+        >
+          <Image
+            source={{ uri: photo.imageUrl }}
+            style={[viewerStyles.image, { width: screenWidth }]}
+            resizeMode="contain"
+          />
+        </Pressable>
+
+        {/* Top bar: close + counter */}
+        {navVisible && (
+          <View style={[viewerStyles.topBar, { paddingTop: insets.top + spacing.sm }]}>
+            {/* Counter centered */}
+            <View style={viewerStyles.counterContainer}>
+              <Text style={viewerStyles.counterText}>{counterText}</Text>
+            </View>
+
+            {/* Close button top-right */}
+            <Pressable
+              onPress={onClose}
+              style={viewerStyles.closeBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.close")}
+              hitSlop={8}
+            >
+              <Icon name="close" size={24} color={group.white} />
+            </Pressable>
+          </View>
+        )}
+
+        {/* Bottom bar: caption + uploadedBy */}
+        {navVisible && (photo.caption || photo.uploadedBy) && (
+          <View style={[viewerStyles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
+            {photo.caption && (
+              <Text style={viewerStyles.captionText} numberOfLines={3}>
+                {photo.caption}
+              </Text>
+            )}
+            {photo.uploadedBy && (
+              <Text style={viewerStyles.uploadedByText}>
+                {photo.uploadedBy}
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Prev button */}
+        {navVisible && hasPrev && (
+          <Pressable
+            onPress={goToPrev}
+            style={[viewerStyles.navBtn, viewerStyles.navBtnLeft]}
+            accessibilityRole="button"
+            accessibilityLabel="Previous"
+            hitSlop={8}
+          >
+            <Icon name="chevron-back" size={28} color={group.white} />
+          </Pressable>
+        )}
+
+        {/* Next button */}
+        {navVisible && hasNext && (
+          <Pressable
+            onPress={goToNext}
+            style={[viewerStyles.navBtn, viewerStyles.navBtnRight]}
+            accessibilityRole="button"
+            accessibilityLabel="Next"
+            hitSlop={8}
+          >
+            <Icon name="chevron-forward" size={28} color={group.white} />
+          </Pressable>
+        )}
+      </View>
+    </Modal>
+  );
+}
+
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-export default function PhotosScreen() {
+function PhotosScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -148,9 +320,20 @@ export default function PhotosScreen() {
   const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
   const [loadedIds, setLoadedIds] = useState<Set<string>>(new Set());
 
+  // Fullscreen viewer state
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+
   const photoCount = photos?.length ?? 0;
 
-  const renderPhoto = useCallback(({ item }: { item: GroupPhotoData }) => {
+  // Build a list of viewable photos (only those that pass SSRF check)
+  const viewablePhotos = useMemo(() => {
+    return (photos ?? []).filter((p) => isUrlAllowed(p.imageUrl));
+  }, [photos]);
+
+  const renderPhoto = useCallback(({ item, index }: { item: GroupPhotoData; index: number }) => {
+    // Find index in viewablePhotos for the viewer
+    const viewableIdx = viewablePhotos.findIndex((p) => p.id === item.id);
+
     return (
       <AnimatedPhotoCard
         item={item}
@@ -160,9 +343,14 @@ export default function PhotosScreen() {
         isLoaded={loadedIds.has(item.id)}
         onImageError={() => setFailedIds((prev) => new Set(prev).add(item.id))}
         onImageLoad={() => setLoadedIds((prev) => new Set([...prev, item.id]))}
+        onPress={() => {
+          if (!failedIds.has(item.id) && viewableIdx >= 0) {
+            setViewerIndex(viewableIdx);
+          }
+        }}
       />
     );
-  }, [failedIds, loadedIds, photoSize, lang]);
+  }, [failedIds, loadedIds, photoSize, lang, viewablePhotos]);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
@@ -210,7 +398,25 @@ export default function PhotosScreen() {
           )
         }
       />
+
+      {/* Fullscreen photo viewer */}
+      <PhotoViewerModal
+        photos={viewablePhotos}
+        viewerIndex={viewerIndex}
+        onClose={() => setViewerIndex(null)}
+        lang={lang}
+      />
     </View>
+  );
+}
+
+// ── Default export wrapped in ErrorBoundary ──────────────────────────────────
+
+export default function PhotosScreenWithErrorBoundary() {
+  return (
+    <ErrorBoundary>
+      <PhotosScreen />
+    </ErrorBoundary>
   );
 }
 
@@ -317,7 +523,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.xl,
-    minHeight: 44,
+    minHeight: TOUCH_TARGET,
     justifyContent: "center",
     alignItems: "center",
     marginTop: spacing.sm,
@@ -326,5 +532,100 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: "Inter_600SemiBold",
     color: group.white,
+  },
+});
+
+// ── Viewer Styles ─────────────────────────────────────────────────────────────
+
+const viewerStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  tapArea: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  image: {
+    flex: 1,
+  },
+
+  // Top bar
+  topBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  counterContainer: {
+    flex: 1,
+    alignItems: "center",
+  },
+  counterText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.white,
+  },
+  closeBtn: {
+    position: "absolute",
+    right: spacing.lg,
+    bottom: spacing.sm,
+    width: TOUCH_TARGET,
+    height: TOUCH_TARGET,
+    borderRadius: TOUCH_TARGET / 2,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // Bottom bar
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  captionText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.white,
+    lineHeight: 22,
+  },
+  uploadedByText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.7)",
+    marginTop: spacing.xs,
+  },
+
+  // Nav buttons
+  navBtn: {
+    position: "absolute",
+    top: "50%",
+    marginTop: -(TOUCH_TARGET / 2),
+    width: TOUCH_TARGET,
+    height: TOUCH_TARGET,
+    borderRadius: TOUCH_TARGET / 2,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  navBtnLeft: {
+    left: spacing.md,
+  },
+  navBtnRight: {
+    right: spacing.md,
   },
 });

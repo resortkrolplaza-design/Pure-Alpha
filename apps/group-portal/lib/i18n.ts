@@ -127,6 +127,45 @@ const pl: Record<string, string> = {
   "overview.quickAnnouncements": "Og\u0142oszenia",
   "overview.guestsLabel": "go\u015Bci",
   "overview.poweredBy": "Powered by Pure Alpha",
+
+  // ── RSVP ----
+  "rsvp.title": "Potwierd\u017A obecno\u015B\u0107",
+  "rsvp.confirm": "Potwierdzam",
+  "rsvp.decline": "Nie przyjd\u0119",
+  "rsvp.dietary": "Preferencje dietetyczne",
+  "rsvp.allergies": "Alergie",
+  "rsvp.note": "Notatka (opcjonalnie)",
+  "rsvp.marketingConsent": "Wyra\u017Cam zgod\u0119 na komunikacj\u0119 marketingow\u0105",
+  "rsvp.success": "Dzi\u0119kujemy za potwierdzenie!",
+  "rsvp.declineSuccess": "Odpowied\u017A zosta\u0142a zapisana",
+  "rsvp.verifyEmail": "Podaj sw\u00F3j email do weryfikacji",
+  "rsvp.selectGuest": "Wybierz swoje imi\u0119 z listy",
+  "rsvp.searchGuest": "Szukaj po imieniu...",
+  "rsvp.noMatch": "Nie znaleziono. Skontaktuj si\u0119 z organizatorem.",
+  "rsvp.alreadyConfirmed": "Ju\u017C potwierdzono",
+  "rsvp.alreadyDeclined": "Ju\u017C odrzucono",
+
+  // ── Self-Registration ----
+  "register.title": "Do\u0142\u0105cz do wydarzenia",
+  "register.firstName": "Imi\u0119",
+  "register.lastName": "Nazwisko",
+  "register.email": "Email",
+  "register.phone": "Telefon",
+  "register.dietary": "Preferencje dietetyczne",
+  "register.allergies": "Alergie",
+  "register.specialRequests": "Specjalne pro\u015Bby",
+  "register.submit": "Zarejestruj si\u0119",
+  "register.success": "Rejestracja zako\u0144czona!",
+  "register.successDesc": "Zosta\u0142e\u015B dodany do listy go\u015Bci.",
+  "register.full": "Lista go\u015Bci jest pe\u0142na",
+  "register.duplicate": "Go\u015B\u0107 o tym imieniu ju\u017C istnieje",
+  "register.emailDuplicate": "Ten email jest ju\u017C zarejestrowany",
+
+  // ── Photo Viewer ----
+  "photos.viewer.of": "z",
+  "photos.upload": "Dodaj zdj\u0119cie",
+  "photos.uploadName": "Twoje imi\u0119",
+  "photos.caption": "Podpis (opcjonalnie)",
 };
 
 const en: Record<string, string> = {
@@ -252,6 +291,45 @@ const en: Record<string, string> = {
   "overview.quickAnnouncements": "Announcements",
   "overview.guestsLabel": "guests",
   "overview.poweredBy": "Powered by Pure Alpha",
+
+  // ── RSVP ----
+  "rsvp.title": "Confirm attendance",
+  "rsvp.confirm": "I will attend",
+  "rsvp.decline": "I won't attend",
+  "rsvp.dietary": "Dietary preferences",
+  "rsvp.allergies": "Allergies",
+  "rsvp.note": "Note (optional)",
+  "rsvp.marketingConsent": "I consent to marketing communication",
+  "rsvp.success": "Thank you for confirming!",
+  "rsvp.declineSuccess": "Your response has been saved",
+  "rsvp.verifyEmail": "Enter your email to verify",
+  "rsvp.selectGuest": "Select your name from the list",
+  "rsvp.searchGuest": "Search by name...",
+  "rsvp.noMatch": "Not found. Contact the organizer.",
+  "rsvp.alreadyConfirmed": "Already confirmed",
+  "rsvp.alreadyDeclined": "Already declined",
+
+  // ── Self-Registration ----
+  "register.title": "Join the event",
+  "register.firstName": "First name",
+  "register.lastName": "Last name",
+  "register.email": "Email",
+  "register.phone": "Phone",
+  "register.dietary": "Dietary preferences",
+  "register.allergies": "Allergies",
+  "register.specialRequests": "Special requests",
+  "register.submit": "Register",
+  "register.success": "Registration complete!",
+  "register.successDesc": "You have been added to the guest list.",
+  "register.full": "Guest list is full",
+  "register.duplicate": "A guest with this name already exists",
+  "register.emailDuplicate": "This email is already registered",
+
+  // ── Photo Viewer ----
+  "photos.viewer.of": "of",
+  "photos.upload": "Add photo",
+  "photos.uploadName": "Your name",
+  "photos.caption": "Caption (optional)",
 };
 
 const dicts: Record<Lang, Record<string, string>> = { pl, en };

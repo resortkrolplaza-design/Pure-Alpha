@@ -26,6 +26,7 @@ import {
   group,
   quickActionColors,
   timeline,
+  semantic,
   fontSize,
   radius,
   spacing,
@@ -39,6 +40,7 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { logout } from "@/lib/auth";
 import { fetchPortalInit } from "@/lib/group-api";
+import { usePushNotifications } from "@/lib/usePushNotifications";
 import type { AgendaItemData, GroupAnnouncementData, PortalInitData } from "@/lib/types";
 
 // =============================================================================
@@ -344,6 +346,9 @@ export default function OverviewScreen() {
   const lang = useAppStore((s) => s.lang);
   const setLang = useAppStore((s) => s.setLang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
+
+  // Register push notifications on first load
+  usePushNotifications();
 
   const [showAllAgenda, setShowAllAgenda] = useState(false);
   const [ctaDismissed, setCtaDismissed] = useState(false);
@@ -667,6 +672,44 @@ export default function OverviewScreen() {
             >
               <Icon name="close" size={16} color="rgba(255,255,255,0.7)" />
             </Pressable>
+          </View>
+        )}
+
+        {/* ================================================================= */}
+        {/* D2. RSVP + SELF-REGISTER ACTION CARDS                            */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && initData && (
+          <View style={styles.actionCardsRow}>
+            <Pressable
+              style={styles.actionCard}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.navigate("/(group)/rsvp" as any);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "rsvp.title")}
+            >
+              <View style={[styles.actionCardIcon, { backgroundColor: "rgba(16,185,129,0.1)" }]}>
+                <Icon name="checkmark-circle-outline" size={24} color={semantic.success} />
+              </View>
+              <Text style={styles.actionCardText}>{t(lang, "rsvp.title")}</Text>
+            </Pressable>
+            {portal?.selfRegistrationEnabled && (
+              <Pressable
+                style={styles.actionCard}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.navigate("/(group)/register" as any);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t(lang, "register.title")}
+              >
+                <View style={[styles.actionCardIcon, { backgroundColor: group.primaryLight }]}>
+                  <Icon name="person-add-outline" size={24} color={group.primary} />
+                </View>
+                <Text style={styles.actionCardText}>{t(lang, "register.title")}</Text>
+              </Pressable>
+            )}
           </View>
         )}
 
@@ -1509,5 +1552,37 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: group.cardBorder,
+  },
+
+  // Action cards (RSVP + Register)
+  actionCardsRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.xl,
+  },
+  actionCard: {
+    flex: 1,
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    alignItems: "center",
+    gap: spacing.sm,
+    minHeight: 88,
+    justifyContent: "center",
+    ...shadow.sm,
+  },
+  actionCardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionCardText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+    textAlign: "center",
   },
 });

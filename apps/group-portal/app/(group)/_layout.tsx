@@ -156,6 +156,15 @@ export default function GroupLayout() {
           ),
         }}
       />
+      {/* Hidden screens (no tab bar item) */}
+      <Tabs.Screen
+        name="rsvp"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="register"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

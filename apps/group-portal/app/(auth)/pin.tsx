@@ -90,7 +90,10 @@ export default function PinScreen() {
           persistOps.push(setRsvpToken(res.data.rsvpToken));
         }
         await Promise.all(persistOps);
-        useAppStore.getState().setAuthenticated(true);
+        const store = useAppStore.getState();
+        store.setAuthenticated(true);
+        if (res.data.guest) store.setGuest(res.data.guest);
+        if (res.data.rsvpToken) store.setRsvpTokenState(res.data.rsvpToken);
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace("/(group)/overview");
       } else {
