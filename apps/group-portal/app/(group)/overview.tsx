@@ -16,6 +16,7 @@ import {
   Image,
   Alert,
   Linking,
+  Platform,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -364,19 +365,22 @@ function OverviewScreenInner() {
   const announcementsRef = useRef<View>(null);
   const scrollRef = useRef<ScrollView>(null);
 
-  const handleLogout = useCallback(() => {
-    Alert.alert(t(lang, "group.logout"), t(lang, "group.logoutConfirm"), [
-      { text: t(lang, "common.cancel"), style: "cancel" },
-      {
-        text: t(lang, "group.logout"),
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-          useAppStore.getState().reset();
-          router.replace("/");
-        },
-      },
-    ]);
+  const handleLogout = useCallback(async () => {
+    const doLogout = async () => {
+      await logout();
+      useAppStore.getState().reset();
+      router.replace("/");
+    };
+    if (Platform.OS === "web") {
+      if (window.confirm(t(lang, "group.logoutConfirm"))) {
+        await doLogout();
+      }
+    } else {
+      Alert.alert(t(lang, "group.logout"), t(lang, "group.logoutConfirm"), [
+        { text: t(lang, "common.cancel"), style: "cancel" },
+        { text: t(lang, "group.logout"), style: "destructive", onPress: doLogout },
+      ]);
+    }
   }, [lang]);
 
   // -- Entrance animations --
