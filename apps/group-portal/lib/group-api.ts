@@ -4,7 +4,7 @@
 
 import { API_BASE } from "./api";
 import { getGroupToken } from "./auth";
-import type { ApiResponse } from "./types";
+import type { ApiResponse, PortalInitData } from "./types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -55,6 +55,12 @@ export async function groupFetch<T>(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+export async function fetchPortalInit(
+  trackingId: string,
+): Promise<ApiResponse<PortalInitData>> {
+  return groupFetch<PortalInitData>(trackingId, "/init");
 }
 
 export async function loginByLink(

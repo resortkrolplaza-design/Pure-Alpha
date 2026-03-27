@@ -78,6 +78,77 @@ export interface AgendaItemData {
   category: string | null;
 }
 
+export interface PortalInitData {
+  portal: {
+    id: string;
+    title: string | null;
+    status: string;
+    portalLanguage: string;
+    guestListEnabled: boolean;
+    documentsEnabled: boolean;
+    messagingEnabled: boolean;
+    galleryEnabled: boolean;
+    selfRegistrationEnabled: boolean;
+    timelineCheckpoints: Array<{
+      label: string;
+      labelEn?: string;
+      date?: string;
+      icon?: string;
+      isComplete?: boolean;
+    }>;
+  };
+  event: {
+    name: string | null;
+    type: string | null;
+    checkInDate: string | null;
+    checkOutDate: string | null;
+    guestCount: number;
+    companyName: string | null;
+    contactPerson: string | null;
+  };
+  hotel: {
+    name: string;
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    logoUrl: string | null;
+    coverImageUrl: string | null;
+  };
+  salesperson: {
+    name: string | null;
+    email: string | null;
+    phone: string | null;
+  } | null;
+  socialLinks: Array<{ platform: string; username: string; url: string }>;
+  faq: Array<{ id: string; question: string; answer: string }>;
+  attractions: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    imageUrl: string | null;
+    category: string | null;
+    distance: string | null;
+  }>;
+  gallery: Array<{
+    id: string;
+    url: string;
+    thumbnailUrl: string | null;
+    alt: string | null;
+    caption: string | null;
+  }>;
+  services: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    price: number | null;
+    currency: string | null;
+  }>;
+  agendaItems: AgendaItemData[];
+  announcements: GroupAnnouncementData[];
+  totalGuestCount: number;
+  documents: GroupDocumentData[];
+}
+
 export interface GroupMessage {
   id: string;
   body: string;

@@ -1,9 +1,9 @@
 // =============================================================================
-// Group Portal — Overview (Event info, countdown, agenda, announcements)
-// World-class redesign: Airbnb + Apple HIG
+// Group Portal — Overview (data-driven from /init endpoint)
+// Matches web portal: hero, timeline, quick actions, FAQ, contact footer
 // =============================================================================
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Linking,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -30,14 +31,17 @@ import {
   letterSpacing,
 } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
+import type { IconName } from "@/lib/icons";
 import { useSlideUp, useScalePress, configureListAnimation } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { logout } from "@/lib/auth";
-import { groupFetch } from "@/lib/group-api";
-import type { AgendaItemData, GroupAnnouncementData } from "@/lib/types";
+import { fetchPortalInit } from "@/lib/group-api";
+import type { AgendaItemData, GroupAnnouncementData, PortalInitData } from "@/lib/types";
 
-// -- Relative time helper ---------------------------------------------------
+// =============================================================================
+// Helpers
+// =============================================================================
 
 function relativeTime(dateStr: string, lang: "pl" | "en"): string {
   const now = Date.now();
@@ -53,25 +57,90 @@ function relativeTime(dateStr: string, lang: "pl" | "en"): string {
   return `${diffDay} ${t(lang, "group.timeAgo.daysAgo")}`;
 }
 
-// -- Quick Action Chip (horizontal scroll) ----------------------------------
+function formatDate(dateStr: string | null | undefined, lang: "pl" | "en"): string {
+  if (!dateStr) return "\u2014";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "\u2014";
+  return d.toLocaleDateString(lang === "pl" ? "pl-PL" : "en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
-const QUICK_ACTIONS = [
-  { labelKey: "group.quickGuests", icon: "people-outline" as const, tab: "guests" },
-  { labelKey: "group.quickMessages", icon: "chatbubbles-outline" as const, tab: "messages" },
-  { labelKey: "group.quickDocuments", icon: "document-text-outline" as const, tab: "documents" },
-  { labelKey: "group.quickPhotos", icon: "camera-outline" as const, tab: "photos" },
-] as const;
+function countdownLabel(diffDays: number, lang: "pl" | "en"): string {
+  if (diffDays < 0) return t(lang, "overview.hero.ended");
+  if (diffDays === 0) return t(lang, "overview.hero.inProgress");
+  if (diffDays === 1) return t(lang, "overview.hero.daysUntilOne");
+  return t(lang, "overview.hero.daysUntil").replace("{n}", String(diffDays));
+}
 
-function QuickActionChip({
+/** Map social platform names to Ionicon names */
+function socialIcon(platform: string): IconName {
+  const p = platform.toLowerCase();
+  if (p.includes("facebook") || p.includes("fb")) return "logo-facebook";
+  if (p.includes("instagram") || p.includes("ig")) return "logo-instagram";
+  if (p.includes("twitter") || p.includes("x")) return "logo-twitter";
+  if (p.includes("linkedin")) return "logo-linkedin";
+  if (p.includes("youtube")) return "logo-youtube";
+  if (p.includes("tiktok")) return "logo-tiktok";
+  return "globe-outline";
+}
+
+/** Map timeline checkpoint icon string to Ionicon name */
+function checkpointIcon(icon: string | undefined): IconName {
+  if (!icon) return "ellipse";
+  const m: Record<string, IconName> = {
+    check: "checkmark-circle",
+    calendar: "calendar-outline",
+    people: "people-outline",
+    document: "document-text-outline",
+    camera: "camera-outline",
+    home: "home-outline",
+    bed: "bed-outline",
+    star: "star-outline",
+  };
+  return m[icon] ?? "ellipse";
+}
+
+// =============================================================================
+// QUICK ACTIONS config
+// =============================================================================
+
+const QUICK_ACTIONS: Array<{
+  labelKey: string;
+  icon: IconName;
+  tab: string;
+  bg: string;
+  color: string;
+}> = [
+  { labelKey: "group.quickGuests", icon: "people", tab: "guests", bg: "#eef2ff", color: "#6366f1" },
+  { labelKey: "group.quickDocuments", icon: "document-text", tab: "documents", bg: "#ecfdf5", color: "#10b981" },
+  { labelKey: "overview.quickAnnouncements", icon: "megaphone", tab: "_announcements", bg: "#fff7ed", color: "#f97316" },
+  { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: "#eff6ff", color: "#3b82f6" },
+  { labelKey: "group.quickPhotos", icon: "images", tab: "photos", bg: "#fdf2f8", color: "#ec4899" },
+];
+
+// =============================================================================
+// Sub-components
+// =============================================================================
+
+// -- Quick Action Circle (colored icon in grid) --------------------------------
+
+function QuickActionCircle({
   label,
   iconName,
+  bg,
+  color,
   onPress,
 }: {
   label: string;
-  iconName: React.ComponentProps<typeof Icon>["name"];
+  iconName: IconName;
+  bg: string;
+  color: string;
   onPress: () => void;
 }) {
-  const { scaleStyle, onPressIn, onPressOut } = useScalePress(0.95);
+  const { scaleStyle, onPressIn, onPressOut } = useScalePress(0.92);
 
   return (
     <Pressable
@@ -80,16 +149,21 @@ function QuickActionChip({
       onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityLabel={label}
+      style={styles.quickActionItem}
     >
-      <Animated.View style={[styles.chipContainer, scaleStyle]}>
-        <Icon name={iconName} size={16} color={group.primary} />
-        <Text style={styles.chipLabel}>{label}</Text>
+      <Animated.View style={scaleStyle}>
+        <View style={[styles.quickActionCircle, { backgroundColor: bg }]}>
+          <Icon name={iconName} size={24} color={color} />
+        </View>
+        <Text style={styles.quickActionLabel} numberOfLines={1}>
+          {label}
+        </Text>
       </Animated.View>
     </Pressable>
   );
 }
 
-// -- Announcement Card (with staggered entrance) ----------------------------
+// -- Announcement Card --------------------------------------------------------
 
 function AnnouncementCard({
   announcement,
@@ -129,7 +203,139 @@ function AnnouncementCard({
   );
 }
 
-// -- Main Screen ------------------------------------------------------------
+// -- FAQ Accordion Item -------------------------------------------------------
+
+function FaqItem({
+  question,
+  answer,
+}: {
+  question: string;
+  answer: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  const toggle = useCallback(() => {
+    configureListAnimation();
+    setExpanded((prev) => {
+      Animated.timing(rotateAnim, {
+        toValue: prev ? 0 : 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+      return !prev;
+    });
+  }, [rotateAnim]);
+
+  const rotate = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "180deg"],
+  });
+
+  return (
+    <View style={styles.faqItem}>
+      <Pressable
+        onPress={toggle}
+        accessibilityRole="button"
+        accessibilityLabel={question}
+        style={styles.faqHeader}
+      >
+        <Text style={styles.faqQuestion}>{question}</Text>
+        <Animated.View style={{ transform: [{ rotate }] }}>
+          <Icon name="chevron-down" size={18} color={group.textMuted} />
+        </Animated.View>
+      </Pressable>
+      {expanded && (
+        <Text style={styles.faqAnswer}>{answer}</Text>
+      )}
+    </View>
+  );
+}
+
+// -- Timeline Stepper (horizontal) --------------------------------------------
+
+function TimelineStepper({
+  checkpoints,
+  lang,
+}: {
+  checkpoints: PortalInitData["portal"]["timelineCheckpoints"];
+  lang: "pl" | "en";
+}) {
+  if (!checkpoints.length) return null;
+
+  // Find the last completed step index
+  const lastCompleteIdx = checkpoints.reduce(
+    (acc, cp, idx) => (cp.isComplete ? idx : acc),
+    -1,
+  );
+  // Current step is the first incomplete one (or last if all complete)
+  const currentIdx = lastCompleteIdx + 1 < checkpoints.length ? lastCompleteIdx + 1 : lastCompleteIdx;
+
+  return (
+    <View style={styles.stepperContainer}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.stepperScroll}
+      >
+        {checkpoints.map((cp, idx) => {
+          const isComplete = cp.isComplete === true;
+          const isCurrent = idx === currentIdx && !isComplete;
+          const isFuture = !isComplete && !isCurrent;
+          const label = lang === "en" && cp.labelEn ? cp.labelEn : cp.label;
+
+          return (
+            <View key={idx} style={styles.stepperStep}>
+              {/* Connecting line (before dot, except for first) */}
+              {idx > 0 && (
+                <View
+                  style={[
+                    styles.stepperLine,
+                    { backgroundColor: isComplete || isCurrent ? group.primary : "#d1d5db" },
+                  ]}
+                />
+              )}
+              {/* Dot */}
+              <View
+                style={[
+                  styles.stepperDot,
+                  isComplete && styles.stepperDotComplete,
+                  isCurrent && styles.stepperDotCurrent,
+                  isFuture && styles.stepperDotFuture,
+                ]}
+              >
+                {isComplete ? (
+                  <Icon name="checkmark" size={12} color={group.white} />
+                ) : isCurrent ? (
+                  <View style={styles.stepperPulseInner} />
+                ) : null}
+              </View>
+              {/* Label + date */}
+              <Text
+                style={[
+                  styles.stepperLabel,
+                  (isComplete || isCurrent) && styles.stepperLabelActive,
+                ]}
+                numberOfLines={2}
+              >
+                {label}
+              </Text>
+              {cp.date && (
+                <Text style={styles.stepperDate}>
+                  {formatDate(cp.date, lang).replace(/\s\d{4}$/, "")}
+                </Text>
+              )}
+            </View>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+// =============================================================================
+// Main Screen
+// =============================================================================
 
 export default function OverviewScreen() {
   const insets = useSafeAreaInsets();
@@ -138,6 +344,10 @@ export default function OverviewScreen() {
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
   const [showAllAgenda, setShowAllAgenda] = useState(false);
+  const [ctaDismissed, setCtaDismissed] = useState(false);
+  const [coverError, setCoverError] = useState(false);
+  const announcementsRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollView>(null);
 
   const handleLogout = useCallback(() => {
     Alert.alert(t(lang, "group.logout"), t(lang, "group.logoutConfirm"), [
@@ -154,103 +364,68 @@ export default function OverviewScreen() {
     ]);
   }, [lang]);
 
-  // -- Slide-up entrance animations --
+  // -- Entrance animations --
   const headerSlide = useSlideUp(0, 12);
-  const countdownSlide = useSlideUp(80, 16);
+  const heroSlide = useSlideUp(80, 16);
   const quickActionsSlide = useSlideUp(160, 12);
 
-  // -- Data fetching --
+  // -- Data fetching via /init --
   const {
-    data: agenda,
-    isLoading: isAgendaLoading,
-    isError: isAgendaError,
-    refetch: refetchAgenda,
+    data: initData,
+    isLoading,
+    isError,
+    refetch,
   } = useQuery({
-    queryKey: ["group-agenda", trackingId],
+    queryKey: ["portal-init", trackingId],
     queryFn: async () => {
-      if (!trackingId) return [];
-      const res = await groupFetch<{ items: AgendaItemData[] }>(
-        trackingId,
-        "/agenda",
-      );
-      return res.data?.items ?? [];
+      if (!trackingId) return null;
+      const res = await fetchPortalInit(trackingId);
+      return res.status === "success" ? res.data : null;
     },
     enabled: !!trackingId,
+    staleTime: 60_000,
   });
 
   const {
-    data: announcements,
-    isLoading: isAnnouncementsLoading,
-    isError: isAnnouncementsError,
-    refetch: refetchAnnouncements,
-  } = useQuery({
-    queryKey: ["group-announcements", trackingId],
-    queryFn: async () => {
-      if (!trackingId) return [];
-      const res = await groupFetch<GroupAnnouncementData[]>(
-        trackingId,
-        "/announcements",
-      );
-      return res.data ?? [];
-    },
-    enabled: !!trackingId,
-  });
+    portal,
+    event,
+    hotel,
+    salesperson,
+    socialLinks,
+    faq,
+    agendaItems: agenda,
+    announcements,
+    totalGuestCount,
+  } = initData ?? {};
 
-  // P2-35: tick counter to force countdown re-render every 60s
+  // -- Tick counter for countdown refresh every 60s --
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const interval = setInterval(() => setTick((prev) => prev + 1), 60_000);
     return () => clearInterval(interval);
   }, []);
 
-  // Countdown: compute days until earliest agenda date
-  const eventDate = useMemo(() => {
-    if (!agenda?.length) return null;
-    const sorted = [...agenda].sort(
-      (a, b) =>
-        new Date(a.date ?? a.startTime ?? "").getTime() -
-        new Date(b.date ?? b.startTime ?? "").getTime(),
-    );
-    return sorted[0]?.date ? new Date(sorted[0].date) : null;
-  }, [agenda]);
-
-  // P1-14: strip time from both dates for accurate day-level countdown
+  // -- Countdown from event.checkInDate --
   const diffDays = useMemo(() => {
-    if (!eventDate) return null;
+    const dateStr = event?.checkInDate;
+    if (!dateStr) return null;
+    const target = new Date(dateStr);
+    if (isNaN(target.getTime())) return null;
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const target = new Date(eventDate);
     target.setHours(0, 0, 0, 0);
     return Math.ceil((target.getTime() - now.getTime()) / 86400000);
-  }, [eventDate, tick]);
+  }, [event?.checkInDate, tick]);
 
-  const countdownText = useMemo(() => {
-    if (diffDays === null) return "--";
-    if (diffDays > 0) return String(diffDays);
-    if (diffDays === 0) return t(lang, "group.eventInProgress");
-    return t(lang, "group.eventEnded");
-  }, [diffDays, lang]);
-
-  const countdownSubText = useMemo(() => {
-    if (diffDays === null) {
-      return trackingId ? "" : t(lang, "group.enterPinPrompt");
-    }
-    if (diffDays > 0) return t(lang, "group.countdownDaysLabel");
-    return "";
-  }, [diffDays, trackingId, lang]);
-
-  const isEventInProgress = diffDays === 0;
-
+  // -- Pull-to-refresh --
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchAgenda(), refetchAnnouncements()]);
+    await refetch();
     setRefreshing(false);
-  }, [refetchAgenda, refetchAnnouncements]);
+  }, [refetch]);
 
-  const isError = isAgendaError || isAnnouncementsError;
-  const isLoading = isAgendaLoading && isAnnouncementsLoading;
-
+  // -- Agenda slicing --
   const agendaItems = useMemo(() => {
     if (!agenda?.length) return [];
     return showAllAgenda ? agenda : agenda.slice(0, 5);
@@ -263,16 +438,37 @@ export default function OverviewScreen() {
 
   const handleQuickAction = useCallback((tab: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (tab === "_announcements") {
+      // Scroll to announcements section
+      announcementsRef.current?.measureLayout(
+        scrollRef.current?.getInnerViewNode() as any,
+        (_x: number, y: number) => {
+          scrollRef.current?.scrollTo({ y, animated: true });
+        },
+        () => {},
+      );
+      return;
+    }
     router.navigate(`/(group)/${tab}` as any);
   }, []);
+
+  // -- Cover image source --
+  const hasCover = !!hotel?.coverImageUrl && !coverError;
+
+  // -- Show CTA? --
+  const showCta =
+    !ctaDismissed &&
+    totalGuestCount === 0 &&
+    diffDays !== null &&
+    diffDays > 0;
 
   return (
     <View style={styles.container}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
           {
-            paddingTop: insets.top + spacing.lg,
             paddingBottom: insets.bottom + 100,
           },
         ]}
@@ -285,12 +481,22 @@ export default function OverviewScreen() {
           />
         }
       >
-        {/* ── Header Section ── */}
-        <Animated.View style={headerSlide}>
+        {/* ================================================================= */}
+        {/* A. HEADER: Hotel logo + name, lang toggle, logout                 */}
+        {/* ================================================================= */}
+        <Animated.View style={[headerSlide, { paddingTop: insets.top + spacing.md }]}>
           <View accessibilityRole="header" style={styles.headerRow}>
             <View style={styles.headerLeft}>
-              <Text style={styles.title}>
-                {t(lang, "group.portalTitle")}
+              {hotel?.logoUrl ? (
+                <Image
+                  source={{ uri: hotel.logoUrl }}
+                  style={styles.hotelLogo}
+                  resizeMode="contain"
+                  accessibilityLabel={hotel.name}
+                />
+              ) : null}
+              <Text style={styles.hotelNameHeader} numberOfLines={1}>
+                {hotel?.name ?? t(lang, "group.portalTitle")}
               </Text>
             </View>
             <View style={styles.headerActions}>
@@ -316,24 +522,26 @@ export default function OverviewScreen() {
           </View>
         </Animated.View>
 
-        {/* ── Loading State ── */}
+        {/* ================================================================= */}
+        {/* LOADING STATE                                                     */}
+        {/* ================================================================= */}
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator color={group.primary} size="large" />
+            <Text style={styles.loadingText}>{t(lang, "common.loading")}</Text>
           </View>
         )}
 
-        {/* ── Error State ── */}
-        {isError && (
+        {/* ================================================================= */}
+        {/* ERROR STATE                                                       */}
+        {/* ================================================================= */}
+        {isError && !isLoading && (
           <View style={styles.errorCard}>
             <Icon name="alert-circle-outline" size={32} color={group.textMuted} />
             <Text style={styles.errorText}>{t(lang, "common.error")}</Text>
             <Pressable
               style={styles.retryBtn}
-              onPress={() => {
-                refetchAgenda();
-                refetchAnnouncements();
-              }}
+              onPress={() => refetch()}
               accessibilityRole="button"
               accessibilityLabel={t(lang, "common.retry")}
             >
@@ -344,172 +552,376 @@ export default function OverviewScreen() {
           </View>
         )}
 
-        {/* ── Countdown Hero Card ── */}
-        <Animated.View style={countdownSlide}>
-          <LinearGradient
-            colors={[group.primary, group.primaryDark]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.countdownGradient}
-          >
-            <View
-              style={styles.countdownInner}
-              accessibilityLabel={`${t(lang, "group.countdown")}: ${countdownText}`}
-            >
-              {isEventInProgress && (
-                <View style={styles.pulseDotRow}>
-                  <View style={styles.pulseDot} />
-                  <Text style={styles.pulseLabel}>
-                    {t(lang, "group.eventInProgress")}
-                  </Text>
-                </View>
+        {/* ================================================================= */}
+        {/* B. HERO SECTION: Cover image + event info                         */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && initData && (
+          <Animated.View style={heroSlide}>
+            <View style={styles.heroContainer}>
+              {/* Cover image or gradient placeholder */}
+              {hasCover ? (
+                <Image
+                  source={{ uri: hotel!.coverImageUrl! }}
+                  style={styles.heroCoverImage}
+                  resizeMode="cover"
+                  onError={() => setCoverError(true)}
+                  accessibilityLabel={event?.name ?? "Cover"}
+                />
+              ) : (
+                <LinearGradient
+                  colors={[group.primary, group.primaryDark]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.heroCoverImage}
+                />
               )}
-              {!isEventInProgress && (
-                <>
-                  <Text style={styles.countdownValue}>{countdownText}</Text>
-                  {countdownSubText ? (
-                    <Text style={styles.countdownSub}>{countdownSubText}</Text>
-                  ) : null}
-                </>
-              )}
-              {diffDays === null && !isLoading && (
-                <View style={styles.countdownEmpty}>
-                  <Icon name="calendar-outline" size={40} color={group.overlayWhite40} />
-                  <Text style={styles.countdownEmptyText}>
-                    {t(lang, "group.countdown")}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </LinearGradient>
-        </Animated.View>
 
-        {/* ── Quick Actions Bar ── */}
-        <Animated.View style={quickActionsSlide}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickActionsRow}
-          >
-            {QUICK_ACTIONS.map((action) => (
-              <QuickActionChip
-                key={action.tab}
-                label={t(lang, action.labelKey)}
-                iconName={action.icon}
-                onPress={() => handleQuickAction(action.tab)}
+              {/* Dark gradient overlay */}
+              <LinearGradient
+                colors={["transparent", "rgba(0,0,0,0.7)"]}
+                style={styles.heroOverlay}
               />
-            ))}
-          </ScrollView>
-        </Animated.View>
 
-        {/* ── Agenda Section ── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {t(lang, "group.agenda")}
-            </Text>
-            {agenda && agenda.length > 5 && !showAllAgenda && (
-              <Pressable
-                onPress={handleSeeAll}
-                accessibilityRole="button"
-                accessibilityLabel={t(lang, "group.seeAllAgenda")}
-                style={styles.seeAllBtn}
-              >
-                <Text style={styles.seeAllText}>
-                  {t(lang, "group.seeAllAgenda")}
+              {/* Countdown badge (top-left) */}
+              {diffDays !== null && (
+                <View style={styles.heroCountdownBadge}>
+                  <Text style={styles.heroCountdownText}>
+                    {countdownLabel(diffDays, lang)}
+                  </Text>
+                </View>
+              )}
+
+              {/* Event name + address (bottom overlay) */}
+              <View style={styles.heroBottomOverlay}>
+                <Text style={styles.heroEventName} numberOfLines={2}>
+                  {event?.name ?? "\u2014"}
                 </Text>
-                <Icon name="chevron-forward" size={14} color={group.primary} />
-              </Pressable>
-            )}
-          </View>
-
-          {!agenda?.length ? (
-            <View style={styles.emptyCard}>
-              <Icon
-                name="calendar-outline"
-                size={36}
-                color={group.textMuted}
-              />
-              <Text style={styles.emptyText}>
-                {t(lang, "group.noAgenda")}
-              </Text>
+                {hotel?.address && (
+                  <View style={styles.heroAddressRow}>
+                    <Icon name="location-outline" size={14} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.heroAddress} numberOfLines={1}>
+                      {hotel.address}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-          ) : (
-            <View style={styles.timelineContainer}>
-              {agendaItems.map((item, idx) => (
-                <View key={item.id} style={styles.timelineRow}>
-                  {/* Timeline rail */}
-                  <View style={styles.timelineRail}>
-                    <View style={styles.timelineDot} />
-                    {idx < agendaItems.length - 1 && (
-                      <View style={styles.timelineLine} />
-                    )}
-                  </View>
-                  {/* Content */}
-                  <View style={styles.agendaCard}>
-                    <View style={styles.agendaTimePill}>
-                      <Text style={styles.agendaTimeText}>
-                        {item.startTime ?? "\u2014"}
-                      </Text>
-                    </View>
-                    <Text style={styles.agendaTitle}>{item.title}</Text>
-                    {item.location && (
-                      <View style={styles.agendaLocationRow}>
-                        <Icon
-                          name="location-outline"
-                          size={12}
-                          color={group.textMuted}
-                        />
-                        <Text style={styles.agendaLocation}>
-                          {item.location}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
+
+            {/* Below image: date range + guest count */}
+            <View style={styles.heroInfoRow}>
+              <View style={styles.heroInfoItem}>
+                <Icon name="calendar-outline" size={16} color={group.primary} />
+                <Text style={styles.heroInfoText}>
+                  {formatDate(event?.checkInDate, lang)}
+                  {event?.checkOutDate ? ` \u2013 ${formatDate(event.checkOutDate, lang)}` : ""}
+                </Text>
+              </View>
+              {(event?.guestCount ?? 0) > 0 && (
+                <View style={styles.heroInfoItem}>
+                  <Icon name="people-outline" size={16} color={group.primary} />
+                  <Text style={styles.heroInfoText}>
+                    {event!.guestCount} {t(lang, "overview.guestsLabel")}
+                  </Text>
                 </View>
-              ))}
+              )}
             </View>
-          )}
-        </View>
+          </Animated.View>
+        )}
 
-        {/* ── Announcements Section ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {t(lang, "group.announcements")}
-          </Text>
+        {/* ================================================================= */}
+        {/* C. TIMELINE STEPPER                                               */}
+        {/* ================================================================= */}
+        {!isLoading && portal?.timelineCheckpoints && portal.timelineCheckpoints.length > 0 && (
+          <TimelineStepper checkpoints={portal.timelineCheckpoints} lang={lang} />
+        )}
 
-          {!announcements?.length ? (
-            <View style={styles.emptyCard}>
-              <Icon
-                name="megaphone-outline"
-                size={36}
-                color={group.textMuted}
-              />
-              <Text style={styles.emptyText}>
-                {t(lang, "group.noAnnouncements")}
+        {/* ================================================================= */}
+        {/* D. CTA ALERT                                                      */}
+        {/* ================================================================= */}
+        {showCta && (
+          <View style={styles.ctaContainer}>
+            <View style={styles.ctaContent}>
+              <Icon name="people-outline" size={20} color={group.white} />
+              <Text style={styles.ctaText}>
+                {t(lang, "overview.cta.addGuests")}
               </Text>
             </View>
-          ) : (
-            <View style={styles.announcementsList}>
-              {announcements.map((a, idx) => (
-                <AnnouncementCard
-                  key={a.id}
-                  announcement={a}
-                  index={idx}
-                  lang={lang}
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.navigate("/(group)/guests" as any);
+              }}
+              style={styles.ctaBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "overview.cta.addGuests")}
+            >
+              <Icon name="arrow-forward" size={18} color={group.primary} />
+            </Pressable>
+            <Pressable
+              onPress={() => setCtaDismissed(true)}
+              style={styles.ctaDismiss}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.close")}
+            >
+              <Icon name="close" size={16} color="rgba(255,255,255,0.7)" />
+            </Pressable>
+          </View>
+        )}
+
+        {/* ================================================================= */}
+        {/* E. QUICK ACTIONS (colored grid)                                   */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && initData && (
+          <Animated.View style={quickActionsSlide}>
+            <View style={styles.quickActionsGrid}>
+              {QUICK_ACTIONS.map((action) => (
+                <QuickActionCircle
+                  key={action.tab}
+                  label={t(lang, action.labelKey)}
+                  iconName={action.icon}
+                  bg={action.bg}
+                  color={action.color}
+                  onPress={() => handleQuickAction(action.tab)}
                 />
               ))}
             </View>
-          )}
-        </View>
+          </Animated.View>
+        )}
+
+        {/* ================================================================= */}
+        {/* F. ANNOUNCEMENTS SECTION                                          */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && initData && (
+          <View ref={announcementsRef} style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {t(lang, "group.announcements")}
+            </Text>
+
+            {!announcements?.length ? (
+              <View style={styles.emptyCard}>
+                <Icon name="megaphone-outline" size={36} color={group.textMuted} />
+                <Text style={styles.emptyText}>
+                  {t(lang, "group.noAnnouncements")}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.announcementsList}>
+                {announcements.map((a, idx) => (
+                  <AnnouncementCard
+                    key={a.id}
+                    announcement={a}
+                    index={idx}
+                    lang={lang}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ================================================================= */}
+        {/* G. AGENDA PREVIEW                                                 */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && initData && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {t(lang, "group.agenda")}
+              </Text>
+              {agenda && agenda.length > 5 && !showAllAgenda && (
+                <Pressable
+                  onPress={handleSeeAll}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(lang, "group.seeAllAgenda")}
+                  style={styles.seeAllBtn}
+                >
+                  <Text style={styles.seeAllText}>
+                    {t(lang, "group.seeAllAgenda")}
+                  </Text>
+                  <Icon name="chevron-forward" size={14} color={group.primary} />
+                </Pressable>
+              )}
+            </View>
+
+            {!agenda?.length ? (
+              <View style={styles.emptyCard}>
+                <Icon name="calendar-outline" size={36} color={group.textMuted} />
+                <Text style={styles.emptyText}>
+                  {t(lang, "group.noAgenda")}
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.timelineContainer}>
+                {agendaItems.map((item, idx) => (
+                  <View key={item.id} style={styles.timelineRow}>
+                    {/* Timeline rail */}
+                    <View style={styles.timelineRail}>
+                      <View style={styles.timelineDot} />
+                      {idx < agendaItems.length - 1 && (
+                        <View style={styles.timelineLine} />
+                      )}
+                    </View>
+                    {/* Content */}
+                    <View style={styles.agendaCard}>
+                      <View style={styles.agendaTimePill}>
+                        <Text style={styles.agendaTimeText}>
+                          {item.startTime ?? "\u2014"}
+                        </Text>
+                      </View>
+                      <Text style={styles.agendaTitle}>{item.title}</Text>
+                      {item.location && (
+                        <View style={styles.agendaLocationRow}>
+                          <Icon name="location-outline" size={12} color={group.textMuted} />
+                          <Text style={styles.agendaLocation}>
+                            {item.location}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ================================================================= */}
+        {/* H. FAQ SECTION                                                    */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && faq && faq.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {t(lang, "overview.faq.title")}
+            </Text>
+            <View style={styles.faqList}>
+              {faq.map((item) => (
+                <FaqItem
+                  key={item.id}
+                  question={item.question}
+                  answer={item.answer}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* ================================================================= */}
+        {/* I. HOTEL CONTACT FOOTER                                           */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && initData && (
+          <View style={styles.contactFooter}>
+            <Text style={styles.contactTitle}>
+              {t(lang, "overview.contact.title")}
+            </Text>
+
+            {/* Hotel info */}
+            <View style={styles.contactRow}>
+              <Icon name="business-outline" size={18} color={group.primary} />
+              <Text style={styles.contactText}>{hotel?.name ?? "\u2014"}</Text>
+            </View>
+            {hotel?.address && (
+              <View style={styles.contactRow}>
+                <Icon name="location-outline" size={18} color={group.primary} />
+                <Text style={styles.contactText}>{hotel.address}</Text>
+              </View>
+            )}
+            {hotel?.phone && (
+              <Pressable
+                onPress={() => Linking.openURL(`tel:${hotel.phone}`)}
+                style={styles.contactRow}
+                accessibilityRole="link"
+              >
+                <Icon name="call-outline" size={18} color={group.primary} />
+                <Text style={[styles.contactText, styles.contactLink]}>
+                  {hotel.phone}
+                </Text>
+              </Pressable>
+            )}
+            {hotel?.email && (
+              <Pressable
+                onPress={() => Linking.openURL(`mailto:${hotel.email}`)}
+                style={styles.contactRow}
+                accessibilityRole="link"
+              >
+                <Icon name="mail-outline" size={18} color={group.primary} />
+                <Text style={[styles.contactText, styles.contactLink]}>
+                  {hotel.email}
+                </Text>
+              </Pressable>
+            )}
+
+            {/* Salesperson / event manager */}
+            {salesperson && (salesperson.name || salesperson.email || salesperson.phone) && (
+              <View style={styles.contactManagerSection}>
+                <Text style={styles.contactManagerLabel}>
+                  {t(lang, "overview.contact.eventManager")}
+                </Text>
+                {salesperson.name && (
+                  <View style={styles.contactRow}>
+                    <Icon name="person-outline" size={18} color={group.primary} />
+                    <Text style={styles.contactText}>{salesperson.name}</Text>
+                  </View>
+                )}
+                {salesperson.email && (
+                  <Pressable
+                    onPress={() => Linking.openURL(`mailto:${salesperson.email}`)}
+                    style={styles.contactRow}
+                    accessibilityRole="link"
+                  >
+                    <Icon name="mail-outline" size={18} color={group.primary} />
+                    <Text style={[styles.contactText, styles.contactLink]}>
+                      {salesperson.email}
+                    </Text>
+                  </Pressable>
+                )}
+                {salesperson.phone && (
+                  <Pressable
+                    onPress={() => Linking.openURL(`tel:${salesperson.phone}`)}
+                    style={styles.contactRow}
+                    accessibilityRole="link"
+                  >
+                    <Icon name="call-outline" size={18} color={group.primary} />
+                    <Text style={[styles.contactText, styles.contactLink]}>
+                      {salesperson.phone}
+                    </Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+
+            {/* Social links */}
+            {socialLinks && socialLinks.length > 0 && (
+              <View style={styles.socialRow}>
+                {socialLinks.map((link, idx) => (
+                  <Pressable
+                    key={idx}
+                    onPress={() => Linking.openURL(link.url)}
+                    accessibilityRole="link"
+                    accessibilityLabel={link.platform}
+                    style={styles.socialIconBtn}
+                  >
+                    <Icon name={socialIcon(link.platform)} size={22} color={group.primary} />
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {/* Powered by */}
+            <Text style={styles.poweredBy}>
+              {t(lang, "overview.poweredBy")}
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
 }
 
-// ---------------------------------------------------------------------------
+// =============================================================================
 // Styles
-// ---------------------------------------------------------------------------
+// =============================================================================
+
+const HERO_HEIGHT = 200;
 
 const styles = StyleSheet.create({
   container: {
@@ -517,8 +929,7 @@ const styles = StyleSheet.create({
     backgroundColor: group.bg,
   },
   scroll: {
-    paddingHorizontal: spacing["2xl"],
-    gap: spacing["2xl"],
+    gap: spacing.xl,
   },
 
   // ── Header ──
@@ -526,15 +937,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    paddingHorizontal: spacing["2xl"],
   },
   headerLeft: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
   },
-  title: {
-    fontSize: fontSize["2xl"],
-    fontFamily: "Inter_700Bold",
+  hotelLogo: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.sm,
+  },
+  hotelNameHeader: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_600SemiBold",
     color: group.text,
     letterSpacing: letterSpacing.tight,
+    flex: 1,
   },
   headerActions: {
     flexDirection: "row",
@@ -563,8 +984,14 @@ const styles = StyleSheet.create({
 
   // ── Loading ──
   loadingContainer: {
-    paddingVertical: spacing["4xl"],
+    paddingVertical: spacing["6xl"],
     alignItems: "center",
+    gap: spacing.md,
+  },
+  loadingText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
   },
 
   // ── Error ──
@@ -574,6 +1001,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: group.cardBorder,
     padding: spacing["2xl"],
+    marginHorizontal: spacing["2xl"],
     alignItems: "center",
     gap: spacing.md,
     ...shadow.md,
@@ -600,83 +1028,226 @@ const styles = StyleSheet.create({
     color: group.white,
   },
 
-  // ── Countdown Hero Card ──
-  countdownGradient: {
+  // ── Hero Section ──
+  heroContainer: {
+    height: HERO_HEIGHT,
     borderRadius: radius["2xl"],
-    ...shadow.lg,
     overflow: "hidden",
+    marginHorizontal: spacing["2xl"],
+    position: "relative",
+    ...shadow.lg,
   },
-  countdownInner: {
-    paddingVertical: spacing["3xl"],
-    paddingHorizontal: spacing["2xl"],
-    alignItems: "center",
-    gap: spacing.sm,
+  heroCoverImage: {
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    top: 0,
+    left: 0,
   },
-  countdownValue: {
-    fontSize: 56,
-    fontFamily: "Inter_700Bold",
+  heroOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: HERO_HEIGHT * 0.7,
+  },
+  heroCountdownBadge: {
+    position: "absolute",
+    top: spacing.md,
+    left: spacing.md,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    borderRadius: radius.full,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+  },
+  heroCountdownText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_600SemiBold",
     color: group.white,
-    letterSpacing: letterSpacing.snug,
   },
-  countdownSub: {
-    fontSize: fontSize.base,
-    fontFamily: "Inter_500Medium",
-    color: group.overlayWhite70,
-    textAlign: "center",
+  heroBottomOverlay: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.lg,
+    gap: spacing.xs,
   },
-  countdownEmpty: {
-    alignItems: "center",
-    gap: spacing.md,
-  },
-  countdownEmptyText: {
-    fontSize: fontSize.base,
-    fontFamily: "Inter_400Regular",
-    color: group.overlayWhite60,
-  },
-  pulseDotRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  pulseDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#34d399",
-  },
-  pulseLabel: {
+  heroEventName: {
     fontSize: fontSize["2xl"],
     fontFamily: "Inter_700Bold",
     color: group.white,
+    letterSpacing: letterSpacing.tight,
   },
-
-  // ── Quick Actions ──
-  quickActionsRow: {
+  heroAddressRow: {
     flexDirection: "row",
-    gap: spacing.sm,
-    paddingVertical: spacing.xs,
+    alignItems: "center",
+    gap: spacing.xs,
   },
-  chipContainer: {
+  heroAddress: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.8)",
+    flex: 1,
+  },
+  heroInfoRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.lg,
+    paddingHorizontal: spacing["2xl"],
+    paddingTop: spacing.md,
+  },
+  heroInfoItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: group.card,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: group.cardBorder,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    ...shadow.sm,
   },
-  chipLabel: {
+  heroInfoText: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_500Medium",
+    color: group.textSecondary,
+  },
+
+  // ── Timeline Stepper ──
+  stepperContainer: {
+    paddingLeft: spacing["2xl"],
+  },
+  stepperScroll: {
+    flexDirection: "row",
+    gap: 0,
+    paddingRight: spacing["2xl"],
+  },
+  stepperStep: {
+    alignItems: "center",
+    width: 80,
+    position: "relative",
+  },
+  stepperLine: {
+    position: "absolute",
+    top: 11,
+    right: 40,
+    left: -40,
+    height: 2,
+    zIndex: -1,
+  },
+  stepperDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+  },
+  stepperDotComplete: {
+    backgroundColor: group.primary,
+  },
+  stepperDotCurrent: {
+    backgroundColor: group.white,
+    borderWidth: 3,
+    borderColor: group.primary,
+  },
+  stepperDotFuture: {
+    backgroundColor: group.white,
+    borderWidth: 2,
+    borderColor: "#d1d5db",
+  },
+  stepperPulseInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: group.primary,
+  },
+  stepperLabel: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    textAlign: "center",
+    lineHeight: 14,
+  },
+  stepperLabelActive: {
+    fontFamily: "Inter_600SemiBold",
     color: group.text,
+  },
+  stepperDate: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    textAlign: "center",
+    marginTop: 2,
+  },
+
+  // ── CTA Alert ──
+  ctaContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: group.primary,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginHorizontal: spacing["2xl"],
+    ...shadow.md,
+  },
+  ctaContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  ctaText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
+    flex: 1,
+  },
+  ctaBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: group.white,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: spacing.sm,
+  },
+  ctaDismiss: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: spacing.xs,
+  },
+
+  // ── Quick Actions Grid ──
+  quickActionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-around",
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  quickActionItem: {
+    alignItems: "center",
+    width: 64,
+  },
+  quickActionCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+    ...shadow.sm,
+  },
+  quickActionLabel: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_500Medium",
+    color: group.textSecondary,
+    textAlign: "center",
+    lineHeight: 14,
   },
 
   // ── Section ──
   section: {
     gap: spacing.md,
+    paddingHorizontal: spacing["2xl"],
   },
   sectionHeader: {
     flexDirection: "row",
@@ -823,5 +1394,118 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: group.textMuted,
+  },
+
+  // ── FAQ ──
+  faqList: {
+    backgroundColor: group.card,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    overflow: "hidden",
+    ...shadow.sm,
+  },
+  faqItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: group.cardBorder,
+  },
+  faqHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    minHeight: 44,
+  },
+  faqQuestion: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+    flex: 1,
+    paddingRight: spacing.md,
+    lineHeight: 21,
+  },
+  faqAnswer: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
+    lineHeight: 20,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+
+  // ── Contact Footer ──
+  contactFooter: {
+    backgroundColor: group.card,
+    borderRadius: radius["2xl"],
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    padding: spacing["2xl"],
+    marginHorizontal: spacing["2xl"],
+    gap: spacing.md,
+    ...shadow.md,
+  },
+  contactTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+    marginBottom: spacing.xs,
+  },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    minHeight: 32,
+  },
+  contactText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
+    flex: 1,
+    lineHeight: 20,
+  },
+  contactLink: {
+    color: group.primary,
+    textDecorationLine: "underline",
+  },
+  contactManagerSection: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: group.cardBorder,
+    gap: spacing.sm,
+  },
+  contactManagerLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  socialRow: {
+    flexDirection: "row",
+    gap: spacing.md,
+    marginTop: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: group.cardBorder,
+  },
+  socialIconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: group.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  poweredBy: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    textAlign: "center",
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: group.cardBorder,
   },
 });

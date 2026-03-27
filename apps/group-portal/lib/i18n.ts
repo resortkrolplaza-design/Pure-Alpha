@@ -113,7 +113,20 @@ const pl: Record<string, string> = {
   "group.noDocumentsDesc": "Dokumenty do pobrania pojawią się tutaj",
   "group.noMessages": "Brak wiadomości",
   "group.noMessagesDesc": "Napisz pierwszą wiadomość do organizatora!",
-  "group.documentsCount": "dokumentów",
+  "group.documentsCount": "dokument\u00F3w",
+
+  // ── Overview (data-driven) ----
+  "overview.hero.daysUntil": "Za {n} dni",
+  "overview.hero.daysUntilOne": "Za 1 dzie\u0144",
+  "overview.hero.inProgress": "Trwa!",
+  "overview.hero.ended": "Zako\u0144czone",
+  "overview.cta.addGuests": "Uzupe\u0142nij list\u0119 go\u015Bci",
+  "overview.faq.title": "Cz\u0119sto zadawane pytania",
+  "overview.contact.title": "Kontakt z hotelem",
+  "overview.contact.eventManager": "Opiekun wydarzenia",
+  "overview.quickAnnouncements": "Og\u0142oszenia",
+  "overview.guestsLabel": "go\u015Bci",
+  "overview.poweredBy": "Powered by Pure Alpha",
 };
 
 const en: Record<string, string> = {
@@ -226,6 +239,19 @@ const en: Record<string, string> = {
   "group.noMessages": "No messages",
   "group.noMessagesDesc": "Write the first message to the organizer!",
   "group.documentsCount": "documents",
+
+  // ── Overview (data-driven) ----
+  "overview.hero.daysUntil": "In {n} days",
+  "overview.hero.daysUntilOne": "In 1 day",
+  "overview.hero.inProgress": "In progress!",
+  "overview.hero.ended": "Ended",
+  "overview.cta.addGuests": "Complete your guest list",
+  "overview.faq.title": "Frequently asked questions",
+  "overview.contact.title": "Hotel contact",
+  "overview.contact.eventManager": "Event manager",
+  "overview.quickAnnouncements": "Announcements",
+  "overview.guestsLabel": "guests",
+  "overview.poweredBy": "Powered by Pure Alpha",
 };
 
 const dicts: Record<Lang, Record<string, string>> = { pl, en };
