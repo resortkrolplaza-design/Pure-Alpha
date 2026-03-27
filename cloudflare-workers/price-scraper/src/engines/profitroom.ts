@@ -848,7 +848,7 @@ export async function scrapeProfitroomFull(
   }
 
   // Calculate calendar date range
-  const calendarDays = params.calendarDays ?? 90;
+  const calendarDays = params.calendarDays ?? 120;
   const now = new Date();
   const calendarFrom = formatDate(now);
   const calendarTo = formatDate(new Date(now.getTime() + calendarDays * 86_400_000));
@@ -1217,7 +1217,7 @@ export async function scrapeProfitroomCalendarFallback(
     // P1-4 FIX: reduced from 5→3 concurrent (throttled at 200ms each, less burst pressure)
     const BATCH_SIZE = 3;
     const BATCH_DELAY = 300;
-    const daysToFetch = params.calendarDays ?? 60;
+    const daysToFetch = params.calendarDays ?? 120;
     // Use checkIn from params as start date (supports offset for multi-call loop)
     const startDate = new Date(params.checkIn);
 
