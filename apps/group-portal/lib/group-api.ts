@@ -57,6 +57,15 @@ export async function groupFetch<T>(
   }
 }
 
+export async function loginByLink(
+  trackingId: string,
+): Promise<ApiResponse<{ token: string; role: string; hotelName?: string; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
+  return groupFetch(trackingId, "/auth-by-link", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
 export async function verifyPin(
   trackingId: string,
   pin: string,

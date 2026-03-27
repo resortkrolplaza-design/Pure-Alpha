@@ -8,7 +8,8 @@ import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { group } from "@/lib/tokens";
 import { useAppStore } from "@/lib/store";
-import { getAppMode, getGroupTrackingId, getGroupToken, isTokenExpired, logout } from "@/lib/auth";
+import { getAppMode, getGroupTrackingId, getGroupToken, isTokenExpired, logout, setGroupToken, setGroupTrackingId as persistGroupId, setAppMode, setRsvpToken } from "@/lib/auth";
+import { loginByLink } from "@/lib/group-api";
 
 export default function EntryScreen() {
   const setMode = useAppStore((s) => s.setMode);
@@ -21,6 +22,30 @@ export default function EntryScreen() {
     return match?.[1] ?? null;
   }, []);
 
+  // Deep link auto-login: call /auth-by-link, fall back to PIN screen on failure
+  const handleDeepLinkLogin = useCallback(async (trackingId: string) => {
+    try {
+      const res = await loginByLink(trackingId);
+      if (res.status === "success" && res.data?.token) {
+        await Promise.all([
+          setGroupToken(res.data.token),
+          persistGroupId(trackingId),
+          setAppMode("group"),
+          ...(res.data.rsvpToken ? [setRsvpToken(res.data.rsvpToken)] : []),
+        ]);
+        useAppStore.getState().setGroupTrackingId(trackingId);
+        useAppStore.getState().setAuthenticated(true);
+        useAppStore.getState().setMode("group");
+        router.replace("/(group)/overview");
+        return;
+      }
+      // auth-by-link failed (e.g. PIN required) -- fall back to PIN screen
+      router.replace({ pathname: "/(auth)/pin", params: { trackingId } });
+    } catch {
+      router.replace({ pathname: "/(auth)/pin", params: { trackingId } });
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       // Check deep link first
@@ -28,8 +53,8 @@ export default function EntryScreen() {
       const deepLinkTrackingId = extractTrackingId(initialUrl);
 
       if (deepLinkTrackingId) {
-        // Deep link with trackingId -- go directly to PIN with pre-filled ID
-        router.replace({ pathname: "/(auth)/pin", params: { trackingId: deepLinkTrackingId } });
+        // Deep link with trackingId -- auto-login with zero inputs
+        await handleDeepLinkLogin(deepLinkTrackingId);
         return;
       }
 
@@ -53,18 +78,18 @@ export default function EntryScreen() {
 
       setReady(true);
     })();
-  }, [setMode, extractTrackingId]);
+  }, [setMode, extractTrackingId, handleDeepLinkLogin]);
 
   // Listen for warm-start deep links
   useEffect(() => {
     const sub = Linking.addEventListener("url", (event) => {
       const trackingId = extractTrackingId(event.url);
       if (trackingId) {
-        router.replace({ pathname: "/(auth)/pin", params: { trackingId } });
+        handleDeepLinkLogin(trackingId);
       }
     });
     return () => sub.remove();
-  }, [extractTrackingId]);
+  }, [extractTrackingId, handleDeepLinkLogin]);
 
   useEffect(() => {
     if (ready) {

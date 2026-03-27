@@ -1,11 +1,12 @@
 // =============================================================================
-// PIN Entry -- Group Portal (matches web portal design)
+// PIN Entry -- Group Portal (2-section: link instruction + collapsible PIN)
 // =============================================================================
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   View, Text, Pressable, StyleSheet, TextInput, Alert,
   ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
+  LayoutAnimation, UIManager,
 } from "react-native";
 import { router, useNavigation, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +20,11 @@ import { verifyPin } from "@/lib/group-api";
 
 const PIN_LENGTH = 6;
 
+// Enable LayoutAnimation on Android
+if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 export default function PinScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -31,14 +37,27 @@ export default function PinScreen() {
   const [email, setEmail] = useState("");
   const [trackingId, setTrackingId] = useState(params.trackingId ?? "");
   const [loading, setLoading] = useState(false);
+  const [pinFormExpanded, setPinFormExpanded] = useState(false);
   const pinInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     if (params.trackingId) setTrackingId(params.trackingId);
   }, [params.trackingId]);
 
+  // If we arrived with a trackingId (from deep link fallback), expand PIN form
+  useEffect(() => {
+    if (params.trackingId) {
+      setPinFormExpanded(true);
+    }
+  }, [params.trackingId]);
+
   const hotelName = params.hotelName ?? "";
   const hasTrackingId = !!trackingId.trim();
+
+  const togglePinForm = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setPinFormExpanded((prev) => !prev);
+  }, []);
 
   const handlePinChange = (text: string) => {
     // Only allow digits, max PIN_LENGTH
@@ -111,90 +130,122 @@ export default function PinScreen() {
             </Pressable>
           )}
 
-          {/* Card */}
+          {hotelName ? (
+            <Text style={styles.hotelName}>{hotelName}</Text>
+          ) : null}
+
+          {/* Card 1: Open link from email */}
           <View style={styles.card}>
-            {hotelName ? (
-              <Text style={styles.hotelName}>{hotelName}</Text>
-            ) : null}
-
-            <View style={styles.lockCircle}>
-              <Icon name="lock-closed-outline" size={28} color={group.primary} />
+            <View style={styles.mailCircle}>
+              <Icon name="mail-outline" size={28} color={group.primary} />
             </View>
+            <Text style={styles.cardTitle}>{t(lang, "pin.openLinkTitle")}</Text>
+            <Text style={styles.cardDesc}>{t(lang, "pin.openLinkDesc")}</Text>
+          </View>
 
-            <Text style={styles.title}>{t(lang, "pin.protectedByPin")}</Text>
-            <Text style={styles.subtitle}>{t(lang, "pin.enterCodeFromHotel")}</Text>
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{t(lang, "pin.orLoginWithPin")}</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
-            {/* Email input */}
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>{t(lang, "pin.yourEmail")}</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="jan@example.com"
-                placeholderTextColor={group.textMuted}
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                maxLength={320}
+          {/* Card 2: PIN login (collapsible) */}
+          <View style={styles.card}>
+            <Pressable
+              onPress={togglePinForm}
+              style={styles.expandHeader}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "pin.loginWithPin")}
+              accessibilityState={{ expanded: pinFormExpanded }}
+            >
+              <View style={styles.lockCircle}>
+                <Icon name="lock-closed-outline" size={22} color={group.primary} />
+              </View>
+              <Text style={styles.expandTitle}>{t(lang, "pin.loginWithPin")}</Text>
+              <Icon
+                name={pinFormExpanded ? "chevron-up" : "chevron-down"}
+                size={20}
+                color={group.textMuted}
               />
-              <Text style={styles.inputHint}>{t(lang, "pin.emailHint")}</Text>
-            </View>
+            </Pressable>
 
-            {/* TrackingId input (hidden when from deep link) */}
-            {!hasTrackingId && (
-              <View style={styles.inputSection}>
-                <Text style={styles.inputLabel}>{t(lang, "pin.eventId")}</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder={t(lang, "pin.trackingIdPlaceholder")}
-                  placeholderTextColor={group.textMuted}
-                  value={trackingId}
-                  onChangeText={setTrackingId}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  maxLength={200}
-                />
+            {pinFormExpanded && (
+              <View style={styles.pinFormBody}>
+                {/* Email input */}
+                <View style={styles.inputSection}>
+                  <Text style={styles.inputLabel}>{t(lang, "pin.yourEmail")}</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="jan@example.com"
+                    placeholderTextColor={group.textMuted}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    maxLength={320}
+                  />
+                  <Text style={styles.inputHint}>{t(lang, "pin.emailHint")}</Text>
+                </View>
+
+                {/* TrackingId input (hidden when pre-filled from deep link) */}
+                {!hasTrackingId && (
+                  <View style={styles.inputSection}>
+                    <Text style={styles.inputLabel}>{t(lang, "pin.eventId")}</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholder={t(lang, "pin.trackingIdPlaceholder")}
+                      placeholderTextColor={group.textMuted}
+                      value={trackingId}
+                      onChangeText={setTrackingId}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      maxLength={200}
+                    />
+                  </View>
+                )}
+
+                {/* PIN dots -- tap to focus hidden input */}
+                <View style={styles.dotsContainer}>
+                  <Text style={styles.pinLabel}>{t(lang, "pin.protectedByPin")}</Text>
+                  <Pressable
+                    onPress={() => pinInputRef.current?.focus()}
+                    style={styles.dots}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(lang, "auth.enterPin")}
+                  >
+                    {Array.from({ length: PIN_LENGTH }).map((_, i) => (
+                      <View
+                        key={i}
+                        style={[styles.dot, i < pin.length && styles.dotFilled]}
+                      />
+                    ))}
+                  </Pressable>
+
+                  {/* Hidden TextInput that captures keyboard input */}
+                  <TextInput
+                    ref={pinInputRef}
+                    style={styles.hiddenInput}
+                    value={pin}
+                    onChangeText={handlePinChange}
+                    keyboardType="number-pad"
+                    maxLength={PIN_LENGTH}
+                    autoFocus={false}
+                    caretHidden
+                    contextMenuHidden
+                  />
+
+                  <Text style={styles.pinHint}>{t(lang, "pin.codeSentByEmail")}</Text>
+                  <Pressable
+                    onPress={() => Alert.alert(t(lang, "pin.forgotPin"), t(lang, "pin.forgotPinHint"))}
+                    accessibilityRole="button"
+                    style={styles.forgotBtn}
+                  >
+                    <Text style={styles.forgotLink}>{t(lang, "pin.forgotPin")}</Text>
+                  </Pressable>
+                </View>
               </View>
             )}
-
-            {/* PIN dots -- tap to focus hidden input */}
-            <View style={styles.dotsContainer}>
-              <Pressable
-                onPress={() => pinInputRef.current?.focus()}
-                style={styles.dots}
-                accessibilityRole="button"
-                accessibilityLabel={t(lang, "auth.enterPin")}
-              >
-                {Array.from({ length: PIN_LENGTH }).map((_, i) => (
-                  <View
-                    key={i}
-                    style={[styles.dot, i < pin.length && styles.dotFilled]}
-                  />
-                ))}
-              </Pressable>
-
-              {/* Hidden TextInput that captures keyboard input */}
-              <TextInput
-                ref={pinInputRef}
-                style={styles.hiddenInput}
-                value={pin}
-                onChangeText={handlePinChange}
-                keyboardType="number-pad"
-                maxLength={PIN_LENGTH}
-                autoFocus={false}
-                caretHidden
-                contextMenuHidden
-              />
-
-              <Text style={styles.pinHint}>{t(lang, "pin.codeSentByEmail")}</Text>
-              <Pressable
-                onPress={() => Alert.alert(t(lang, "pin.forgotPin"), t(lang, "pin.forgotPinHint"))}
-                accessibilityRole="button"
-                style={styles.forgotBtn}
-              >
-                <Text style={styles.forgotLink}>{t(lang, "pin.forgotPin")}</Text>
-              </Pressable>
-            </View>
           </View>
 
           {loading && (
@@ -231,6 +282,16 @@ const styles = StyleSheet.create({
   },
   backText: { fontSize: fontSize.base, color: group.primary, fontFamily: "Inter_500Medium" },
 
+  hotelName: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_700Bold",
+    color: group.text,
+    letterSpacing: letterSpacing.tight,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+  },
+
+  // -- Card shared --
   card: {
     width: "100%",
     maxWidth: 400,
@@ -243,30 +304,24 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     ...shadow.md,
   },
-  hotelName: {
-    fontSize: fontSize.lg,
-    fontFamily: "Inter_700Bold",
-    color: group.text,
-    letterSpacing: letterSpacing.tight,
-    textAlign: "center",
-  },
-  lockCircle: {
+
+  // -- Card 1: Open link instruction --
+  mailCircle: {
     width: 56,
     height: 56,
     borderRadius: radius.full,
     backgroundColor: group.primaryLight,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: spacing.sm,
   },
-  title: {
+  cardTitle: {
     fontSize: fontSize.xl,
     fontFamily: "Inter_700Bold",
     color: group.text,
     letterSpacing: letterSpacing.tight,
     textAlign: "center",
   },
-  subtitle: {
+  cardDesc: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_400Regular",
     color: group.textSecondary,
@@ -274,7 +329,56 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  inputSection: { width: "100%", gap: spacing.xs, marginTop: spacing.sm },
+  // -- Divider --
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 400,
+    marginVertical: spacing.xl,
+    gap: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: group.cardBorder,
+  },
+  dividerText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+  },
+
+  // -- Card 2: Collapsible PIN form --
+  expandHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    gap: spacing.md,
+    minHeight: 44,
+  },
+  lockCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    backgroundColor: group.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  expandTitle: {
+    flex: 1,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+
+  pinFormBody: {
+    width: "100%",
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+
+  inputSection: { width: "100%", gap: spacing.xs },
   inputLabel: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_600SemiBold",
@@ -300,7 +404,14 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 
-  dotsContainer: { alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
+  dotsContainer: { alignItems: "center", gap: spacing.sm, marginTop: spacing.sm },
+  pinLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+    textAlign: "center",
+    marginBottom: spacing.xs,
+  },
   dots: { flexDirection: "row", gap: spacing.md },
   dot: {
     width: 40,

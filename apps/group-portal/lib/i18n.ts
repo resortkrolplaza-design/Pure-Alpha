@@ -70,6 +70,10 @@ const pl: Record<string, string> = {
   "pin.codeSentByEmail": "Kod PIN został wysłany w wiadomości email od hotelu",
   "pin.forgotPin": "Nie pamiętam PIN-u",
   "pin.forgotPinHint": "Skontaktuj się z recepcją hotelu lub organizatorem wydarzenia, aby otrzymać nowy PIN.",
+  "pin.openLinkTitle": "Otwórz link z emaila",
+  "pin.openLinkDesc": "Sprawdź email od hotelu i kliknij link do portalu wydarzenia",
+  "pin.orLoginWithPin": "lub zaloguj się przez PIN",
+  "pin.loginWithPin": "Zaloguj się przez PIN",
 
   // ── Messages ----
   "messages.title": "Wiadomości",
@@ -149,6 +153,10 @@ const en: Record<string, string> = {
   "pin.codeSentByEmail": "PIN code was sent in an email from the hotel",
   "pin.forgotPin": "I forgot my PIN",
   "pin.forgotPinHint": "Contact the hotel reception or event organizer to receive a new PIN.",
+  "pin.openLinkTitle": "Open link from email",
+  "pin.openLinkDesc": "Check your email from the hotel and tap the link to the event portal",
+  "pin.orLoginWithPin": "or log in with PIN",
+  "pin.loginWithPin": "Log in with PIN",
 
   // ── Messages ----
   "messages.title": "Messages",
