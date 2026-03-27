@@ -2,7 +2,7 @@
 // PIN Entry -- Group Portal (matches web portal design)
 // =============================================================================
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View, Text, Pressable, StyleSheet, TextInput, Alert,
   ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator,
@@ -28,12 +28,11 @@ export default function PinScreen() {
   const params = useLocalSearchParams<{ trackingId?: string; hotelName?: string }>();
 
   const [pin, setPin] = useState("");
-  const pinRef = useRef("");
   const [email, setEmail] = useState("");
   const [trackingId, setTrackingId] = useState(params.trackingId ?? "");
   const [loading, setLoading] = useState(false);
+  const pinInputRef = useRef<TextInput>(null);
 
-  // Pre-fill trackingId from deep link params
   useEffect(() => {
     if (params.trackingId) setTrackingId(params.trackingId);
   }, [params.trackingId]);
@@ -41,60 +40,52 @@ export default function PinScreen() {
   const hotelName = params.hotelName ?? "";
   const hasTrackingId = !!trackingId.trim();
 
-  const handleDigit = useCallback(async (digit: string) => {
-    if (digit === "DEL") {
-      const shortened = pinRef.current.slice(0, -1);
-      pinRef.current = shortened;
-      setPin(shortened);
-      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      return;
+  const handlePinChange = (text: string) => {
+    // Only allow digits, max PIN_LENGTH
+    const digits = text.replace(/\D/g, "").slice(0, PIN_LENGTH);
+    setPin(digits);
+
+    if (digits.length === PIN_LENGTH) {
+      handleSubmit(digits);
     }
-    if (digit === "" || pinRef.current.length >= PIN_LENGTH) return;
+  };
 
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const newPin = pinRef.current + digit;
-    pinRef.current = newPin;
-    setPin(newPin);
-
-    if (newPin.length === PIN_LENGTH) {
-      setLoading(true);
-      try {
-        if (!trackingId.trim()) {
-          Alert.alert(t(lang, "auth.error"), t(lang, "pin.enterTrackingId"));
-          pinRef.current = "";
-          setPin("");
-          return;
-        }
-        const res = await verifyPin(trackingId.trim(), newPin, email.trim().toLowerCase());
-        if (res.status === "success" && res.data?.token) {
-          setGroupTrackingId(trackingId.trim());
-          const persistOps = [
-            setGroupToken(res.data.token),
-            persistGroupId(trackingId.trim()),
-            setAppMode("group"),
-          ];
-          if (res.data.rsvpToken) {
-            persistOps.push(setRsvpToken(res.data.rsvpToken));
-          }
-          await Promise.all(persistOps);
-          useAppStore.getState().setAuthenticated(true);
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          router.replace("/(group)/overview");
-        } else {
-          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          Alert.alert(t(lang, "auth.error"), res.errorMessage || t(lang, "pin.invalidPin"));
-          pinRef.current = "";
-          setPin("");
-        }
-      } catch {
-        Alert.alert(t(lang, "auth.error"), t(lang, "common.error"));
-        pinRef.current = "";
+  const handleSubmit = async (pinValue: string) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      if (!trackingId.trim()) {
+        Alert.alert(t(lang, "auth.error"), t(lang, "pin.enterTrackingId"));
         setPin("");
-      } finally {
-        setLoading(false);
+        return;
       }
+      const res = await verifyPin(trackingId.trim(), pinValue, email.trim().toLowerCase());
+      if (res.status === "success" && res.data?.token) {
+        setGroupTrackingId(trackingId.trim());
+        const persistOps = [
+          setGroupToken(res.data.token),
+          persistGroupId(trackingId.trim()),
+          setAppMode("group"),
+        ];
+        if (res.data.rsvpToken) {
+          persistOps.push(setRsvpToken(res.data.rsvpToken));
+        }
+        await Promise.all(persistOps);
+        useAppStore.getState().setAuthenticated(true);
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.replace("/(group)/overview");
+      } else {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert(t(lang, "auth.error"), res.errorMessage || t(lang, "pin.invalidPin"));
+        setPin("");
+      }
+    } catch {
+      Alert.alert(t(lang, "auth.error"), t(lang, "common.error"));
+      setPin("");
+    } finally {
+      setLoading(false);
     }
-  }, [trackingId, email, lang, setGroupTrackingId]);
+  };
 
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
@@ -122,17 +113,14 @@ export default function PinScreen() {
 
           {/* Card */}
           <View style={styles.card}>
-            {/* Hotel name */}
             {hotelName ? (
               <Text style={styles.hotelName}>{hotelName}</Text>
             ) : null}
 
-            {/* Lock icon */}
             <View style={styles.lockCircle}>
               <Icon name="lock-closed-outline" size={28} color={group.primary} />
             </View>
 
-            {/* Title */}
             <Text style={styles.title}>{t(lang, "pin.protectedByPin")}</Text>
             <Text style={styles.subtitle}>{t(lang, "pin.enterCodeFromHotel")}</Text>
 
@@ -152,7 +140,7 @@ export default function PinScreen() {
               <Text style={styles.inputHint}>{t(lang, "pin.emailHint")}</Text>
             </View>
 
-            {/* TrackingId input (shown only if not from deep link) */}
+            {/* TrackingId input (hidden when from deep link) */}
             {!hasTrackingId && (
               <View style={styles.inputSection}>
                 <Text style={styles.inputLabel}>{t(lang, "pin.eventId")}</Text>
@@ -169,51 +157,44 @@ export default function PinScreen() {
               </View>
             )}
 
-            {/* PIN Dots */}
+            {/* PIN dots -- tap to focus hidden input */}
             <View style={styles.dotsContainer}>
-              <View style={styles.dots}>
+              <Pressable
+                onPress={() => pinInputRef.current?.focus()}
+                style={styles.dots}
+                accessibilityRole="button"
+                accessibilityLabel={t(lang, "auth.enterPin")}
+              >
                 {Array.from({ length: PIN_LENGTH }).map((_, i) => (
                   <View
                     key={i}
-                    style={[
-                      styles.dot,
-                      i < pin.length && styles.dotFilled,
-                    ]}
+                    style={[styles.dot, i < pin.length && styles.dotFilled]}
                   />
                 ))}
-              </View>
+              </Pressable>
+
+              {/* Hidden TextInput that captures keyboard input */}
+              <TextInput
+                ref={pinInputRef}
+                style={styles.hiddenInput}
+                value={pin}
+                onChangeText={handlePinChange}
+                keyboardType="number-pad"
+                maxLength={PIN_LENGTH}
+                autoFocus={false}
+                caretHidden
+                contextMenuHidden
+              />
+
               <Text style={styles.pinHint}>{t(lang, "pin.codeSentByEmail")}</Text>
               <Pressable
                 onPress={() => Alert.alert(t(lang, "pin.forgotPin"), t(lang, "pin.forgotPinHint"))}
                 accessibilityRole="button"
+                style={styles.forgotBtn}
               >
                 <Text style={styles.forgotLink}>{t(lang, "pin.forgotPin")}</Text>
               </Pressable>
             </View>
-          </View>
-
-          {/* Keypad */}
-          <View style={styles.keypad}>
-            {["1","2","3","4","5","6","7","8","9","","0","DEL"].map((digit, i) => (
-              <Pressable
-                key={i}
-                style={({ pressed }) => [
-                  styles.key,
-                  digit === "" && styles.keyEmpty,
-                  pressed && digit !== "" && styles.keyPressed,
-                ]}
-                onPress={() => handleDigit(digit)}
-                disabled={digit === "" || loading}
-                accessibilityRole="button"
-                accessibilityLabel={digit === "DEL" ? t(lang, "common.delete") : digit}
-              >
-                {digit === "DEL" ? (
-                  <Icon name="backspace-outline" size={24} color={group.text} />
-                ) : (
-                  <Text style={styles.keyText}>{digit}</Text>
-                )}
-              </Pressable>
-            ))}
           </View>
 
           {loading && (
@@ -222,7 +203,6 @@ export default function PinScreen() {
             </View>
           )}
 
-          {/* Footer */}
           <Text style={styles.footer}>Powered by Pure Alpha</Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -251,7 +231,6 @@ const styles = StyleSheet.create({
   },
   backText: { fontSize: fontSize.base, color: group.primary, fontFamily: "Inter_500Medium" },
 
-  // Card (matches web portal)
   card: {
     width: "100%",
     maxWidth: 400,
@@ -275,7 +254,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.full,
-    backgroundColor: "rgba(99,102,241,0.08)",
+    backgroundColor: group.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     marginTop: spacing.sm,
@@ -295,7 +274,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Email + trackingId inputs
   inputSection: { width: "100%", gap: spacing.xs, marginTop: spacing.sm },
   inputLabel: {
     fontSize: fontSize.sm,
@@ -322,7 +300,6 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 
-  // PIN dots
   dotsContainer: { alignItems: "center", gap: spacing.sm, marginTop: spacing.lg },
   dots: { flexDirection: "row", gap: spacing.md },
   dot: {
@@ -337,6 +314,12 @@ const styles = StyleSheet.create({
     backgroundColor: group.primary,
     borderColor: group.primary,
   },
+  hiddenInput: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
   pinHint: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
@@ -344,35 +327,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: spacing.xs,
   },
+  forgotBtn: { minHeight: 44, justifyContent: "center" },
   forgotLink: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_500Medium",
     color: group.primary,
     textAlign: "center",
-  },
-
-  // Keypad
-  keypad: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    width: 280,
-    justifyContent: "center",
-    marginTop: spacing.xl,
-  },
-  key: {
-    width: 72,
-    height: 72,
-    borderRadius: radius.full,
-    alignItems: "center",
-    justifyContent: "center",
-    margin: 6,
-  },
-  keyEmpty: { opacity: 0 },
-  keyPressed: { backgroundColor: group.surface },
-  keyText: {
-    fontSize: fontSize["2xl"],
-    fontFamily: "Inter_500Medium",
-    color: group.text,
   },
 
   loadingOverlay: { marginTop: spacing.lg },
