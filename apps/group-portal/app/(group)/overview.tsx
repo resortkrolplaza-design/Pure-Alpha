@@ -103,6 +103,44 @@ function countdownLabel(diffDays: number, lang: "pl" | "en"): string {
   return t(lang, "overview.hero.daysUntil").replace("{n}", String(diffDays));
 }
 
+// =============================================================================
+// Live Event Banner — pulsing green dot + "Event is live!" text
+// =============================================================================
+
+function LiveEventBanner({ lang }: { lang: "pl" | "en" }) {
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
+
+  return (
+    <View
+      style={styles.liveBanner}
+      accessibilityRole="text"
+      accessibilityLabel={t(lang, "overview.liveEvent")}
+    >
+      <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
+      <Text style={styles.liveBannerText}>{t(lang, "overview.liveEvent")}</Text>
+    </View>
+  );
+}
+
 /** Map social platform names to Ionicon names */
 function socialIcon(platform: string): IconName {
   const p = platform.toLowerCase();
@@ -736,9 +774,12 @@ function OverviewScreenInner() {
     }
   }, [trackingId]);
 
-  // -- Rating modal (participant, post-event) --
+  // -- Rating modal (participant, post-event) -- P2-4: 4 categories
   const [ratingVisible, setRatingVisible] = useState(false);
-  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingOverall, setRatingOverall] = useState(0);
+  const [ratingOrganization, setRatingOrganization] = useState(0);
+  const [ratingFood, setRatingFood] = useState(0);
+  const [ratingRooms, setRatingRooms] = useState(0);
   const [ratingComment, setRatingComment] = useState("");
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
   const ratingChecked = useRef(false);
@@ -752,13 +793,21 @@ function OverviewScreenInner() {
     }).catch(() => {});
   }, [isParticipant, diffDays, trackingId]);
 
+  const canSubmitRating = ratingOverall > 0;
+
   const handleRatingSubmit = useCallback(async () => {
-    if (ratingValue === 0 || ratingSubmitting || !trackingId) return;
+    if (!canSubmitRating || ratingSubmitting || !trackingId) return;
     setRatingSubmitting(true);
     try {
       await groupFetch(trackingId, "/rating", {
         method: "POST",
-        body: JSON.stringify({ rating: ratingValue, comment: ratingComment.trim() || undefined }),
+        body: JSON.stringify({
+          rating: ratingOverall,
+          organization: ratingOrganization || undefined,
+          food: ratingFood || undefined,
+          rooms: ratingRooms || undefined,
+          comment: ratingComment.trim() || undefined,
+        }),
       });
       await setSecureItem(`rated_${trackingId}`, "1");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -767,7 +816,7 @@ function OverviewScreenInner() {
     }
     setRatingVisible(false);
     setRatingSubmitting(false);
-  }, [ratingValue, ratingComment, ratingSubmitting, trackingId]);
+  }, [canSubmitRating, ratingOverall, ratingOrganization, ratingFood, ratingRooms, ratingComment, ratingSubmitting, trackingId]);
 
   return (
     <View style={styles.container}>
@@ -861,6 +910,13 @@ function OverviewScreenInner() {
               </Text>
             </Pressable>
           </View>
+        )}
+
+        {/* ================================================================= */}
+        {/* LIVE EVENT BANNER                                                 */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && diffDays !== null && (diffDays === 0 || diffDays === -1) && (
+          <LiveEventBanner lang={lang} />
         )}
 
         {/* ================================================================= */}
@@ -1347,23 +1403,77 @@ function OverviewScreenInner() {
         </Modal>
       )}
 
-      {/* Rating Modal (participant, post-event) */}
+      {/* Rating Modal (participant, post-event) -- P2-4: 4 categories */}
       <Modal visible={ratingVisible} transparent animationType="fade" onRequestClose={() => setRatingVisible(false)}>
         <Pressable style={styles.modalOverlay} onPress={() => setRatingVisible(false)}>
-          <View style={styles.ratingCard}>
+          <View style={styles.ratingCard} onStartShouldSetResponder={() => true}>
             <Text style={styles.ratingTitle}>{t(lang, "overview.rating.title")}</Text>
             <Text style={styles.ratingSubtitle}>{t(lang, "overview.rating.subtitle")}</Text>
-            <View style={styles.starsRow}>
-              {[1, 2, 3, 4, 5].map((star) => (
-                <Pressable key={star} onPress={() => setRatingValue(star)} style={styles.starBtn}>
-                  <Icon
-                    name={star <= ratingValue ? "star" : "star-outline"}
-                    size={36}
-                    color={star <= ratingValue ? "#f59e0b" : group.textMuted}
-                  />
-                </Pressable>
-              ))}
+
+            {/* Overall */}
+            <View style={styles.ratingCategoryRow}>
+              <Text style={styles.ratingCategoryLabel}>{t(lang, "overview.rating.overall")}</Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Pressable key={star} onPress={() => setRatingOverall(star)} style={styles.starBtn}>
+                    <Icon
+                      name={star <= ratingOverall ? "star" : "star-outline"}
+                      size={28}
+                      color={star <= ratingOverall ? "#f59e0b" : group.textMuted}
+                    />
+                  </Pressable>
+                ))}
+              </View>
             </View>
+
+            {/* Organization */}
+            <View style={styles.ratingCategoryRow}>
+              <Text style={styles.ratingCategoryLabel}>{t(lang, "overview.rating.organization")}</Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Pressable key={star} onPress={() => setRatingOrganization(star)} style={styles.starBtn}>
+                    <Icon
+                      name={star <= ratingOrganization ? "star" : "star-outline"}
+                      size={28}
+                      color={star <= ratingOrganization ? "#f59e0b" : group.textMuted}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Food */}
+            <View style={styles.ratingCategoryRow}>
+              <Text style={styles.ratingCategoryLabel}>{t(lang, "overview.rating.food")}</Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Pressable key={star} onPress={() => setRatingFood(star)} style={styles.starBtn}>
+                    <Icon
+                      name={star <= ratingFood ? "star" : "star-outline"}
+                      size={28}
+                      color={star <= ratingFood ? "#f59e0b" : group.textMuted}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {/* Rooms */}
+            <View style={styles.ratingCategoryRow}>
+              <Text style={styles.ratingCategoryLabel}>{t(lang, "overview.rating.rooms")}</Text>
+              <View style={styles.starsRow}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Pressable key={star} onPress={() => setRatingRooms(star)} style={styles.starBtn}>
+                    <Icon
+                      name={star <= ratingRooms ? "star" : "star-outline"}
+                      size={28}
+                      color={star <= ratingRooms ? "#f59e0b" : group.textMuted}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
             <TextInput
               style={styles.ratingInput}
               placeholder={t(lang, "overview.rating.commentPlaceholder")}
@@ -1374,9 +1484,9 @@ function OverviewScreenInner() {
               maxLength={500}
             />
             <Pressable
-              style={[styles.ratingSubmit, ratingValue === 0 && styles.ratingSubmitDisabled]}
+              style={[styles.ratingSubmit, !canSubmitRating && styles.ratingSubmitDisabled]}
               onPress={handleRatingSubmit}
-              disabled={ratingValue === 0 || ratingSubmitting}
+              disabled={!canSubmitRating || ratingSubmitting}
               accessibilityRole="button"
             >
               <Text style={styles.ratingSubmitText}>
@@ -1499,6 +1609,30 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: "Inter_600SemiBold",
     color: group.white,
+  },
+
+  // ── Live Event Banner ──
+  liveBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: semantic.success,
+    marginHorizontal: spacing["2xl"],
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.xl,
+    gap: spacing.sm,
+  },
+  liveDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: group.white,
+  },
+  liveBannerText: {
+    color: group.white,
+    fontSize: fontSize.sm,
+    fontWeight: "700" as const,
+    letterSpacing: 0.5,
   },
 
   // ── Hero Section ──
@@ -2292,14 +2426,26 @@ const styles = StyleSheet.create({
     color: group.textMuted,
     textAlign: "center" as const,
   },
+  ratingCategoryRow: {
+    width: "100%" as const,
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
+    paddingVertical: spacing.xs,
+  },
+  ratingCategoryLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.textSecondary,
+    minWidth: 90,
+  },
   starsRow: {
     flexDirection: "row" as const,
-    gap: spacing.sm,
-    marginVertical: spacing.sm,
+    gap: spacing.xxs,
   },
   starBtn: {
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: 36,
+    minHeight: 36,
     justifyContent: "center" as const,
     alignItems: "center" as const,
   },

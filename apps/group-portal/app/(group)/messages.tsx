@@ -25,7 +25,14 @@ function stripBidiChars(str: string): string {
   return str.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
 }
 
-const POLL_INTERVAL = 10_000;
+// P2-3: Adaptive polling backoff
+// Start at 10s, after 1min of no new messages -> 30s, after 5min -> 60s.
+// Reset to 10s on user send.
+const POLL_FAST = 10_000;
+const POLL_MEDIUM = 30_000;
+const POLL_SLOW = 60_000;
+const BACKOFF_MEDIUM_AFTER_MS = 60_000; // 1 minute of no new messages
+const BACKOFF_SLOW_AFTER_MS = 300_000; // 5 minutes of no new messages
 
 // ── Avatar initials + gradient ────────────────────────────────────────────────
 
@@ -99,6 +106,11 @@ function GroupMessagesScreenInner() {
     }
   }, [prefill]);
 
+  // P2-3: Adaptive polling backoff
+  const [pollInterval, setPollInterval] = useState(POLL_FAST);
+  const lastNewMsgTimeRef = useRef(Date.now());
+  const prevMsgCountRef2 = useRef<number | null>(null);
+
   const { scaleStyle, onPressIn, onPressOut } = useScalePress();
   const headerSlide = useSlideUp(0, 12);
 
@@ -110,9 +122,34 @@ function GroupMessagesScreenInner() {
       return res.data ?? { replies: [], anchorMessage: null };
     },
     enabled: !!trackingId,
-    refetchInterval: POLL_INTERVAL,
+    refetchInterval: pollInterval,
     refetchIntervalInBackground: false,
   });
+
+  // P2-3: Detect new messages and adjust polling interval
+  useEffect(() => {
+    if (!msgData) return;
+    const currentCount = (msgData.replies?.length ?? 0) + (msgData.anchorMessage ? 1 : 0);
+    if (prevMsgCountRef2.current !== null && currentCount > prevMsgCountRef2.current) {
+      // New message arrived -- reset to fast polling
+      lastNewMsgTimeRef.current = Date.now();
+      setPollInterval(POLL_FAST);
+    }
+    prevMsgCountRef2.current = currentCount;
+  }, [msgData]);
+
+  // P2-3: Periodic check to increase polling interval when idle
+  useEffect(() => {
+    const checkInterval = setInterval(() => {
+      const idleMs = Date.now() - lastNewMsgTimeRef.current;
+      if (idleMs >= BACKOFF_SLOW_AFTER_MS) {
+        setPollInterval((prev) => (prev !== POLL_SLOW ? POLL_SLOW : prev));
+      } else if (idleMs >= BACKOFF_MEDIUM_AFTER_MS) {
+        setPollInterval((prev) => (prev !== POLL_MEDIUM ? POLL_MEDIUM : prev));
+      }
+    }, 10_000);
+    return () => clearInterval(checkInterval);
+  }, []);
 
   // Build flat list with date separators
   const listItems = useMemo<ListItem[]>(() => {
@@ -171,6 +208,9 @@ function GroupMessagesScreenInner() {
       queryClient.invalidateQueries({ queryKey: ["group-messages"] });
       setText("");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      // P2-3: Reset polling to fast after user sends a message
+      lastNewMsgTimeRef.current = Date.now();
+      setPollInterval(POLL_FAST);
     },
     onError: (err) => {
       Alert.alert(t(lang, "common.error"), t(lang, "messages.sendFailed"));

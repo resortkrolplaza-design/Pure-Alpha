@@ -18,6 +18,8 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Switch,
+  Share,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -79,6 +81,9 @@ interface GuestFormState {
   phone: string;
   dietaryNeeds: string;
   allergies: string;
+  roomPreference: string;
+  specialRequests: string;
+  marketingConsent: boolean;
 }
 
 const EMPTY_FORM: GuestFormState = {
@@ -88,6 +93,9 @@ const EMPTY_FORM: GuestFormState = {
   phone: "",
   dietaryNeeds: "",
   allergies: "",
+  roomPreference: "",
+  specialRequests: "",
+  marketingConsent: false,
 };
 
 function GuestFormModal({
@@ -113,6 +121,8 @@ function GuestFormModal({
   const phoneRef = useRef<TextInput>(null);
   const dietaryRef = useRef<TextInput>(null);
   const allergiesRef = useRef<TextInput>(null);
+  const roomPrefRef = useRef<TextInput>(null);
+  const specialReqRef = useRef<TextInput>(null);
 
   // Reset form when modal opens/closes or editing guest changes
   const prevVisibleRef = useRef(false);
@@ -126,6 +136,9 @@ function GuestFormModal({
         phone: editingGuest.phone ?? "",
         dietaryNeeds: editingGuest.dietaryNeeds ?? "",
         allergies: editingGuest.allergies ?? "",
+        roomPreference: editingGuest.roomPreference ?? "",
+        specialRequests: editingGuest.specialRequests ?? "",
+        marketingConsent: false,
       });
     } else {
       setForm(EMPTY_FORM);
@@ -320,9 +333,53 @@ function GuestFormModal({
               onChangeText={(v) => setForm((f) => ({ ...f, allergies: v }))}
               placeholder={t(lang, "guests.allergies")}
               placeholderTextColor={group.textMuted}
-              returnKeyType="done"
-              onSubmitEditing={handleSubmit}
+              returnKeyType="next"
+              onSubmitEditing={() => roomPrefRef.current?.focus()}
               accessibilityLabel={t(lang, "guests.allergies")}
+            />
+          </View>
+
+          {/* Room preference (optional) */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={modalStyles.fieldLabel}>{t(lang, "guests.roomPreference")}</Text>
+            <TextInput
+              ref={roomPrefRef}
+              style={modalStyles.input}
+              value={form.roomPreference}
+              onChangeText={(v) => setForm((f) => ({ ...f, roomPreference: v }))}
+              placeholder={t(lang, "guests.roomPreference")}
+              placeholderTextColor={group.textMuted}
+              returnKeyType="next"
+              onSubmitEditing={() => specialReqRef.current?.focus()}
+              accessibilityLabel={t(lang, "guests.roomPreference")}
+            />
+          </View>
+
+          {/* Special requests (optional, multiline) */}
+          <View style={modalStyles.fieldGroup}>
+            <Text style={modalStyles.fieldLabel}>{t(lang, "guests.specialRequests")}</Text>
+            <TextInput
+              ref={specialReqRef}
+              style={[modalStyles.input, { minHeight: 80, textAlignVertical: "top" }]}
+              value={form.specialRequests}
+              onChangeText={(v) => setForm((f) => ({ ...f, specialRequests: v }))}
+              placeholder={t(lang, "guests.specialRequests")}
+              placeholderTextColor={group.textMuted}
+              multiline
+              returnKeyType="done"
+              accessibilityLabel={t(lang, "guests.specialRequests")}
+            />
+          </View>
+
+          {/* Marketing consent (optional) */}
+          <View style={modalStyles.consentRow}>
+            <Text style={modalStyles.consentLabel}>{t(lang, "guests.marketingConsent")}</Text>
+            <Switch
+              value={form.marketingConsent}
+              onValueChange={(v) => setForm((f) => ({ ...f, marketingConsent: v }))}
+              trackColor={{ false: group.disabledBg, true: group.primary }}
+              thumbColor={group.white}
+              accessibilityLabel={t(lang, "guests.marketingConsent")}
             />
           </View>
         </ScrollView>
@@ -413,6 +470,19 @@ const modalStyles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: semantic.danger,
   },
+  consentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  consentLabel: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.text,
+  },
 });
 
 // -- CSV Import Modal ---------------------------------------------------------
@@ -455,6 +525,7 @@ interface CsvRow {
   phone: string;
   dietaryNeeds: string;
   allergies: string;
+  roomPreference: string;
 }
 
 function parseCsvText(text: string): CsvRow[] {
@@ -475,6 +546,7 @@ function parseCsvText(text: string): CsvRow[] {
     phone: ["phone", "telefon", "tel", "mobile"],
     dietaryNeeds: ["dietaryneeds", "dietary_needs", "dietary", "dieta", "preferencje"],
     allergies: ["allergies", "alergie", "allergy"],
+    roomPreference: ["roompreference", "room_preference", "pokoj", "pok\u00F3j", "room"],
   };
 
   const colMap: Record<string, number> = {};
@@ -494,6 +566,7 @@ function parseCsvText(text: string): CsvRow[] {
       phone: (cols[colMap.phone] ?? "").trim(),
       dietaryNeeds: (cols[colMap.dietaryNeeds] ?? "").trim(),
       allergies: (cols[colMap.allergies] ?? "").trim(),
+      roomPreference: (cols[colMap.roomPreference] ?? "").trim(),
     };
   }).filter((r) => r.firstName.length > 0 && r.lastName.length > 0);
 }
@@ -549,6 +622,7 @@ function CsvImportModal({
         ...(r.phone ? { phone: r.phone } : {}),
         ...(r.dietaryNeeds ? { dietaryNeeds: r.dietaryNeeds } : {}),
         ...(r.allergies ? { allergies: r.allergies } : {}),
+        ...(r.roomPreference ? { roomPreference: r.roomPreference } : {}),
       }));
 
       const res = await importGuests(trackingId, { guests: payload });
@@ -869,6 +943,7 @@ function GuestsScreenInner() {
   const portalRole = useAppStore((s) => s.portalRole);
   const isOrganizer = portalRole === "organizer";
   const [searchQuery, setSearchQuery] = useState("");
+  const [rsvpFilter, setRsvpFilter] = useState<"all" | "confirmed" | "pending" | "declined">("all");
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
@@ -1008,6 +1083,9 @@ function GuestsScreenInner() {
           phone: form.phone.trim() || null,
           dietaryNeeds: form.dietaryNeeds.trim() || null,
           allergies: form.allergies.trim() || null,
+          roomPreference: form.roomPreference.trim() || null,
+          specialRequests: form.specialRequests.trim() || null,
+          marketingConsent: form.marketingConsent,
         };
         editMutation.mutate({ guestId: editingGuest.id, payload });
       } else {
@@ -1018,6 +1096,9 @@ function GuestsScreenInner() {
           ...(form.phone.trim() ? { phone: form.phone.trim() } : {}),
           ...(form.dietaryNeeds.trim() ? { dietaryNeeds: form.dietaryNeeds.trim() } : {}),
           ...(form.allergies.trim() ? { allergies: form.allergies.trim() } : {}),
+          ...(form.roomPreference.trim() ? { roomPreference: form.roomPreference.trim() } : {}),
+          ...(form.specialRequests.trim() ? { specialRequests: form.specialRequests.trim() } : {}),
+          marketingConsent: form.marketingConsent,
         };
         addMutation.mutate(payload);
       }
@@ -1065,18 +1146,46 @@ function GuestsScreenInner() {
     queryClient.invalidateQueries({ queryKey: ["group-guests", trackingId] });
   }, [queryClient, trackingId]);
 
-  // -- Filtered guests by search --
+  const handleExport = useCallback(async () => {
+    if (!guests?.length) return;
+    try {
+      const lines = guests.map((g) => {
+        const name = `${g.firstName} ${g.lastName}`;
+        const rsvp = g.rsvpStatus === "confirmed"
+          ? t(lang, "group.rsvp.confirmed")
+          : g.rsvpStatus === "declined"
+            ? t(lang, "group.rsvp.declined")
+            : t(lang, "group.rsvp.pending");
+        const parts = [name, rsvp];
+        if (g.email) parts.push(g.email);
+        if (g.phone) parts.push(g.phone);
+        return parts.join(" | ");
+      });
+      const message = `${t(lang, "guests.exportTitle")} (${guests.length})\n\n${lines.join("\n")}`;
+      await Share.share({ message, title: t(lang, "guests.exportTitle") });
+    } catch {
+      Alert.alert(t(lang, "auth.error"), t(lang, "guests.exportError"));
+    }
+  }, [guests, lang]);
+
+  // -- Filtered guests by RSVP filter + search --
   const filteredGuests = useMemo(() => {
     if (!guests?.length) return [];
-    if (!searchQuery.trim()) return guests;
-    const q = searchQuery.toLowerCase().trim();
-    return guests.filter(
-      (g) =>
-        g.firstName.toLowerCase().includes(q) ||
-        g.lastName.toLowerCase().includes(q) ||
-        (g.email && g.email.toLowerCase().includes(q)),
-    );
-  }, [guests, searchQuery]);
+    let result = guests;
+    if (rsvpFilter !== "all") {
+      result = result.filter((g) => g.rsvpStatus === rsvpFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(
+        (g) =>
+          g.firstName.toLowerCase().includes(q) ||
+          g.lastName.toLowerCase().includes(q) ||
+          (g.email && g.email.toLowerCase().includes(q)),
+      );
+    }
+    return result;
+  }, [guests, searchQuery, rsvpFilter]);
 
   // -- RSVP summary counts --
   const rsvpCounts = useMemo(() => {
@@ -1130,6 +1239,17 @@ function GuestsScreenInner() {
               <Text style={styles.importBtnText}>{t(lang, "guests.import")}</Text>
             </Pressable>
           )}
+          {isOrganizer && totalCount > 0 && (
+            <Pressable
+              style={styles.exportBtn}
+              onPress={handleExport}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "guests.export")}
+            >
+              <Icon name="share-outline" size={16} color={group.primary} />
+              <Text style={styles.importBtnText}>{t(lang, "guests.export")}</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* RSVP Summary Bar */}
@@ -1177,6 +1297,48 @@ function GuestsScreenInner() {
               </Text>
             </View>
           </View>
+        )}
+
+        {/* RSVP Filter Pills */}
+        {totalCount > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
+          >
+            {(
+              [
+                { key: "all", label: t(lang, "guests.filterAll") },
+                { key: "confirmed", label: t(lang, "guests.filterConfirmed") },
+                { key: "pending", label: t(lang, "guests.filterPending") },
+                { key: "declined", label: t(lang, "guests.filterDeclined") },
+              ] as const
+            ).map((item) => {
+              const isActive = rsvpFilter === item.key;
+              return (
+                <Pressable
+                  key={item.key}
+                  style={[
+                    styles.filterPill,
+                    isActive && styles.filterPillActive,
+                  ]}
+                  onPress={() => setRsvpFilter(item.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isActive }}
+                  accessibilityLabel={item.label}
+                >
+                  <Text
+                    style={[
+                      styles.filterPillText,
+                      isActive && styles.filterPillTextActive,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
         )}
 
         {/* Search Bar */}
@@ -1342,6 +1504,16 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: group.primary,
   },
+  exportBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: group.primaryLight,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: TOUCH_TARGET,
+  },
   title: {
     fontSize: fontSize["2xl"],
     fontFamily: "Inter_700Bold",
@@ -1392,6 +1564,37 @@ const styles = StyleSheet.create({
     width: 1,
     height: 28,
     backgroundColor: group.cardBorder,
+  },
+
+  // RSVP Filter Pills
+  filterRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  filterPill: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: group.card,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    minHeight: TOUCH_TARGET,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  filterPillActive: {
+    backgroundColor: group.primary,
+    borderColor: group.primary,
+  },
+  filterPillText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.textSecondary,
+  },
+  filterPillTextActive: {
+    color: group.white,
+    fontFamily: "Inter_600SemiBold",
   },
 
   // Search

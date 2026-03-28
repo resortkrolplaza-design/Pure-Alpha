@@ -13,6 +13,7 @@ import type {
   SelfRegisterPayload,
   SelfRegisterResponse,
   GroupAnnouncementData,
+  GroupDocumentData,
   GroupGuestData,
   GroupPhotoData,
   PollData,
@@ -151,6 +152,9 @@ export interface AddGuestPayload {
   phone?: string;
   dietaryNeeds?: string;
   allergies?: string;
+  roomPreference?: string;
+  specialRequests?: string;
+  marketingConsent?: boolean;
 }
 
 export interface EditGuestPayload {
@@ -160,6 +164,9 @@ export interface EditGuestPayload {
   phone?: string | null;
   dietaryNeeds?: string | null;
   allergies?: string | null;
+  roomPreference?: string | null;
+  specialRequests?: string | null;
+  marketingConsent?: boolean;
 }
 
 export async function addGuest(
@@ -208,6 +215,7 @@ export interface ImportGuestsPayload {
     phone?: string;
     dietaryNeeds?: string;
     allergies?: string;
+    roomPreference?: string;
   }>;
 }
 
@@ -249,6 +257,27 @@ export async function sendInvitation(
   });
 }
 
+// ── Documents (organizer only) ----
+
+export interface AddDocumentPayload {
+  title: string;
+  category: string;
+  url: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+}
+
+export async function addDocument(
+  trackingId: string,
+  payload: AddDocumentPayload,
+): Promise<ApiResponse<GroupDocumentData>> {
+  return groupFetch(trackingId, "/documents", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 // ── Announcements ----
 
 export async function fetchAnnouncements(
@@ -259,7 +288,7 @@ export async function fetchAnnouncements(
 
 export async function createAnnouncement(
   trackingId: string,
-  payload: { content: string; isPinned: boolean },
+  payload: { content: string; isPinned: boolean; imageUrl?: string },
 ): Promise<ApiResponse<GroupAnnouncementData>> {
   return groupFetch(trackingId, "/announcements", {
     method: "POST",
@@ -275,6 +304,21 @@ export async function deleteAnnouncement(
     trackingId,
     `/announcements/${encodeURIComponent(announcementId)}`,
     { method: "DELETE" },
+  );
+}
+
+export async function toggleAnnouncementPin(
+  trackingId: string,
+  announcementId: string,
+  isPinned: boolean,
+): Promise<ApiResponse<GroupAnnouncementData>> {
+  return groupFetch(
+    trackingId,
+    `/announcements/${encodeURIComponent(announcementId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ id: announcementId, isPinned }),
+    },
   );
 }
 
@@ -296,7 +340,7 @@ export async function fetchPolls(
 
 export async function createPoll(
   trackingId: string,
-  payload: { question: string; options: string[] },
+  payload: { question: string; options: string[]; showAsPopup?: boolean },
 ): Promise<ApiResponse<PollData>> {
   return groupFetch(trackingId, "/polls", {
     method: "POST",

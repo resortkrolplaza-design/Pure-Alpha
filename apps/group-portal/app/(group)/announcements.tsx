@@ -4,7 +4,7 @@
 // Data: own react-query key ["announcements", trackingId] for independent refetch.
 // =============================================================================
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -37,7 +37,7 @@ import {
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { fetchAnnouncements, createAnnouncement, deleteAnnouncement } from "@/lib/group-api";
+import { fetchAnnouncements, createAnnouncement, deleteAnnouncement, toggleAnnouncementPin } from "@/lib/group-api";
 import { isImageUrlSafe } from "@/lib/url-safety";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import { useSlideUp } from "@/lib/animations";
@@ -48,6 +48,7 @@ import type { GroupAnnouncementData } from "@/lib/types";
 // =============================================================================
 
 const MAX_CONTENT_LENGTH = 2000;
+const UNDO_TIMEOUT_MS = 5000;
 
 function relativeTime(dateStr: string, lang: "pl" | "en"): string {
   const now = Date.now();
@@ -97,6 +98,53 @@ function AuthorBadge({
 }
 
 // =============================================================================
+// Undo Toast (P2-5)
+// =============================================================================
+
+function UndoToast({
+  lang,
+  onUndo,
+}: {
+  lang: "pl" | "en";
+  onUndo: () => void;
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+    return () => {
+      // fade out on unmount not needed -- removed instantly
+    };
+  }, [opacity]);
+
+  return (
+    <Animated.View
+      style={[styles.undoToast, { opacity }]}
+      accessibilityRole="alert"
+      accessibilityLiveRegion="polite"
+    >
+      <Text style={styles.undoToastText}>
+        {t(lang, "announcements.deleted")}
+      </Text>
+      <Pressable
+        onPress={onUndo}
+        style={styles.undoToastBtn}
+        accessibilityRole="button"
+        accessibilityLabel={t(lang, "announcements.undo")}
+      >
+        <Text style={styles.undoToastBtnText}>
+          {t(lang, "announcements.undo")}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+// =============================================================================
 // Single Announcement Card
 // =============================================================================
 
@@ -106,14 +154,18 @@ function AnnouncementCard({
   lang,
   isOrganizer,
   onDelete,
+  onTogglePin,
   deleting,
+  togglingPin,
 }: {
   announcement: GroupAnnouncementData;
   index: number;
   lang: "pl" | "en";
   isOrganizer: boolean;
   onDelete: (id: string) => void;
+  onTogglePin: (id: string, currentlyPinned: boolean) => void;
   deleting: string | null;
+  togglingPin: string | null;
 }) {
   const slideStyle = useSlideUp(80 + index * 60, 16);
   const safeImage = announcement.imageUrl && isImageUrlSafe(announcement.imageUrl);
@@ -142,19 +194,42 @@ function AnnouncementCard({
               {relativeTime(announcement.createdAt, lang)}
             </Text>
             {isOrganizer && (
-              <Pressable
-                onPress={() => onDelete(announcement.id)}
-                disabled={deleting === announcement.id}
-                accessibilityRole="button"
-                accessibilityLabel={t(lang, "announcements.delete")}
-                style={styles.deleteBtn}
-              >
-                {deleting === announcement.id ? (
-                  <ActivityIndicator size="small" color={semantic.danger} />
-                ) : (
-                  <Icon name="trash-outline" size={18} color={semantic.danger} />
-                )}
-              </Pressable>
+              <View style={styles.cardActions}>
+                <Pressable
+                  onPress={() => onTogglePin(announcement.id, announcement.isPinned)}
+                  disabled={togglingPin === announcement.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    announcement.isPinned
+                      ? t(lang, "announcements.unpin")
+                      : t(lang, "announcements.pin")
+                  }
+                  style={styles.pinToggleBtn}
+                >
+                  {togglingPin === announcement.id ? (
+                    <ActivityIndicator size="small" color={group.primary} />
+                  ) : (
+                    <Icon
+                      name={announcement.isPinned ? "pin" : "pin-outline"}
+                      size={18}
+                      color={group.primary}
+                    />
+                  )}
+                </Pressable>
+                <Pressable
+                  onPress={() => onDelete(announcement.id)}
+                  disabled={deleting === announcement.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(lang, "announcements.delete")}
+                  style={styles.deleteBtn}
+                >
+                  {deleting === announcement.id ? (
+                    <ActivityIndicator size="small" color={semantic.danger} />
+                  ) : (
+                    <Icon name="trash-outline" size={18} color={semantic.danger} />
+                  )}
+                </Pressable>
+              </View>
             )}
           </View>
         </View>
@@ -164,7 +239,7 @@ function AnnouncementCard({
 }
 
 // =============================================================================
-// Create Form (organizer-only)
+// Create Form (organizer-only) -- P2-8: added imageUrl field
 // =============================================================================
 
 function CreateForm({
@@ -174,19 +249,25 @@ function CreateForm({
   submitting,
 }: {
   lang: "pl" | "en";
-  onSubmit: (content: string, isPinned: boolean) => void;
+  onSubmit: (content: string, isPinned: boolean, imageUrl?: string) => void;
   onCancel: () => void;
   submitting: boolean;
 }) {
   const [content, setContent] = useState("");
   const [isPinned, setIsPinned] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
 
   const canSubmit = content.trim().length > 0 && content.length <= MAX_CONTENT_LENGTH && !submitting;
 
   const handleSubmit = useCallback(() => {
     if (!canSubmit) return;
-    onSubmit(content.trim(), isPinned);
-  }, [canSubmit, content, isPinned, onSubmit]);
+    const trimmedUrl = imageUrl.trim();
+    onSubmit(
+      content.trim(),
+      isPinned,
+      trimmedUrl && isImageUrlSafe(trimmedUrl) ? trimmedUrl : undefined,
+    );
+  }, [canSubmit, content, isPinned, imageUrl, onSubmit]);
 
   return (
     <View style={styles.formContainer}>
@@ -217,6 +298,21 @@ function CreateForm({
       <Text style={styles.charCount}>
         {t(lang, "announcements.charCount").replace("{n}", String(content.length))}
       </Text>
+
+      {/* P2-8: Image URL field */}
+      <TextInput
+        style={styles.imageUrlInput}
+        placeholder={t(lang, "announcements.imageUrl")}
+        placeholderTextColor={group.textMuted}
+        value={imageUrl}
+        onChangeText={setImageUrl}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="url"
+        maxLength={2000}
+        accessibilityLabel={t(lang, "announcements.imageUrl")}
+        editable={!submitting}
+      />
 
       <View style={styles.formRow}>
         <View style={styles.pinnedToggle}>
@@ -265,7 +361,22 @@ function AnnouncementsScreenInner() {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [togglingPin, setTogglingPin] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // P2-1: Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // P2-5: Undo delete state
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; item: GroupAnnouncementData } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup undo timer on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    };
+  }, []);
 
   const {
     data: announcements,
@@ -283,6 +394,22 @@ function AnnouncementsScreenInner() {
     staleTime: 30_000,
   });
 
+  // P2-1: Filtered announcements
+  const filteredAnnouncements = useMemo(() => {
+    if (!announcements) return [];
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return announcements;
+    return announcements.filter(
+      (a) => a.content.toLowerCase().includes(q),
+    );
+  }, [announcements, searchQuery]);
+
+  // P2-5: Visible announcements (exclude pending delete)
+  const visibleAnnouncements = useMemo(() => {
+    if (!pendingDelete) return filteredAnnouncements;
+    return filteredAnnouncements.filter((a) => a.id !== pendingDelete.id);
+  }, [filteredAnnouncements, pendingDelete]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refetch();
@@ -290,16 +417,15 @@ function AnnouncementsScreenInner() {
   }, [refetch]);
 
   const handleCreate = useCallback(
-    async (content: string, isPinned: boolean) => {
+    async (content: string, isPinned: boolean, imageUrl?: string) => {
       if (!trackingId) return;
       setSubmitting(true);
       try {
-        const res = await createAnnouncement(trackingId, { content, isPinned });
+        const res = await createAnnouncement(trackingId, { content, isPinned, imageUrl });
         if (res.status === "success") {
           setShowForm(false);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           await refetch();
-          // Also invalidate the portal-init cache so overview picks up the change
           queryClient.invalidateQueries({ queryKey: ["portal-init", trackingId] });
         } else {
           Alert.alert(
@@ -314,44 +440,86 @@ function AnnouncementsScreenInner() {
     [trackingId, lang, refetch, queryClient],
   );
 
-  const handleDelete = useCallback(
-    (announcementId: string) => {
-      const doDelete = async () => {
-        setDeleting(announcementId);
-        try {
-          const res = await deleteAnnouncement(trackingId, announcementId);
-          if (res.status === "success") {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            await refetch();
-            queryClient.invalidateQueries({ queryKey: ["portal-init", trackingId] });
-          } else {
-            Alert.alert(
-              t(lang, "common.error"),
-              res.errorMessage ?? t(lang, "common.error"),
-            );
-          }
-        } finally {
-          setDeleting(null);
+  const handleTogglePin = useCallback(
+    async (announcementId: string, currentlyPinned: boolean) => {
+      if (!trackingId || togglingPin) return;
+      setTogglingPin(announcementId);
+      try {
+        const res = await toggleAnnouncementPin(trackingId, announcementId, !currentlyPinned);
+        if (res.status === "success") {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          await refetch();
+          queryClient.invalidateQueries({ queryKey: ["portal-init", trackingId] });
+        } else {
+          Alert.alert(
+            t(lang, "common.error"),
+            res.errorMessage ?? t(lang, "common.error"),
+          );
         }
-      };
+      } finally {
+        setTogglingPin(null);
+      }
+    },
+    [trackingId, togglingPin, lang, refetch, queryClient],
+  );
 
-      if (Platform.OS === "web") {
-        if (window.confirm(t(lang, "announcements.deleteConfirm"))) {
-          doDelete();
+  // P2-5: Undo delete -- optimistic remove, 5s undo window, then real delete
+  const executeDelete = useCallback(
+    async (announcementId: string) => {
+      setDeleting(announcementId);
+      try {
+        const res = await deleteAnnouncement(trackingId, announcementId);
+        if (res.status === "success") {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          await refetch();
+          queryClient.invalidateQueries({ queryKey: ["portal-init", trackingId] });
+        } else {
+          Alert.alert(
+            t(lang, "common.error"),
+            res.errorMessage ?? t(lang, "common.error"),
+          );
         }
-      } else {
-        Alert.alert(
-          t(lang, "announcements.delete"),
-          t(lang, "announcements.deleteConfirm"),
-          [
-            { text: t(lang, "common.cancel"), style: "cancel" },
-            { text: t(lang, "common.delete"), style: "destructive", onPress: doDelete },
-          ],
-        );
+      } finally {
+        setDeleting(null);
       }
     },
     [trackingId, lang, refetch, queryClient],
   );
+
+  const handleDelete = useCallback(
+    (announcementId: string) => {
+      // Find the item in the current list for undo restoration
+      const item = announcements?.find((a) => a.id === announcementId);
+      if (!item) return;
+
+      // Clear any existing undo timer (previous pending delete gets committed)
+      if (undoTimerRef.current && pendingDelete) {
+        clearTimeout(undoTimerRef.current);
+        executeDelete(pendingDelete.id);
+      }
+
+      // Optimistically remove from view
+      setPendingDelete({ id: announcementId, item });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      // Start 5s countdown to actual delete
+      undoTimerRef.current = setTimeout(() => {
+        setPendingDelete(null);
+        undoTimerRef.current = null;
+        executeDelete(announcementId);
+      }, UNDO_TIMEOUT_MS);
+    },
+    [announcements, pendingDelete, executeDelete],
+  );
+
+  const handleUndo = useCallback(() => {
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+    setPendingDelete(null);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  }, []);
 
   return (
     <View style={styles.container}>
@@ -393,6 +561,33 @@ function AnnouncementsScreenInner() {
           />
         )}
 
+        {/* P2-1: Search bar */}
+        {!isLoading && !isError && announcements && announcements.length > 0 && (
+          <View style={styles.searchContainer}>
+            <Icon name="search-outline" size={18} color={group.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t(lang, "announcements.search")}
+              placeholderTextColor={group.textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel={t(lang, "announcements.search")}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable
+                onPress={() => setSearchQuery("")}
+                accessibilityRole="button"
+                accessibilityLabel={t(lang, "common.cancel")}
+                style={styles.searchClearBtn}
+              >
+                <Icon name="close-circle" size={18} color={group.textMuted} />
+              </Pressable>
+            )}
+          </View>
+        )}
+
         {/* Loading */}
         {isLoading && (
           <View style={styles.loadingContainer}>
@@ -425,10 +620,10 @@ function AnnouncementsScreenInner() {
           </View>
         )}
 
-        {/* List */}
-        {!isLoading && !isError && announcements && announcements.length > 0 && (
+        {/* List (using visibleAnnouncements for undo-delete filtering) */}
+        {!isLoading && !isError && visibleAnnouncements.length > 0 && (
           <View style={styles.list}>
-            {announcements.map((a, idx) => (
+            {visibleAnnouncements.map((a, idx) => (
               <AnnouncementCard
                 key={a.id}
                 announcement={a}
@@ -436,7 +631,9 @@ function AnnouncementsScreenInner() {
                 lang={lang}
                 isOrganizer={isOrganizer}
                 onDelete={handleDelete}
+                onTogglePin={handleTogglePin}
                 deleting={deleting}
+                togglingPin={togglingPin}
               />
             ))}
           </View>
@@ -456,6 +653,13 @@ function AnnouncementsScreenInner() {
         >
           <Icon name="add" size={28} color={group.white} />
         </Pressable>
+      )}
+
+      {/* P2-5: Undo toast */}
+      {pendingDelete && (
+        <View style={[styles.undoToastWrapper, { bottom: insets.bottom + (isOrganizer ? 96 : 24) }]}>
+          <UndoToast lang={lang} onUndo={handleUndo} />
+        </View>
       )}
     </View>
   );
@@ -512,6 +716,30 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: TOUCH_TARGET,
+  },
+
+  // -- P2-1: Search --
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: group.inputBg,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    minHeight: TOUCH_TARGET,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.text,
+    paddingVertical: spacing.sm,
+  },
+  searchClearBtn: {
+    width: TOUCH_TARGET,
+    height: TOUCH_TARGET,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // -- Loading --
@@ -630,6 +858,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: group.textMuted,
   },
+  cardActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  pinToggleBtn: {
+    width: TOUCH_TARGET,
+    height: TOUCH_TARGET,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   deleteBtn: {
     width: TOUCH_TARGET,
     height: TOUCH_TARGET,
@@ -680,6 +919,16 @@ const styles = StyleSheet.create({
     color: group.textMuted,
     textAlign: "right",
   },
+  // P2-8: Image URL input
+  imageUrlInput: {
+    backgroundColor: group.inputBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.text,
+    minHeight: TOUCH_TARGET,
+  },
   formRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -724,5 +973,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...shadow.lg,
+  },
+
+  // -- P2-5: Undo Toast --
+  undoToastWrapper: {
+    position: "absolute",
+    left: spacing["2xl"],
+    right: spacing["2xl"],
+    alignItems: "center",
+  },
+  undoToast: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: group.text,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+    width: "100%",
+    ...shadow.lg,
+  },
+  undoToastText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.white,
+    flex: 1,
+  },
+  undoToastBtn: {
+    minHeight: TOUCH_TARGET,
+    paddingHorizontal: spacing.md,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  undoToastBtnText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.primaryLight,
   },
 });

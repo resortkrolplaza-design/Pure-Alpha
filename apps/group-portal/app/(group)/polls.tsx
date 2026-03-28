@@ -4,7 +4,7 @@
 // Organizer: create, close, delete polls. Participant: vote only.
 // =============================================================================
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,9 +12,11 @@ import {
   StyleSheet,
   Pressable,
   TextInput,
+  Switch,
   ActivityIndicator,
   Alert,
   Platform,
+  Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -67,6 +69,48 @@ const DEVICE_ID = getDeviceId();
 
 const MIN_OPTIONS = 2;
 const MAX_OPTIONS = 6;
+const UNDO_TIMEOUT_MS = 5000;
+const CONFIRM_TAP_TIMEOUT_MS = 3000;
+
+// =============================================================================
+// Undo Toast
+// =============================================================================
+
+function UndoToast({
+  message,
+  undoLabel,
+  onUndo,
+}: {
+  message: string;
+  undoLabel: string;
+  onUndo: () => void;
+}) {
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(opacity, {
+      toValue: 1,
+      duration: 250,
+      useNativeDriver: true,
+    }).start();
+  }, [opacity]);
+
+  return (
+    <Animated.View style={[styles.undoToastWrapper, { opacity }]}>
+      <View style={styles.undoToast}>
+        <Text style={styles.undoToastText}>{message}</Text>
+        <Pressable
+          onPress={onUndo}
+          style={styles.undoToastBtn}
+          accessibilityRole="button"
+          accessibilityLabel={undoLabel}
+        >
+          <Text style={styles.undoToastBtnText}>{undoLabel}</Text>
+        </Pressable>
+      </View>
+    </Animated.View>
+  );
+}
 
 // =============================================================================
 // Sub-components
@@ -112,7 +156,7 @@ function ProgressBar({ percentage }: { percentage: number }) {
 }
 
 // =============================================================================
-// Poll Card
+// Poll Card (with P2-7 double-tap delete confirmation)
 // =============================================================================
 
 function PollCard({
@@ -123,6 +167,9 @@ function PollCard({
   onClose,
   onDelete,
   votingPollId,
+  myVote,
+  onChangeVote,
+  changingVote,
 }: {
   poll: PollData;
   lang: "pl" | "en";
@@ -131,11 +178,42 @@ function PollCard({
   onClose: (pollId: string) => void;
   onDelete: (pollId: string) => void;
   votingPollId: string | null;
+  myVote: number | null;
+  onChangeVote: (pollId: string) => void;
+  changingVote: string | null;
 }) {
   const isVoting = votingPollId === poll.id;
+  const isChanging = changingVote === poll.id;
   const options = poll.options ?? [];
   const voteCounts = poll.voteCounts ?? [];
   const totalVotes = poll.totalVotes ?? 0;
+  const hasVoted = myVote !== null;
+
+  // P2-7: Double-tap delete confirmation
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
+  const handleDeleteTap = useCallback(() => {
+    if (confirmingDelete) {
+      // Second tap -- execute delete
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+      setConfirmingDelete(false);
+      onDelete(poll.id);
+    } else {
+      // First tap -- enter confirmation state
+      setConfirmingDelete(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      confirmTimerRef.current = setTimeout(() => {
+        setConfirmingDelete(false);
+      }, CONFIRM_TAP_TIMEOUT_MS);
+    }
+  }, [confirmingDelete, onDelete, poll.id]);
 
   return (
     <View
@@ -155,12 +233,13 @@ function PollCard({
         {options.map((option, idx) => {
           const count = voteCounts[idx] ?? 0;
           const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-          const canVote = poll.isActive && !isOrganizer;
+          const canVote = poll.isActive && !isOrganizer && (!hasVoted || isChanging);
+          const isMyChoice = myVote === idx;
 
           return (
             <Pressable
               key={`${poll.id}-opt-${idx}`}
-              style={styles.optionRow}
+              style={[styles.optionRow, isMyChoice && styles.optionRowSelected]}
               onPress={canVote ? () => onVote(poll.id, idx) : undefined}
               disabled={!canVote || isVoting}
               accessibilityRole={canVote ? "button" : "text"}
@@ -188,6 +267,19 @@ function PollCard({
         </View>
       )}
 
+      {/* Change vote button (participant only, already voted, poll active) */}
+      {hasVoted && !isOrganizer && poll.isActive && !isChanging && (
+        <Pressable
+          onPress={() => onChangeVote(poll.id)}
+          style={styles.changeVoteBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t(lang, "polls.changeVote")}
+        >
+          <Icon name="refresh-outline" size={16} color={group.primary} />
+          <Text style={styles.changeVoteText}>{t(lang, "polls.changeVote")}</Text>
+        </Pressable>
+      )}
+
       {/* Footer: total votes + organizer actions */}
       <View style={styles.cardFooter}>
         <Text style={styles.totalVotesText}>
@@ -210,14 +302,23 @@ function PollCard({
               </Pressable>
             )}
             <Pressable
-              style={styles.actionBtn}
-              onPress={() => onDelete(poll.id)}
+              style={[styles.actionBtn, confirmingDelete && styles.actionBtnConfirm]}
+              onPress={handleDeleteTap}
               accessibilityRole="button"
-              accessibilityLabel={t(lang, "polls.delete")}
+              accessibilityLabel={confirmingDelete ? t(lang, "polls.confirmDeleteTap") : t(lang, "polls.delete")}
             >
-              <Icon name="trash-outline" size={16} color={semantic.danger} />
-              <Text style={[styles.actionBtnText, { color: semantic.danger }]}>
-                {t(lang, "polls.delete")}
+              <Icon
+                name="trash-outline"
+                size={16}
+                color={confirmingDelete ? group.white : semantic.danger}
+              />
+              <Text
+                style={[
+                  styles.actionBtnText,
+                  { color: confirmingDelete ? group.white : semantic.danger },
+                ]}
+              >
+                {confirmingDelete ? t(lang, "polls.confirmDeleteTap") : t(lang, "polls.delete")}
               </Text>
             </Pressable>
           </View>
@@ -238,12 +339,13 @@ function CreatePollForm({
   isSubmitting,
 }: {
   lang: "pl" | "en";
-  onSubmit: (question: string, options: string[]) => void;
+  onSubmit: (question: string, options: string[], showAsPopup: boolean) => void;
   onCancel: () => void;
   isSubmitting: boolean;
 }) {
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
+  const [showAsPopup, setShowAsPopup] = useState(false);
 
   const canAddOption = options.length < MAX_OPTIONS;
   const validOptions = options.map((o) => o.trim()).filter(Boolean);
@@ -272,8 +374,8 @@ function CreatePollForm({
 
   const handleSubmit = useCallback(() => {
     if (!canSubmit) return;
-    onSubmit(question.trim(), validOptions);
-  }, [canSubmit, question, validOptions, onSubmit]);
+    onSubmit(question.trim(), validOptions, showAsPopup);
+  }, [canSubmit, question, validOptions, showAsPopup, onSubmit]);
 
   return (
     <View style={styles.formContainer}>
@@ -343,6 +445,20 @@ function CreatePollForm({
         </Pressable>
       )}
 
+      {/* Show as popup toggle */}
+      <View style={styles.popupToggleRow}>
+        <Icon name="megaphone-outline" size={16} color={showAsPopup ? group.primary : group.textMuted} />
+        <Text style={styles.popupToggleLabel}>{t(lang, "polls.showAsPopup")}</Text>
+        <Switch
+          value={showAsPopup}
+          onValueChange={setShowAsPopup}
+          trackColor={{ false: group.disabledBg, true: group.primary }}
+          thumbColor={group.white}
+          disabled={isSubmitting}
+          accessibilityLabel={t(lang, "polls.showAsPopup")}
+        />
+      </View>
+
       {/* Submit */}
       <Pressable
         onPress={handleSubmit}
@@ -376,7 +492,23 @@ function PollsScreenContent() {
   const [showForm, setShowForm] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [votingPollId, setVotingPollId] = useState<string | null>(null);
+  const [myVotes, setMyVotes] = useState<Record<string, number>>({});
+  const [changingVote, setChangingVote] = useState<string | null>(null);
   const deviceIdRef = useRef(DEVICE_ID);
+
+  // P2-2: Search state
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // P2-6: Undo delete state
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; item: PollData } | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup undo timer on unmount
+  useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    };
+  }, []);
 
   // ── Fetch polls ──
   const {
@@ -410,13 +542,30 @@ function PollsScreenContent() {
     return [...active, ...closed];
   }, [polls]);
 
+  // P2-2: Search filter (case-insensitive by question text)
+  const showSearch = sortedPolls.length > 2;
+
+  const filteredPolls = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return sortedPolls;
+    return sortedPolls.filter((p) =>
+      String(p.question).toLowerCase().includes(q),
+    );
+  }, [sortedPolls, searchQuery]);
+
+  // P2-6: Exclude pending delete from visible list
+  const visiblePolls = useMemo(() => {
+    if (!pendingDelete) return filteredPolls;
+    return filteredPolls.filter((p) => p.id !== pendingDelete.id);
+  }, [filteredPolls, pendingDelete]);
+
   // ── Create poll ──
   const handleCreate = useCallback(
-    async (question: string, options: string[]) => {
+    async (question: string, options: string[], showAsPopup: boolean) => {
       if (!trackingId) return;
       setIsCreating(true);
       try {
-        const res = await createPoll(trackingId, { question, options });
+        const res = await createPoll(trackingId, { question, options, showAsPopup });
         if (res.status === "success") {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setShowForm(false);
@@ -438,6 +587,10 @@ function PollsScreenContent() {
       try {
         const res = await votePoll(trackingId, pollId, optionIdx, deviceIdRef.current);
         if (res.status === "success" && res.data) {
+          // Record local vote
+          setMyVotes((prev) => ({ ...prev, [pollId]: optionIdx }));
+          // Clear changing-vote mode
+          setChangingVote(null);
           // Optimistic update in cache
           queryClient.setQueryData<PollData[]>(
             ["portal-polls", trackingId],
@@ -457,6 +610,15 @@ function PollsScreenContent() {
       }
     },
     [trackingId, votingPollId, queryClient],
+  );
+
+  // ── Change vote (re-enable option selection) ──
+  const handleChangeVote = useCallback(
+    (pollId: string) => {
+      setChangingVote(pollId);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    },
+    [],
   );
 
   // ── Close poll ──
@@ -485,31 +647,51 @@ function PollsScreenContent() {
     [lang, trackingId, queryClient],
   );
 
-  // ── Delete poll ──
+  // P2-6: Execute the actual delete API call
+  const executeDelete = useCallback(
+    async (pollId: string) => {
+      if (!trackingId) return;
+      const res = await deletePoll(trackingId, pollId);
+      if (res.status === "success") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        queryClient.invalidateQueries({ queryKey: ["portal-polls", trackingId] });
+      }
+    },
+    [trackingId, queryClient],
+  );
+
+  // P2-6: Undo delete handler -- optimistic remove + 5s timer
   const handleDelete = useCallback(
     (pollId: string) => {
-      Alert.alert(
-        t(lang, "polls.delete"),
-        t(lang, "polls.confirmDelete"),
-        [
-          { text: t(lang, "common.cancel"), style: "cancel" },
-          {
-            text: t(lang, "common.delete"),
-            style: "destructive",
-            onPress: async () => {
-              if (!trackingId) return;
-              const res = await deletePoll(trackingId, pollId);
-              if (res.status === "success") {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                queryClient.invalidateQueries({ queryKey: ["portal-polls", trackingId] });
-              }
-            },
-          },
-        ],
-      );
+      // If there is already a pending delete, commit it immediately
+      if (pendingDelete && undoTimerRef.current) {
+        clearTimeout(undoTimerRef.current);
+        executeDelete(pendingDelete.id);
+      }
+
+      const item = polls.find((p) => p.id === pollId);
+      if (!item) return;
+
+      setPendingDelete({ id: pollId, item });
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+      undoTimerRef.current = setTimeout(() => {
+        setPendingDelete(null);
+        undoTimerRef.current = null;
+        executeDelete(pollId);
+      }, UNDO_TIMEOUT_MS);
     },
-    [lang, trackingId, queryClient],
+    [pendingDelete, polls, executeDelete],
   );
+
+  // P2-6: Undo -- restore the item
+  const handleUndo = useCallback(() => {
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current);
+      undoTimerRef.current = null;
+    }
+    setPendingDelete(null);
+  }, []);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -525,6 +707,32 @@ function PollsScreenContent() {
         </Pressable>
         <Text style={styles.title}>{t(lang, "polls.title")}</Text>
       </View>
+
+      {/* P2-2: Search bar (only shown when >2 polls) */}
+      {showSearch && (
+        <View style={styles.searchContainer}>
+          <Icon name="search-outline" size={18} color={group.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t(lang, "polls.search")}
+            placeholderTextColor={group.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            accessibilityLabel={t(lang, "polls.search")}
+          />
+          {searchQuery.length > 0 && (
+            <Pressable
+              onPress={() => setSearchQuery("")}
+              style={styles.searchClearBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.cancel")}
+            >
+              <Icon name="close-circle" size={18} color={group.textMuted} />
+            </Pressable>
+          )}
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={[
@@ -578,7 +786,7 @@ function PollsScreenContent() {
         {/* Poll list */}
         {!isLoading &&
           !isError &&
-          sortedPolls.map((poll) => (
+          visiblePolls.map((poll) => (
             <PollCard
               key={poll.id}
               poll={poll}
@@ -588,9 +796,21 @@ function PollsScreenContent() {
               onClose={handleClose}
               onDelete={handleDelete}
               votingPollId={votingPollId}
+              myVote={myVotes[poll.id] ?? null}
+              onChangeVote={handleChangeVote}
+              changingVote={changingVote}
             />
           ))}
       </ScrollView>
+
+      {/* P2-6: Undo Toast */}
+      {pendingDelete && (
+        <UndoToast
+          message={t(lang, "polls.deleted")}
+          undoLabel={t(lang, "polls.undo")}
+          onUndo={handleUndo}
+        />
+      )}
 
       {/* FAB: create new poll (organizer only) */}
       {isOrganizer && !showForm && (
@@ -656,6 +876,32 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: group.text,
     letterSpacing: letterSpacing.tight,
+  },
+
+  // -- Search --
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: group.inputBg,
+    borderRadius: radius.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    minHeight: TOUCH_TARGET,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.text,
+    paddingVertical: spacing.sm,
+  },
+  searchClearBtn: {
+    width: TOUCH_TARGET,
+    height: TOUCH_TARGET,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // -- Poll Card --
@@ -777,10 +1023,38 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
     minHeight: TOUCH_TARGET,
     paddingHorizontal: spacing.sm,
+    borderRadius: radius.md,
+  },
+  actionBtnConfirm: {
+    backgroundColor: semantic.danger,
+    paddingHorizontal: spacing.md,
   },
   actionBtnText: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_500Medium",
+  },
+
+  // -- Change Vote --
+  optionRowSelected: {
+    backgroundColor: "rgba(99,102,241,0.06)",
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginHorizontal: -spacing.sm,
+  },
+  changeVoteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    minHeight: TOUCH_TARGET,
+  },
+  changeVoteText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.primary,
   },
 
   // -- Create Poll Form --
@@ -854,6 +1128,18 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: group.primary,
   },
+  popupToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  popupToggleLabel: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.textSecondary,
+  },
   submitBtn: {
     backgroundColor: group.primary,
     borderRadius: radius.full,
@@ -913,5 +1199,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     ...shadow.lg,
+  },
+
+  // -- Undo Toast --
+  undoToastWrapper: {
+    position: "absolute",
+    bottom: 96,
+    left: spacing.xl,
+    right: spacing.xl,
+    alignItems: "center",
+  },
+  undoToast: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: group.text,
+    borderRadius: radius.full,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+    ...shadow.md,
+  },
+  undoToastText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.white,
+  },
+  undoToastBtn: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    minHeight: TOUCH_TARGET,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  undoToastBtnText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.primary,
   },
 });

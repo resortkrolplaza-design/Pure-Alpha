@@ -146,6 +146,10 @@ const pl: Record<string, string> = {
   "overview.rating.subtitle": "Twoja opinia pomoze nam poprawic przyszle wydarzenia",
   "overview.rating.commentPlaceholder": "Dodatkowy komentarz (opcjonalnie)...",
   "overview.rating.submit": "Wyslij ocene",
+  "overview.rating.overall": "Og\u00F3lna",
+  "overview.rating.organization": "Organizacja",
+  "overview.rating.food": "Jedzenie",
+  "overview.rating.rooms": "Pokoje",
   "overview.seeAll": "Zobacz wszystkie",
   "overview.noItems": "Brak danych",
   "gallery.hotelTitle": "Galeria hotelu",
@@ -173,6 +177,10 @@ const pl: Record<string, string> = {
   "polls.voted": "Zaglosowano",
   "polls.confirmClose": "Czy na pewno zamknac ankiete?",
   "polls.confirmDelete": "Czy na pewno usunac ankiete?",
+  "polls.search": "Szukaj ankiet...",
+  "polls.deleted": "Usuni\u0119to. Cofnij?",
+  "polls.undo": "Cofnij",
+  "polls.confirmDeleteTap": "Na pewno?",
 
   // ── RSVP ----
   "rsvp.title": "Potwierd\u017A obecno\u015B\u0107",
@@ -228,6 +236,10 @@ const pl: Record<string, string> = {
   "announcements.author.organizer": "Organizator",
   "announcements.author.admin": "Hotel",
   "announcements.charCount": "{n}/2000",
+  "announcements.search": "Szukaj og\u0142osze\u0144...",
+  "announcements.deleted": "Usuni\u0119to. Cofnij?",
+  "announcements.undo": "Cofnij",
+  "announcements.imageUrl": "URL obrazka (opcjonalnie)",
 
   // ── Guest CRUD (organizer) ----
   "guests.add": "Dodaj go\u015Bcia",
@@ -273,8 +285,55 @@ const pl: Record<string, string> = {
   "pollPopup.skip": "Pomi\u0144",
   "pollPopup.voteSuccess": "Dzi\u0119kujemy za g\u0142os!",
 
+  // ── Guest Form (extended fields) ----
+  "guests.roomPreference": "Preferencje pokoju",
+  "guests.specialRequests": "Specjalne zyczenia",
+  "guests.marketingConsent": "Zgoda na komunikacje marketingowa",
+
+  // ── Guest RSVP Filters ----
+  "guests.filterAll": "Wszyscy",
+  "guests.filterConfirmed": "Potwierdzeni",
+  "guests.filterPending": "Oczekujacy",
+  "guests.filterDeclined": "Odrzuceni",
+
+  // ── Announcements Pin Toggle ----
+  "announcements.pin": "Przypnij",
+  "announcements.unpin": "Odepnij",
+
+  // ── Polls (extended) ----
+  "polls.changeVote": "Zmien glos",
+  "polls.showAsPopup": "Pokaz jako popup",
+
   // ── Notes ----
   "notes.title": "Informacje od organizatora",
+
+  // ── Document Categories ----
+  "doc.category.offer": "Oferta",
+  "doc.category.calculation": "Kalkulacja",
+  "doc.category.contract": "Umowa",
+  "doc.category.invoice": "Faktura",
+  "doc.category.menu": "Menu",
+  "doc.category.program": "Program",
+  "doc.category.other": "Inne",
+  "doc.addDocument": "Dodaj dokument",
+  "doc.titleLabel": "Tytu\u0142",
+  "doc.titlePlaceholder": "Np. oferta bankietowa",
+  "doc.categoryLabel": "Kategoria",
+  "doc.fileUrlLabel": "URL pliku",
+  "doc.fileUrlPlaceholder": "https://...",
+  "doc.titleRequired": "Tytu\u0142 jest wymagany",
+  "doc.urlRequired": "URL jest wymagany",
+  "doc.urlInvalid": "URL musi zaczyna\u0107 si\u0119 od https://",
+  "doc.added": "Dokument dodany",
+  "doc.addError": "Nie uda\u0142o si\u0119 doda\u0107 dokumentu",
+
+  // ── Guest Export ----
+  "guests.export": "Eksportuj",
+  "guests.exportTitle": "Lista go\u015Bci",
+  "guests.exportError": "Nie uda\u0142o si\u0119 wyeksportowa\u0107",
+
+  // ── Live Event Banner ----
+  "overview.liveEvent": "Wydarzenie trwa!",
 
   // ── Error Boundary ----
   "error.fallback": "Co\u015B posz\u0142o nie tak",
@@ -423,6 +482,10 @@ const en: Record<string, string> = {
   "overview.rating.subtitle": "Your feedback helps us improve future events",
   "overview.rating.commentPlaceholder": "Additional comment (optional)...",
   "overview.rating.submit": "Submit rating",
+  "overview.rating.overall": "Overall",
+  "overview.rating.organization": "Organization",
+  "overview.rating.food": "Food",
+  "overview.rating.rooms": "Rooms",
   "overview.seeAll": "See all",
   "overview.noItems": "No data",
   "gallery.hotelTitle": "Hotel gallery",
@@ -450,6 +513,10 @@ const en: Record<string, string> = {
   "polls.voted": "Voted",
   "polls.confirmClose": "Are you sure you want to close this poll?",
   "polls.confirmDelete": "Are you sure you want to delete this poll?",
+  "polls.search": "Search polls...",
+  "polls.deleted": "Deleted. Undo?",
+  "polls.undo": "Undo",
+  "polls.confirmDeleteTap": "Are you sure?",
 
   // ── RSVP ----
   "rsvp.title": "Confirm attendance",
@@ -505,6 +572,10 @@ const en: Record<string, string> = {
   "announcements.author.organizer": "Organizer",
   "announcements.author.admin": "Hotel",
   "announcements.charCount": "{n}/2000",
+  "announcements.search": "Search announcements...",
+  "announcements.deleted": "Deleted. Undo?",
+  "announcements.undo": "Undo",
+  "announcements.imageUrl": "Image URL (optional)",
 
   // ── Guest CRUD (organizer) ----
   "guests.add": "Add guest",
@@ -550,8 +621,55 @@ const en: Record<string, string> = {
   "pollPopup.skip": "Skip",
   "pollPopup.voteSuccess": "Thank you for your vote!",
 
+  // ── Guest Form (extended fields) ----
+  "guests.roomPreference": "Room preference",
+  "guests.specialRequests": "Special requests",
+  "guests.marketingConsent": "Marketing consent",
+
+  // ── Guest RSVP Filters ----
+  "guests.filterAll": "All",
+  "guests.filterConfirmed": "Confirmed",
+  "guests.filterPending": "Pending",
+  "guests.filterDeclined": "Declined",
+
+  // ── Announcements Pin Toggle ----
+  "announcements.pin": "Pin",
+  "announcements.unpin": "Unpin",
+
+  // ── Polls (extended) ----
+  "polls.changeVote": "Change vote",
+  "polls.showAsPopup": "Show as popup",
+
   // ── Notes ----
   "notes.title": "Notes from the organizer",
+
+  // ── Document Categories ----
+  "doc.category.offer": "Offer",
+  "doc.category.calculation": "Calculation",
+  "doc.category.contract": "Contract",
+  "doc.category.invoice": "Invoice",
+  "doc.category.menu": "Menu",
+  "doc.category.program": "Program",
+  "doc.category.other": "Other",
+  "doc.addDocument": "Add document",
+  "doc.titleLabel": "Title",
+  "doc.titlePlaceholder": "E.g. banquet offer",
+  "doc.categoryLabel": "Category",
+  "doc.fileUrlLabel": "File URL",
+  "doc.fileUrlPlaceholder": "https://...",
+  "doc.titleRequired": "Title is required",
+  "doc.urlRequired": "URL is required",
+  "doc.urlInvalid": "URL must start with https://",
+  "doc.added": "Document added",
+  "doc.addError": "Failed to add document",
+
+  // ── Guest Export ----
+  "guests.export": "Export",
+  "guests.exportTitle": "Guest list",
+  "guests.exportError": "Failed to export",
+
+  // ── Live Event Banner ----
+  "overview.liveEvent": "Event is live!",
 
   // ── Error Boundary ----
   "error.fallback": "Something went wrong",
