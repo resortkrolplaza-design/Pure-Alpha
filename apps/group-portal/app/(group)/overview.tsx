@@ -1280,7 +1280,7 @@ function OverviewScreenInner() {
             {portal?.mapEnabled !== false && hotel?.address && (
               <Pressable
                 style={styles.openMapsBtn}
-                onPress={() => Linking.openURL(`https://maps.apple.com/?q=${encodeURIComponent(hotel.address!)}`)}
+                onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.address!)}`).catch(() => {})}
                 accessibilityRole="button"
                 accessibilityLabel={t(lang, "overview.openMaps")}
               >
