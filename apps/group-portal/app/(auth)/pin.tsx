@@ -159,23 +159,7 @@ function PinScreenInner() {
             <Text style={styles.hotelName}>{hotelName}</Text>
           ) : null}
 
-          {/* Card 1: Open link from email */}
-          <View style={styles.card}>
-            <View style={styles.mailCircle}>
-              <Icon name="mail-outline" size={28} color={group.primary} />
-            </View>
-            <Text style={styles.cardTitle}>{t(lang, "pin.openLinkTitle")}</Text>
-            <Text style={styles.cardDesc}>{t(lang, "pin.openLinkDesc")}</Text>
-          </View>
-
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t(lang, "pin.orLoginWithPin")}</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Card 2: Sequential login form */}
+          {/* Login form */}
           <View style={styles.card}>
             <View style={styles.lockCircle}>
               <Icon name="lock-closed-outline" size={22} color={group.primary} />

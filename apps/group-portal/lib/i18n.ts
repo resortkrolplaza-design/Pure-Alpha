@@ -147,6 +147,24 @@ const pl: Record<string, string> = {
   "quickAction.attractions": "Atrakcje",
   "quickAction.faq": "FAQ",
   "quickAction.gallery": "Galeria",
+  "quickAction.polls": "Ankiety",
+
+  // ── Polls ----
+  "polls.title": "Ankiety",
+  "polls.create": "Nowa ankieta",
+  "polls.question": "Pytanie",
+  "polls.option": "Opcja",
+  "polls.addOption": "Dodaj opcje",
+  "polls.vote": "Glosuj",
+  "polls.close": "Zamknij ankiete",
+  "polls.delete": "Usun ankiete",
+  "polls.active": "Aktywna",
+  "polls.closed": "Zamknieta",
+  "polls.totalVotes": "glosow",
+  "polls.empty": "Brak ankiet",
+  "polls.voted": "Zaglosowano",
+  "polls.confirmClose": "Czy na pewno zamknac ankiete?",
+  "polls.confirmDelete": "Czy na pewno usunac ankiete?",
 
   // ── RSVP ----
   "rsvp.title": "Potwierd\u017A obecno\u015B\u0107",
@@ -189,6 +207,49 @@ const pl: Record<string, string> = {
   "photos.upload": "Dodaj zdj\u0119cie",
   "photos.uploadName": "Twoje imi\u0119",
   "photos.caption": "Podpis (opcjonalnie)",
+
+  // ── Announcements CRUD ----
+  "announcements.title": "Og\u0142oszenia",
+  "announcements.create": "Nowe og\u0142oszenie",
+  "announcements.placeholder": "Tre\u015B\u0107 og\u0142oszenia...",
+  "announcements.pinned": "Przypi\u0119te",
+  "announcements.delete": "Usu\u0144 og\u0142oszenie",
+  "announcements.deleteConfirm": "Czy na pewno chcesz usun\u0105\u0107 to og\u0142oszenie?",
+  "announcements.empty": "Brak og\u0142osze\u0144",
+  "announcements.created": "Og\u0142oszenie dodane",
+  "announcements.author.organizer": "Organizator",
+  "announcements.author.admin": "Hotel",
+  "announcements.charCount": "{n}/2000",
+
+  // ── Guest CRUD (organizer) ----
+  "guests.add": "Dodaj go\u015Bcia",
+  "guests.edit": "Edytuj go\u015Bcia",
+  "guests.delete": "Usu\u0144 go\u015Bcia",
+  "guests.deleteConfirm": "Czy na pewno chcesz usun\u0105\u0107 tego go\u015Bcia?",
+  "guests.firstName": "Imi\u0119",
+  "guests.lastName": "Nazwisko",
+  "guests.email": "Email",
+  "guests.phone": "Telefon",
+  "guests.dietary": "Preferencje dietetyczne",
+  "guests.allergies": "Alergie",
+  "guests.added": "Go\u015B\u0107 dodany",
+  "guests.updated": "Go\u015B\u0107 zaktualizowany",
+  "guests.deleted": "Go\u015B\u0107 usuni\u0119ty",
+  "guests.firstNameRequired": "Imi\u0119 jest wymagane",
+  "guests.lastNameRequired": "Nazwisko jest wymagane",
+  "guests.cannotEditAdmin": "Nie mo\u017Cna edytowa\u0107 go\u015Bci dodanych przez hotel",
+  "guests.limitReached": "Osi\u0105gni\u0119to limit go\u015Bci",
+
+  // ── Attractions ----
+  "attractions.openHotelMaps": "Otw\u00F3rz hotel w Mapach",
+
+  // ── Upsell ----
+  "upsell.title": "Polecane us\u0142ugi",
+  "upsell.ask": "Zapytaj",
+  "upsell.seeAll": "Zobacz wszystkie us\u0142ugi",
+
+  // ── Notes ----
+  "notes.title": "Informacje od organizatora",
 
   // ── Error Boundary ----
   "error.fallback": "Co\u015B posz\u0142o nie tak",
@@ -338,6 +399,24 @@ const en: Record<string, string> = {
   "quickAction.attractions": "Attractions",
   "quickAction.faq": "FAQ",
   "quickAction.gallery": "Gallery",
+  "quickAction.polls": "Polls",
+
+  // ── Polls ----
+  "polls.title": "Polls",
+  "polls.create": "New poll",
+  "polls.question": "Question",
+  "polls.option": "Option",
+  "polls.addOption": "Add option",
+  "polls.vote": "Vote",
+  "polls.close": "Close poll",
+  "polls.delete": "Delete poll",
+  "polls.active": "Active",
+  "polls.closed": "Closed",
+  "polls.totalVotes": "votes",
+  "polls.empty": "No polls",
+  "polls.voted": "Voted",
+  "polls.confirmClose": "Are you sure you want to close this poll?",
+  "polls.confirmDelete": "Are you sure you want to delete this poll?",
 
   // ── RSVP ----
   "rsvp.title": "Confirm attendance",
@@ -380,6 +459,49 @@ const en: Record<string, string> = {
   "photos.upload": "Add photo",
   "photos.uploadName": "Your name",
   "photos.caption": "Caption (optional)",
+
+  // ── Announcements CRUD ----
+  "announcements.title": "Announcements",
+  "announcements.create": "New announcement",
+  "announcements.placeholder": "Announcement content...",
+  "announcements.pinned": "Pinned",
+  "announcements.delete": "Delete announcement",
+  "announcements.deleteConfirm": "Are you sure you want to delete this announcement?",
+  "announcements.empty": "No announcements",
+  "announcements.created": "Announcement created",
+  "announcements.author.organizer": "Organizer",
+  "announcements.author.admin": "Hotel",
+  "announcements.charCount": "{n}/2000",
+
+  // ── Guest CRUD (organizer) ----
+  "guests.add": "Add guest",
+  "guests.edit": "Edit guest",
+  "guests.delete": "Delete guest",
+  "guests.deleteConfirm": "Are you sure you want to delete this guest?",
+  "guests.firstName": "First name",
+  "guests.lastName": "Last name",
+  "guests.email": "Email",
+  "guests.phone": "Phone",
+  "guests.dietary": "Dietary preferences",
+  "guests.allergies": "Allergies",
+  "guests.added": "Guest added",
+  "guests.updated": "Guest updated",
+  "guests.deleted": "Guest deleted",
+  "guests.firstNameRequired": "First name is required",
+  "guests.lastNameRequired": "Last name is required",
+  "guests.cannotEditAdmin": "Cannot edit guests added by the hotel",
+  "guests.limitReached": "Guest limit reached",
+
+  // ── Attractions ----
+  "attractions.openHotelMaps": "Open hotel in Maps",
+
+  // ── Upsell ----
+  "upsell.title": "Recommended services",
+  "upsell.ask": "Inquire",
+  "upsell.seeAll": "See all services",
+
+  // ── Notes ----
+  "notes.title": "Notes from the organizer",
 
   // ── Error Boundary ----
   "error.fallback": "Something went wrong",

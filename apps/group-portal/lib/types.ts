@@ -106,6 +106,7 @@ export interface PortalInitData {
       icon?: string;
       isComplete?: boolean;
     }>;
+    notes?: string | null;
   };
   event: {
     name: string | null;
@@ -204,6 +205,24 @@ export interface SelfRegisterResponse {
     email: string | null;
   };
   rsvpToken: string;
+}
+
+// ── Polls ----
+
+export interface PollOption {
+  text: string;
+  votes: number;
+}
+
+export interface PollData {
+  id: string;
+  question: string;
+  options: string[];
+  isActive: boolean;
+  totalVotes: number;
+  voteCounts: number[];
+  createdAt: string;
+  closedAt: string | null;
 }
 
 export interface GroupMessage {

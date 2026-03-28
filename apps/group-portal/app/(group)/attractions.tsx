@@ -168,6 +168,29 @@ function AttractionsScreenInner() {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
+        {/* Hotel address — "Open in Maps" */}
+        {initData?.hotel?.address ? (
+          <Pressable
+            style={styles.hotelMapsBtn}
+            onPress={() =>
+              Linking.openURL(
+                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(initData.hotel.address!)}`
+              )
+            }
+            accessibilityRole="link"
+            accessibilityLabel={t(lang, "attractions.openHotelMaps")}
+          >
+            <Icon name="map-outline" size={20} color={group.primary} />
+            <View style={styles.hotelMapsTextArea}>
+              <Text style={styles.hotelMapsLabel}>{t(lang, "attractions.openHotelMaps")}</Text>
+              <Text style={styles.hotelMapsAddress} numberOfLines={1}>
+                {initData.hotel.address}
+              </Text>
+            </View>
+            <Icon name="open-outline" size={16} color={group.textMuted} />
+          </Pressable>
+        ) : null}
+
         {attractions.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Icon name="compass-outline" size={48} color={group.textMuted} />
@@ -238,6 +261,31 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: spacing.xl,
     gap: spacing.md,
+  },
+
+  // Hotel maps button
+  hotelMapsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: group.primaryLight,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    gap: spacing.md,
+    minHeight: 44,
+  },
+  hotelMapsTextArea: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  hotelMapsLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.primary,
+  },
+  hotelMapsAddress: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
   },
 
   // Card

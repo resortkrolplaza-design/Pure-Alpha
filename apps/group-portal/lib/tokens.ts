@@ -43,6 +43,7 @@ export const quickActionColors = {
   attractions: { bg: "#fce7f3", icon: "#db2777" },
   gallery: { bg: "#e0e7ff", icon: "#4f46e5" },
   rsvp: { bg: "#f0fdf4", icon: "#16a34a" },
+  polls: { bg: "#fef9c3", icon: "#ca8a04" },
 } as const;
 
 // ── Timeline Colors ----

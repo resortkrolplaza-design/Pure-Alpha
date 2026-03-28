@@ -133,6 +133,7 @@ const QUICK_ACTIONS: Array<{
   { labelKey: "quickAction.services", icon: "pricetag", tab: "services", bg: quickActionColors.services.bg, color: quickActionColors.services.icon, flag: "servicesEnabled" },
   { labelKey: "quickAction.attractions", icon: "compass", tab: "attractions", bg: quickActionColors.attractions.bg, color: quickActionColors.attractions.icon, flag: "attractionsEnabled" },
   { labelKey: "quickAction.faq", icon: "help-circle", tab: "faq", bg: quickActionColors.faq.bg, color: quickActionColors.faq.icon, flag: "faqEnabled" },
+  { labelKey: "quickAction.polls", icon: "bar-chart", tab: "polls", bg: quickActionColors.polls.bg, color: quickActionColors.polls.icon, flag: "pollsEnabled" },
 ];
 
 // =============================================================================
@@ -674,6 +675,19 @@ function OverviewScreenInner() {
         )}
 
         {/* ================================================================= */}
+        {/* C2. ORGANIZER NOTES                                               */}
+        {/* ================================================================= */}
+        {!isLoading && portal?.notes ? (
+          <View style={styles.notesCard}>
+            <View style={styles.notesHeader}>
+              <Icon name="document-text-outline" size={20} color={group.primary} />
+              <Text style={styles.notesTitle}>{t(lang, "notes.title")}</Text>
+            </View>
+            <Text style={styles.notesBody}>{portal.notes}</Text>
+          </View>
+        ) : null}
+
+        {/* ================================================================= */}
         {/* D. CTA ALERT                                                      */}
         {/* ================================================================= */}
         {showCta && (
@@ -745,6 +759,58 @@ function OverviewScreenInner() {
         )}
 
         {/* ================================================================= */}
+        {/* D3. UPSELL BANNER                                                 */}
+        {/* ================================================================= */}
+        {!isLoading && portal?.upsellEnabled && portal?.servicesEnabled && services && services.length > 0 && (
+          <View style={styles.upsellSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{t(lang, "upsell.title")}</Text>
+              {services.length > 2 && (
+                <Pressable
+                  style={styles.seeAllBtn}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.navigate("/(group)/services" as any);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(lang, "upsell.seeAll")}
+                >
+                  <Text style={styles.seeAllText}>{t(lang, "upsell.seeAll")}</Text>
+                  <Icon name="chevron-forward" size={16} color={group.primary} />
+                </Pressable>
+              )}
+            </View>
+            {services.slice(0, 2).map((svc) => (
+              <View key={svc.id} style={styles.upsellCard}>
+                <View style={styles.upsellCardBody}>
+                  <Text style={styles.upsellCardName} numberOfLines={1}>{svc.name}</Text>
+                  {svc.description ? (
+                    <Text style={styles.upsellCardDesc} numberOfLines={2}>{svc.description}</Text>
+                  ) : null}
+                  {svc.price != null ? (
+                    <Text style={styles.upsellCardPrice}>
+                      {svc.price} {svc.currency ?? "PLN"}{svc.unit ? ` / ${svc.unit}` : ""}
+                    </Text>
+                  ) : null}
+                </View>
+                <Pressable
+                  style={styles.upsellAskBtn}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.navigate("/(group)/messages" as any);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(lang, "upsell.ask")}
+                >
+                  <Icon name="chatbubble-outline" size={16} color={group.white} />
+                  <Text style={styles.upsellAskText}>{t(lang, "upsell.ask")}</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* ================================================================= */}
         {/* E. QUICK ACTIONS (colored grid)                                   */}
         {/* ================================================================= */}
         {!isLoading && !isError && initData && (
@@ -773,9 +839,25 @@ function OverviewScreenInner() {
         {/* ================================================================= */}
         {!isLoading && !isError && initData && (
           <View ref={announcementsRef} onLayout={(e) => { announcementsY.current = e.nativeEvent.layout.y; }} style={styles.section} accessibilityLiveRegion="polite">
-            <Text style={styles.sectionTitle}>
-              {t(lang, "group.announcements")}
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {t(lang, "group.announcements")}
+              </Text>
+              {announcements && announcements.length > 3 && (
+                <Pressable
+                  style={styles.seeAllBtn}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.navigate("/(group)/announcements" as any);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(lang, "common.seeAll")}
+                >
+                  <Text style={styles.seeAllText}>{t(lang, "common.seeAll")}</Text>
+                  <Icon name="chevron-forward" size={16} color={group.primary} />
+                </Pressable>
+              )}
+            </View>
 
             {!announcements?.length ? (
               <View style={styles.emptyCard}>
@@ -786,7 +868,7 @@ function OverviewScreenInner() {
               </View>
             ) : (
               <View style={styles.announcementsList}>
-                {announcements.map((a, idx) => (
+                {announcements.slice(0, 3).map((a, idx) => (
                   <AnnouncementCard
                     key={a.id}
                     announcement={a}
@@ -1223,6 +1305,87 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginLeft: spacing.xs,
+  },
+
+  // ── Notes Card ──
+  notesCard: {
+    backgroundColor: group.card,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    padding: spacing.lg,
+    marginHorizontal: spacing["2xl"],
+    gap: spacing.md,
+    ...shadow.sm,
+  },
+  notesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  notesTitle: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  notesBody: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
+    lineHeight: 20,
+  },
+
+  // ── Upsell Section ──
+  upsellSection: {
+    gap: spacing.md,
+    paddingHorizontal: spacing["2xl"],
+  },
+  upsellCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: group.card,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    padding: spacing.lg,
+    gap: spacing.md,
+    ...shadow.sm,
+  },
+  upsellCardBody: {
+    flex: 1,
+    gap: spacing.xxs,
+  },
+  upsellCardName: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  upsellCardDesc: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    lineHeight: 18,
+  },
+  upsellCardPrice: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_700Bold",
+    color: group.primary,
+    marginTop: spacing.xxs,
+  },
+  upsellAskBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: group.primary,
+    borderRadius: radius.full,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    minHeight: 44,
+  },
+  upsellAskText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
   },
 
   // ── Welcome Back Card ──

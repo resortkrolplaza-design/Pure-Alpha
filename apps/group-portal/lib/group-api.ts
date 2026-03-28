@@ -12,7 +12,10 @@ import type {
   RsvpResponse,
   SelfRegisterPayload,
   SelfRegisterResponse,
+  GroupAnnouncementData,
+  GroupGuestData,
   GroupPhotoData,
+  PollData,
 } from "./types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -139,10 +142,154 @@ export async function selfRegister(
   });
 }
 
+// ── Guest CRUD (organizer only) ----
+
+export interface AddGuestPayload {
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  dietaryNeeds?: string;
+  allergies?: string;
+}
+
+export interface EditGuestPayload {
+  firstName?: string;
+  lastName?: string;
+  email?: string | null;
+  phone?: string | null;
+  dietaryNeeds?: string | null;
+  allergies?: string | null;
+}
+
+export async function addGuest(
+  trackingId: string,
+  payload: AddGuestPayload,
+): Promise<ApiResponse<GroupGuestData>> {
+  return groupFetch(trackingId, "/guests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function editGuest(
+  trackingId: string,
+  guestId: string,
+  payload: EditGuestPayload,
+): Promise<ApiResponse<GroupGuestData>> {
+  return groupFetch(
+    trackingId,
+    `/guests/${encodeURIComponent(guestId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export async function deleteGuest(
+  trackingId: string,
+  guestId: string,
+): Promise<ApiResponse<void>> {
+  return groupFetch(
+    trackingId,
+    `/guests/${encodeURIComponent(guestId)}`,
+    { method: "DELETE" },
+  );
+}
+
+// ── Announcements ----
+
+export async function fetchAnnouncements(
+  trackingId: string,
+): Promise<ApiResponse<GroupAnnouncementData[]>> {
+  return groupFetch(trackingId, "/announcements");
+}
+
+export async function createAnnouncement(
+  trackingId: string,
+  payload: { content: string; isPinned: boolean },
+): Promise<ApiResponse<GroupAnnouncementData>> {
+  return groupFetch(trackingId, "/announcements", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAnnouncement(
+  trackingId: string,
+  announcementId: string,
+): Promise<ApiResponse<void>> {
+  return groupFetch(
+    trackingId,
+    `/announcements/${encodeURIComponent(announcementId)}`,
+    { method: "DELETE" },
+  );
+}
+
 // ── Photos ----
 
 export async function fetchPhotos(
   trackingId: string,
 ): Promise<ApiResponse<GroupPhotoData[]>> {
   return groupFetch(trackingId, "/photos");
+}
+
+// ── Polls ----
+
+export async function fetchPolls(
+  trackingId: string,
+): Promise<ApiResponse<PollData[]>> {
+  return groupFetch(trackingId, "/polls");
+}
+
+export async function createPoll(
+  trackingId: string,
+  payload: { question: string; options: string[] },
+): Promise<ApiResponse<PollData>> {
+  return groupFetch(trackingId, "/polls", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function votePoll(
+  trackingId: string,
+  pollId: string,
+  optionIdx: number,
+  deviceId: string,
+): Promise<ApiResponse<{ totalVotes: number; voteCounts: number[] }>> {
+  return groupFetch(
+    trackingId,
+    `/polls/${encodeURIComponent(pollId)}/vote`,
+    {
+      method: "POST",
+      body: JSON.stringify({ optionIdx, deviceId }),
+    },
+  );
+}
+
+export async function closePoll(
+  trackingId: string,
+  pollId: string,
+): Promise<ApiResponse<void>> {
+  return groupFetch(
+    trackingId,
+    `/polls/${encodeURIComponent(pollId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ isActive: false }),
+    },
+  );
+}
+
+export async function deletePoll(
+  trackingId: string,
+  pollId: string,
+): Promise<ApiResponse<void>> {
+  return groupFetch(
+    trackingId,
+    `/polls/${encodeURIComponent(pollId)}`,
+    { method: "DELETE" },
+  );
 }
