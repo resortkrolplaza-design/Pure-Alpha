@@ -481,6 +481,11 @@ function CreatePollForm({
 // Main Screen Content
 // =============================================================================
 
+// Exported for embedding inside Messages tab (sub-tab "Ankiety")
+export function PollsContent() {
+  return <PollsScreenContent />;
+}
+
 function PollsScreenContent() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);

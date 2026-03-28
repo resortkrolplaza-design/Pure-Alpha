@@ -1,5 +1,6 @@
 // =============================================================================
-// Group Portal — Messages (iOS Messages-style chat with organizer/participants)
+// Group Portal -- Messages (Tab 4): Chat | Ogloszenia | Ankiety
+// Combines 3 features via SegmentedControl sub-tabs.
 // =============================================================================
 
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
@@ -11,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
-import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
+import { group, fontSize, radius, spacing, shadow, TOUCH_TARGET } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { useScalePress, useSlideUp } from "@/lib/animations";
 import { t } from "@/lib/i18n";
@@ -19,6 +20,100 @@ import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
 import type { GroupMessage } from "@/lib/types";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
+import { AnnouncementsContent } from "./announcements";
+import { PollsContent } from "./polls";
+
+// =============================================================================
+// Segment type
+// =============================================================================
+
+type Segment = "chat" | "announcements" | "polls";
+
+const SEGMENTS: Array<{ key: Segment; labelKey: string }> = [
+  { key: "chat", labelKey: "messages.tab.chat" },
+  { key: "announcements", labelKey: "messages.tab.announcements" },
+  { key: "polls", labelKey: "messages.tab.polls" },
+];
+
+// =============================================================================
+// SegmentedControl
+// =============================================================================
+
+function SegmentedControl({
+  selected,
+  onSelect,
+  lang,
+}: {
+  selected: Segment;
+  onSelect: (seg: Segment) => void;
+  lang: "pl" | "en";
+}) {
+  return (
+    <View style={segStyles.container} accessibilityRole="tablist">
+      {SEGMENTS.map((seg) => {
+        const isActive = seg.key === selected;
+        return (
+          <Pressable
+            key={seg.key}
+            style={[segStyles.segment, isActive && segStyles.segmentActive]}
+            onPress={() => {
+              if (!isActive) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onSelect(seg.key);
+              }
+            }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={t(lang, seg.labelKey)}
+          >
+            <Text
+              style={[segStyles.label, isActive && segStyles.labelActive]}
+              numberOfLines={1}
+            >
+              {t(lang, seg.labelKey)}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+const segStyles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    backgroundColor: group.inputBg,
+    borderRadius: radius.lg,
+    padding: 3,
+  },
+  segment: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    minHeight: TOUCH_TARGET,
+  },
+  segmentActive: {
+    backgroundColor: group.white,
+    ...shadow.sm,
+  },
+  label: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.textMuted,
+  },
+  labelActive: {
+    color: group.primary,
+    fontFamily: "Inter_600SemiBold",
+  },
+});
+
+// =============================================================================
+// Chat helpers (extracted from original messages.tsx)
+// =============================================================================
 
 // P1-17: Strip bidi control characters to prevent XSS text spoofing
 function stripBidiChars(str: string): string {
@@ -26,15 +121,13 @@ function stripBidiChars(str: string): string {
 }
 
 // P2-3: Adaptive polling backoff
-// Start at 10s, after 1min of no new messages -> 30s, after 5min -> 60s.
-// Reset to 10s on user send.
 const POLL_FAST = 10_000;
 const POLL_MEDIUM = 30_000;
 const POLL_SLOW = 60_000;
-const BACKOFF_MEDIUM_AFTER_MS = 60_000; // 1 minute of no new messages
-const BACKOFF_SLOW_AFTER_MS = 300_000; // 5 minutes of no new messages
+const BACKOFF_MEDIUM_AFTER_MS = 60_000;
+const BACKOFF_SLOW_AFTER_MS = 300_000;
 
-// ── Avatar initials + gradient ────────────────────────────────────────────────
+// -- Avatar initials + gradient -----------------------------------------------
 
 function getInitials(firstName: string | null, lastName: string | null): string {
   const f = firstName?.charAt(0)?.toUpperCase() ?? "";
@@ -42,7 +135,6 @@ function getInitials(firstName: string | null, lastName: string | null): string 
   return f + l || "?";
 }
 
-// Deterministic color from name string — consistent gradient per sender
 const AVATAR_COLORS = [
   "#6366f1", "#8b5cf6", "#ec4899", "#f43f5e", "#f97316",
   "#eab308", "#22c55e", "#14b8a6", "#06b6d4", "#3b82f6",
@@ -56,7 +148,7 @@ function getAvatarColor(name: string): string {
   return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
 }
 
-// ── Date helpers ──────────────────────────────────────────────────────────────
+// -- Date helpers -------------------------------------------------------------
 
 function isSameDay(d1: Date, d2: Date): boolean {
   return (
@@ -78,13 +170,17 @@ function formatDateSeparator(date: Date, lang: "pl" | "en"): string {
   });
 }
 
-// ── Message list item types ───────────────────────────────────────────────────
+// -- Message list item types --------------------------------------------------
 
 type ListItem =
   | { type: "date"; key: string; label: string }
   | { type: "message"; key: string; msg: GroupMessage; isPinned: boolean };
 
-function GroupMessagesScreenInner() {
+// =============================================================================
+// ChatContent -- the original chat logic, now as a named component
+// =============================================================================
+
+function ChatContent() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -100,7 +196,6 @@ function GroupMessagesScreenInner() {
     if (prefill && typeof prefill === "string" && !prefillApplied.current) {
       prefillApplied.current = true;
       setText(prefill);
-      // Focus input after a short delay to ensure layout is ready
       const timer = setTimeout(() => inputRef.current?.focus(), 300);
       return () => clearTimeout(timer);
     }
@@ -112,7 +207,6 @@ function GroupMessagesScreenInner() {
   const prevMsgCountRef2 = useRef<number | null>(null);
 
   const { scaleStyle, onPressIn, onPressOut } = useScalePress();
-  const headerSlide = useSlideUp(0, 12);
 
   const { data: msgData, isLoading, isError, refetch } = useQuery({
     queryKey: ["group-messages", trackingId],
@@ -131,7 +225,6 @@ function GroupMessagesScreenInner() {
     if (!msgData) return;
     const currentCount = (msgData.replies?.length ?? 0) + (msgData.anchorMessage ? 1 : 0);
     if (prevMsgCountRef2.current !== null && currentCount > prevMsgCountRef2.current) {
-      // New message arrived -- reset to fast polling
       lastNewMsgTimeRef.current = Date.now();
       setPollInterval(POLL_FAST);
     }
@@ -156,7 +249,6 @@ function GroupMessagesScreenInner() {
     const items: ListItem[] = [];
     const replies = [...(msgData?.replies ?? [])].reverse();
 
-    // Anchor message first (pinned)
     if (msgData?.anchorMessage) {
       items.push({
         type: "message",
@@ -208,11 +300,10 @@ function GroupMessagesScreenInner() {
       queryClient.invalidateQueries({ queryKey: ["group-messages"] });
       setText("");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      // P2-3: Reset polling to fast after user sends a message
       lastNewMsgTimeRef.current = Date.now();
       setPollInterval(POLL_FAST);
     },
-    onError: (err) => {
+    onError: () => {
       Alert.alert(t(lang, "common.error"), t(lang, "messages.sendFailed"));
     },
   });
@@ -241,9 +332,9 @@ function GroupMessagesScreenInner() {
   const renderItem = useCallback(({ item }: { item: ListItem }) => {
     if (item.type === "date") {
       return (
-        <View style={styles.dateSeparator}>
-          <View style={styles.datePill}>
-            <Text style={styles.datePillText}>{item.label}</Text>
+        <View style={chatStyles.dateSeparator}>
+          <View style={chatStyles.datePill}>
+            <Text style={chatStyles.datePillText}>{item.label}</Text>
           </View>
         </View>
       );
@@ -260,38 +351,35 @@ function GroupMessagesScreenInner() {
 
     return (
       <Animated.View style={[{ opacity: fadeOpacity }]}>
-        {/* Pinned anchor message */}
         {isPinned && (
-          <View style={styles.pinnedBanner}>
+          <View style={chatStyles.pinnedBanner}>
             <Icon name="pin-outline" size={14} color={group.primary} />
-            <Text style={styles.pinnedBannerText}>{t(lang, "messages.pinnedMessage")}</Text>
+            <Text style={chatStyles.pinnedBannerText}>{t(lang, "messages.pinnedMessage")}</Text>
           </View>
         )}
-        <View style={[styles.msgRow, isMine ? styles.msgRowMine : styles.msgRowTheirs]}>
-          {/* Avatar for organizer messages (left side) */}
+        <View style={[chatStyles.msgRow, isMine ? chatStyles.msgRowMine : chatStyles.msgRowTheirs]}>
           {isOrg && (
-            <View style={[styles.avatar, { backgroundColor: getAvatarColor(senderName || "Org") }]}>
-              <Text style={styles.avatarText}>{getInitials(safeFirstName, safeLastName)}</Text>
+            <View style={[chatStyles.avatar, { backgroundColor: getAvatarColor(senderName || "Org") }]}>
+              <Text style={chatStyles.avatarText}>{getInitials(safeFirstName, safeLastName)}</Text>
             </View>
           )}
 
-          <View style={[styles.bubbleColumn, isMine && styles.bubbleColumnMine]}>
-            {/* Sender name above bubble — only for organizer */}
+          <View style={[chatStyles.bubbleColumn, isMine && chatStyles.bubbleColumnMine]}>
             {isOrg && senderName && (
-              <Text style={styles.senderName}>{senderName}</Text>
+              <Text style={chatStyles.senderName}>{senderName}</Text>
             )}
 
             <View
               style={[
-                styles.msgBubble,
-                isMine ? styles.bubbleMine : styles.bubbleTheirs,
-                isPinned && styles.bubblePinned,
+                chatStyles.msgBubble,
+                isMine ? chatStyles.bubbleMine : chatStyles.bubbleTheirs,
+                isPinned && chatStyles.bubblePinned,
               ]}
             >
-              <Text style={[styles.msgText, isMine && styles.msgTextMine]}>{safeBody}</Text>
+              <Text style={[chatStyles.msgText, isMine && chatStyles.msgTextMine]}>{safeBody}</Text>
             </View>
 
-            <Text style={[styles.msgTime, isMine && styles.msgTimeMine]}>
+            <Text style={[chatStyles.msgTime, isMine && chatStyles.msgTimeMine]}>
               {new Date(msg.createdAt).toLocaleTimeString(lang === "pl" ? "pl-PL" : "en-GB", {
                 hour: "2-digit", minute: "2-digit",
               })}
@@ -305,102 +393,144 @@ function GroupMessagesScreenInner() {
   const hasText = text.trim().length > 0;
 
   return (
-    <View style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardView}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
-      >
-        {/* Header */}
-        <Animated.View style={[styles.header, { paddingTop: insets.top + 12 }, headerSlide]}>
-          <Text style={styles.title}>{t(lang, "group.tab.messages")}</Text>
-        </Animated.View>
-
-        {/* Content */}
-        {isLoading ? (
-          <View style={styles.center}>
-            <ActivityIndicator color={group.primary} />
-          </View>
-        ) : isError ? (
-          <View style={styles.center}>
-            <Icon name="cloud-offline-outline" size={48} color={group.textMuted} />
-            <Text style={styles.errorText}>{t(lang, "messages.errorLoading")}</Text>
-            <Pressable
-              style={styles.retryBtn}
-              onPress={() => refetch()}
-              accessibilityRole="button"
-              accessibilityLabel={t(lang, "common.retry")}
-            >
-              <Text style={styles.retryBtnText}>{t(lang, "common.retry")}</Text>
-            </Pressable>
-          </View>
-        ) : !listItems.length ? (
-          <View style={styles.center}>
-            <Icon name="chatbubbles-outline" size={48} color={group.textMuted} />
-            <Text style={styles.emptyTitle}>{t(lang, "group.noMessages")}</Text>
-            <Text style={styles.emptyDesc}>{t(lang, "group.noMessagesDesc")}</Text>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={listItems}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.key}
-            contentContainerStyle={styles.listContent}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
-
-        {/* Input bar — iOS-style */}
-        <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8 }]}>
-          <View style={styles.inputWrapper}>
-            <TextInput
-              ref={inputRef}
-              style={styles.input}
-              placeholder={t(lang, "messages.placeholder")}
-              placeholderTextColor={group.textMuted}
-              value={text}
-              onChangeText={setText}
-              multiline
-              maxLength={2000}
-              accessibilityLabel={t(lang, "messages.placeholder")}
-            />
-          </View>
-          <Animated.View style={scaleStyle}>
-            <Pressable
-              style={[styles.sendBtn, !hasText && styles.sendBtnDisabled]}
-              onPress={handleSend}
-              onPressIn={onPressIn}
-              onPressOut={onPressOut}
-              disabled={!hasText || sendMutation.isPending}
-              accessibilityRole="button"
-              accessibilityLabel={t(lang, "messages.send")}
-            >
-              {sendMutation.isPending ? (
-                <ActivityIndicator size="small" color={group.white} />
-              ) : (
-                <Icon name="arrow-up" size={20} color={group.white} />
-              )}
-            </Pressable>
-          </Animated.View>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={chatStyles.keyboardView}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+    >
+      {/* Content */}
+      {isLoading ? (
+        <View style={chatStyles.center}>
+          <ActivityIndicator color={group.primary} />
         </View>
-      </KeyboardAvoidingView>
+      ) : isError ? (
+        <View style={chatStyles.center}>
+          <Icon name="cloud-offline-outline" size={48} color={group.textMuted} />
+          <Text style={chatStyles.errorText}>{t(lang, "messages.errorLoading")}</Text>
+          <Pressable
+            style={chatStyles.retryBtn}
+            onPress={() => refetch()}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "common.retry")}
+          >
+            <Text style={chatStyles.retryBtnText}>{t(lang, "common.retry")}</Text>
+          </Pressable>
+        </View>
+      ) : !listItems.length ? (
+        <View style={chatStyles.center}>
+          <Icon name="chatbubbles-outline" size={48} color={group.textMuted} />
+          <Text style={chatStyles.emptyTitle}>{t(lang, "group.noMessages")}</Text>
+          <Text style={chatStyles.emptyDesc}>{t(lang, "group.noMessagesDesc")}</Text>
+        </View>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          data={listItems}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.key}
+          contentContainerStyle={chatStyles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      {/* Input bar */}
+      <View style={[chatStyles.inputBar, { paddingBottom: insets.bottom + 8 }]}>
+        <View style={chatStyles.inputWrapper}>
+          <TextInput
+            ref={inputRef}
+            style={chatStyles.input}
+            placeholder={t(lang, "messages.placeholder")}
+            placeholderTextColor={group.textMuted}
+            value={text}
+            onChangeText={setText}
+            multiline
+            maxLength={2000}
+            accessibilityLabel={t(lang, "messages.placeholder")}
+          />
+        </View>
+        <Animated.View style={scaleStyle}>
+          <Pressable
+            style={[chatStyles.sendBtn, !hasText && chatStyles.sendBtnDisabled]}
+            onPress={handleSend}
+            onPressIn={onPressIn}
+            onPressOut={onPressOut}
+            disabled={!hasText || sendMutation.isPending}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "messages.send")}
+          >
+            {sendMutation.isPending ? (
+              <ActivityIndicator size="small" color={group.white} />
+            ) : (
+              <Icon name="arrow-up" size={20} color={group.white} />
+            )}
+          </Pressable>
+        </Animated.View>
+      </View>
+    </KeyboardAvoidingView>
+  );
+}
+
+// =============================================================================
+// Main Screen -- SegmentedControl + sub-tab switching
+// =============================================================================
+
+function GroupMessagesScreenInner() {
+  const insets = useSafeAreaInsets();
+  const lang = useAppStore((s) => s.lang);
+  const headerSlide = useSlideUp(0, 12);
+
+  // Accept `tab` route param to auto-select a segment on navigation
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const [activeSegment, setActiveSegment] = useState<Segment>(() => {
+    if (tab === "announcements") return "announcements";
+    if (tab === "polls") return "polls";
+    return "chat";
+  });
+
+  // Re-sync segment when route param changes (e.g. quick action navigates here)
+  const prevTabRef = useRef(tab);
+  useEffect(() => {
+    if (tab !== prevTabRef.current) {
+      prevTabRef.current = tab;
+      if (tab === "announcements") setActiveSegment("announcements");
+      else if (tab === "polls") setActiveSegment("polls");
+      else if (tab === "chat") setActiveSegment("chat");
+    }
+  }, [tab]);
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <Animated.View style={[styles.header, { paddingTop: insets.top + 12 }, headerSlide]}>
+        <Text style={styles.title}>{t(lang, "group.tab.messages")}</Text>
+      </Animated.View>
+
+      {/* Segmented Control */}
+      <SegmentedControl
+        selected={activeSegment}
+        onSelect={setActiveSegment}
+        lang={lang}
+      />
+
+      {/* Sub-tab content */}
+      <View style={styles.content}>
+        {activeSegment === "chat" && <ChatContent />}
+        {activeSegment === "announcements" && <AnnouncementsContent />}
+        {activeSegment === "polls" && <PollsContent />}
+      </View>
     </View>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// =============================================================================
+// Styles -- container + header
+// =============================================================================
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: group.bg },
-  keyboardView: { flex: 1 },
-
-  // Header
   header: {
     paddingHorizontal: spacing.xl,
     paddingBottom: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: group.cardBorder,
     backgroundColor: group.bg,
   },
   title: {
@@ -408,8 +538,19 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: group.text,
   },
+  content: {
+    flex: 1,
+  },
+});
 
-  // Center states (loading, error, empty)
+// =============================================================================
+// Chat-specific styles
+// =============================================================================
+
+const chatStyles = StyleSheet.create({
+  keyboardView: { flex: 1 },
+
+  // Center states
   center: {
     flex: 1,
     justifyContent: "center",
@@ -526,7 +667,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xxs,
   },
 
-  // Bubbles — iOS Messages style
+  // Bubbles
   msgBubble: {
     borderRadius: radius.xl,
     paddingHorizontal: spacing.lg,
@@ -632,7 +773,9 @@ const styles = StyleSheet.create({
   },
 });
 
-// ── Default export wrapped in ErrorBoundary ──────────────────────────────────
+// =============================================================================
+// Default export wrapped in ErrorBoundary
+// =============================================================================
 
 export default function GroupMessagesScreen() {
   return (

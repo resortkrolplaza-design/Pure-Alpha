@@ -372,7 +372,7 @@ function AnimatedDocCard({
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-function DocumentsScreenInner() {
+export function DocumentsContent() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -741,7 +741,7 @@ const styles = StyleSheet.create({
 export default function DocumentsScreen() {
   return (
     <ErrorBoundary>
-      <DocumentsScreenInner />
+      <DocumentsContent />
     </ErrorBoundary>
   );
 }

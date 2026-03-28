@@ -934,9 +934,9 @@ function GuestCard({
   );
 }
 
-// -- Main Screen ------------------------------------------------------------
+// -- Main Screen (exported for hub reuse) -----------------------------------
 
-function GuestsScreenInner() {
+export function GuestsContent() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -1765,7 +1765,7 @@ const styles = StyleSheet.create({
 export default function GuestsScreen() {
   return (
     <ErrorBoundary>
-      <GuestsScreenInner />
+      <GuestsContent />
     </ErrorBoundary>
   );
 }

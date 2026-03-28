@@ -350,6 +350,11 @@ function CreateForm({
 // Main Screen (Inner)
 // =============================================================================
 
+// Exported for embedding inside Messages tab (sub-tab "Ogloszenia")
+export function AnnouncementsContent() {
+  return <AnnouncementsScreenInner />;
+}
+
 function AnnouncementsScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);

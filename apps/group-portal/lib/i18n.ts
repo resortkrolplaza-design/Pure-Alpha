@@ -39,6 +39,12 @@ const pl: Record<string, string> = {
   "group.tab.messages": "Wiadomości",
   "group.tab.documents": "Dokumenty",
   "group.tab.photos": "Zdjęcia",
+  "group.tab.rsvp": "RSVP",
+  "group.tab.manage": "Zarządzaj",
+  "group.segment.confirmAttendance": "Potwierdz obecnosc",
+  "group.segment.joinEvent": "Dolacz do wydarzenia",
+  "group.segment.guestList": "Lista gosci",
+  "group.segment.documents": "Dokumenty",
   "group.agenda": "Agenda",
   "group.announcements": "Ogłoszenia",
   "group.countdown": "Do wydarzenia",
@@ -160,6 +166,11 @@ const pl: Record<string, string> = {
   "quickAction.faq": "FAQ",
   "quickAction.gallery": "Galeria",
   "quickAction.polls": "Ankiety",
+
+  // ── Messages sub-tabs ----
+  "messages.tab.chat": "Chat",
+  "messages.tab.announcements": "Og\u0142oszenia",
+  "messages.tab.polls": "Ankiety",
 
   // ── Polls ----
   "polls.title": "Ankiety",
@@ -375,6 +386,12 @@ const en: Record<string, string> = {
   "group.tab.messages": "Messages",
   "group.tab.documents": "Documents",
   "group.tab.photos": "Photos",
+  "group.tab.rsvp": "RSVP",
+  "group.tab.manage": "Manage",
+  "group.segment.confirmAttendance": "Confirm attendance",
+  "group.segment.joinEvent": "Join the event",
+  "group.segment.guestList": "Guest list",
+  "group.segment.documents": "Documents",
   "group.agenda": "Agenda",
   "group.announcements": "Announcements",
   "group.countdown": "Until event",
@@ -496,6 +513,11 @@ const en: Record<string, string> = {
   "quickAction.faq": "FAQ",
   "quickAction.gallery": "Gallery",
   "quickAction.polls": "Polls",
+
+  // ── Messages sub-tabs ----
+  "messages.tab.chat": "Chat",
+  "messages.tab.announcements": "Announcements",
+  "messages.tab.polls": "Polls",
 
   // ── Polls ----
   "polls.title": "Polls",

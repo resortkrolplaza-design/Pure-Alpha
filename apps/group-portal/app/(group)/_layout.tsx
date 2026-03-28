@@ -120,10 +120,17 @@ export default function GroupLayout() {
   }, [msgData, LAST_SEEN_KEY]);
 
   // Fix 2: Consistent defaults -- ALL optional tabs hidden until data loads
-  const hideGuests = !portal?.guestListEnabled || isParticipant;
   const hideMessages = !portal?.messagingEnabled;
-  const hideDocuments = !portal?.documentsEnabled || isParticipant;
   const hidePhotos = !portal?.photoWallEnabled;
+
+  // Event tab visible when at least one sub-section is enabled
+  const hideEvent = !(
+    portal?.agendaEnabled ||
+    portal?.galleryEnabled ||
+    portal?.servicesEnabled ||
+    portal?.attractionsEnabled ||
+    portal?.faqEnabled
+  );
 
   return (
     <Tabs
@@ -139,6 +146,7 @@ export default function GroupLayout() {
         },
       }}
     >
+      {/* ── 1. Overview (always visible) ── */}
       <Tabs.Screen
         name="overview"
         options={{
@@ -154,22 +162,44 @@ export default function GroupLayout() {
           ),
         }}
       />
+      {/* ── 2. Event (hidden when no sub-section is enabled) ── */}
       <Tabs.Screen
-        name="guests"
+        name="event"
         options={{
-          tabBarItemStyle: hideGuests ? { display: "none" } : undefined,
+          tabBarItemStyle: hideEvent ? { display: "none" } : undefined,
           tabBarLabel: ({ focused }) => (
-            <TabLabel focused={focused} label={t(lang, "group.tab.guests")} />
+            <TabLabel focused={focused} label={t(lang, "group.tab.event")} />
           ),
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              activeName="people"
-              inactiveName="people-outline"
+              activeName="calendar"
+              inactiveName="calendar-outline"
             />
           ),
         }}
       />
+      {/* ── 3. RSVP / Manage (always visible) ── */}
+      <Tabs.Screen
+        name="rsvp"
+        options={{
+          tabBarLabel: ({ focused }) => (
+            <TabLabel
+              focused={focused}
+              label={t(lang, isParticipant ? "group.tab.rsvp" : "group.tab.manage")}
+            />
+          ),
+          tabBarIcon: ({ focused }) => (
+            <AnimatedTabIcon
+              focused={focused}
+              activeName={isParticipant ? "checkmark-circle" : "settings"}
+              inactiveName={isParticipant ? "checkmark-circle-outline" : "settings-outline"}
+            />
+          ),
+        }}
+      />
+
+      {/* ── 4. Messages (hidden when messaging disabled) ── */}
       <Tabs.Screen
         name="messages"
         options={{
@@ -191,25 +221,7 @@ export default function GroupLayout() {
           tabPress: () => markMessagesSeen(),
         }}
       />
-      <Tabs.Screen
-        name="documents"
-        options={{
-          tabBarItemStyle: hideDocuments ? { display: "none" } : undefined,
-          tabBarLabel: ({ focused }) => (
-            <TabLabel
-              focused={focused}
-              label={t(lang, "group.tab.documents")}
-            />
-          ),
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon
-              focused={focused}
-              activeName="document-text"
-              inactiveName="document-text-outline"
-            />
-          ),
-        }}
-      />
+      {/* ── 5. Photos (hidden when photo wall disabled) ── */}
       <Tabs.Screen
         name="photos"
         options={{
@@ -227,7 +239,8 @@ export default function GroupLayout() {
         }}
       />
       {/* Hidden screens (no tab bar item) */}
-      <Tabs.Screen name="rsvp" options={{ href: null }} />
+      <Tabs.Screen name="guests" options={{ href: null }} />
+      <Tabs.Screen name="documents" options={{ href: null }} />
       <Tabs.Screen name="register" options={{ href: null }} />
       <Tabs.Screen name="agenda" options={{ href: null }} />
       <Tabs.Screen name="announcements" options={{ href: null }} />

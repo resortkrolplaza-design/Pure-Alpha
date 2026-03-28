@@ -84,7 +84,7 @@ function FormField({
 // Main Screen Content
 // =============================================================================
 
-function RegisterScreenContent() {
+export function RegisterContent() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -357,7 +357,7 @@ function RegisterScreenContent() {
 export default function RegisterScreen() {
   return (
     <ErrorBoundary>
-      <RegisterScreenContent />
+      <RegisterContent />
     </ErrorBoundary>
   );
 }

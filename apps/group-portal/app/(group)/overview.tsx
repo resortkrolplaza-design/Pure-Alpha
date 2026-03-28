@@ -177,22 +177,23 @@ const QUICK_ACTIONS: Array<{
   labelKey: string;
   icon: IconName;
   tab: string;
+  params?: Record<string, string>;
   bg: string;
   color: string;
   flag?: string;
   organizerOnly?: boolean;
 }> = [
   { labelKey: "quickAction.rsvp", icon: "checkmark-circle", tab: "rsvp", bg: quickActionColors.rsvp.bg, color: quickActionColors.rsvp.icon },
-  { labelKey: "group.quickGuests", icon: "people", tab: "guests", bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon, flag: "guestListEnabled", organizerOnly: true },
-  { labelKey: "quickAction.agenda", icon: "calendar", tab: "agenda", bg: quickActionColors.agenda.bg, color: quickActionColors.agenda.icon, flag: "agendaEnabled" },
+  { labelKey: "group.quickGuests", icon: "people", tab: "rsvp", bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon, flag: "guestListEnabled", organizerOnly: true },
+  { labelKey: "quickAction.agenda", icon: "calendar", tab: "event", params: { scrollTo: "agenda" }, bg: quickActionColors.agenda.bg, color: quickActionColors.agenda.icon, flag: "agendaEnabled" },
   { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: quickActionColors.messages.bg, color: quickActionColors.messages.icon, flag: "messagingEnabled" },
-  { labelKey: "group.quickDocuments", icon: "document-text", tab: "documents", bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon, flag: "documentsEnabled", organizerOnly: true },
+  { labelKey: "group.quickDocuments", icon: "document-text", tab: "rsvp", bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon, flag: "documentsEnabled", organizerOnly: true },
   { labelKey: "group.quickPhotos", icon: "camera", tab: "photos", bg: quickActionColors.photos.bg, color: quickActionColors.photos.icon, flag: "photoWallEnabled" },
-  { labelKey: "quickAction.gallery", icon: "images", tab: "gallery", bg: quickActionColors.gallery.bg, color: quickActionColors.gallery.icon, flag: "galleryEnabled" },
-  { labelKey: "quickAction.services", icon: "pricetag", tab: "services", bg: quickActionColors.services.bg, color: quickActionColors.services.icon, flag: "servicesEnabled" },
-  { labelKey: "quickAction.attractions", icon: "compass", tab: "attractions", bg: quickActionColors.attractions.bg, color: quickActionColors.attractions.icon, flag: "attractionsEnabled" },
-  { labelKey: "quickAction.faq", icon: "help-circle", tab: "faq", bg: quickActionColors.faq.bg, color: quickActionColors.faq.icon, flag: "faqEnabled" },
-  { labelKey: "quickAction.polls", icon: "bar-chart", tab: "polls", bg: quickActionColors.polls.bg, color: quickActionColors.polls.icon, flag: "pollsEnabled" },
+  { labelKey: "quickAction.gallery", icon: "images", tab: "event", params: { scrollTo: "gallery" }, bg: quickActionColors.gallery.bg, color: quickActionColors.gallery.icon, flag: "galleryEnabled" },
+  { labelKey: "quickAction.services", icon: "pricetag", tab: "event", params: { scrollTo: "services" }, bg: quickActionColors.services.bg, color: quickActionColors.services.icon, flag: "servicesEnabled" },
+  { labelKey: "quickAction.attractions", icon: "compass", tab: "event", params: { scrollTo: "attractions" }, bg: quickActionColors.attractions.bg, color: quickActionColors.attractions.icon, flag: "attractionsEnabled" },
+  { labelKey: "quickAction.faq", icon: "help-circle", tab: "event", params: { scrollTo: "faq" }, bg: quickActionColors.faq.bg, color: quickActionColors.faq.icon, flag: "faqEnabled" },
+  { labelKey: "quickAction.polls", icon: "bar-chart", tab: "messages", params: { tab: "polls" }, bg: quickActionColors.polls.bg, color: quickActionColors.polls.icon, flag: "pollsEnabled" },
 ];
 
 // =============================================================================
@@ -671,13 +672,20 @@ function OverviewScreenInner() {
     setRefreshing(false);
   }, [refetch]);
 
-  const handleQuickAction = useCallback((tab: string) => {
+  const handleQuickAction = useCallback((tab: string, params?: Record<string, string>) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (tab === "_announcements") {
       // Scroll to announcements section using onLayout-captured Y offset
       if (announcementsY.current > 0) {
         scrollRef.current?.scrollTo({ y: announcementsY.current, animated: true });
       }
+      return;
+    }
+    if (params && Object.keys(params).length > 0) {
+      router.navigate({
+        pathname: `/(group)/${tab}` as any,
+        params,
+      });
       return;
     }
     router.navigate(`/(group)/${tab}` as any);
@@ -1198,7 +1206,7 @@ function OverviewScreenInner() {
                   iconName={action.icon}
                   bg={action.bg}
                   color={action.color}
-                  onPress={() => handleQuickAction(action.tab)}
+                  onPress={() => handleQuickAction(action.tab, action.params)}
                 />
               ))}
             </View>
