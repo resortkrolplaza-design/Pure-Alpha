@@ -367,6 +367,7 @@ function OverviewScreenInner() {
   const [ctaDismissed, setCtaDismissed] = useState(false);
   const [coverError, setCoverError] = useState(false);
   const announcementsRef = useRef<View>(null);
+  const announcementsY = useRef(0);
   const scrollRef = useRef<ScrollView>(null);
 
   const handleLogout = useCallback(async () => {
@@ -465,14 +466,10 @@ function OverviewScreenInner() {
   const handleQuickAction = useCallback((tab: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (tab === "_announcements") {
-      // Scroll to announcements section
-      announcementsRef.current?.measureLayout(
-        scrollRef.current?.getInnerViewNode() as any,
-        (_x: number, y: number) => {
-          scrollRef.current?.scrollTo({ y, animated: true });
-        },
-        () => { /* measurement failed -- noop */ },
-      );
+      // Scroll to announcements section using onLayout-captured Y offset
+      if (announcementsY.current > 0) {
+        scrollRef.current?.scrollTo({ y: announcementsY.current, animated: true });
+      }
       return;
     }
     router.navigate(`/(group)/${tab}` as any);
@@ -782,7 +779,7 @@ function OverviewScreenInner() {
         {/* F. ANNOUNCEMENTS SECTION                                          */}
         {/* ================================================================= */}
         {!isLoading && !isError && initData && (
-          <View ref={announcementsRef} style={styles.section} accessibilityLiveRegion="polite">
+          <View ref={announcementsRef} onLayout={(e) => { announcementsY.current = e.nativeEvent.layout.y; }} style={styles.section} accessibilityLiveRegion="polite">
             <Text style={styles.sectionTitle}>
               {t(lang, "group.announcements")}
             </Text>
