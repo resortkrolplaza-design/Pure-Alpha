@@ -23,7 +23,8 @@ import { group, fontSize, radius, spacing, shadow, letterSpacing } from "@/lib/t
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { selfRegister } from "@/lib/group-api";
+import { selfRegister, fetchPortalInit } from "@/lib/group-api";
+import { useQuery } from "@tanstack/react-query";
 import { useScalePress, useSlideUp } from "@/lib/animations";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import { setRsvpToken } from "@/lib/auth";
@@ -89,6 +90,19 @@ function RegisterScreenContent() {
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
   const setGuest = useAppStore((s) => s.setGuest);
   const setRsvpTokenState = useAppStore((s) => s.setRsvpTokenState);
+
+  // Read portal flags (shared cache)
+  const { data: portalData } = useQuery({
+    queryKey: ["portal-init", trackingId],
+    queryFn: async () => {
+      if (!trackingId) return null;
+      const res = await fetchPortalInit(trackingId);
+      return res.status === "success" ? res.data : null;
+    },
+    enabled: !!trackingId,
+    staleTime: 60_000,
+  });
+  const dietaryEnabled = portalData?.portal?.dietaryEnabled !== false;
 
   // ── Form state ----
   const [firstName, setFirstName] = useState("");
@@ -279,17 +293,21 @@ function RegisterScreenContent() {
               textContentType="telephoneNumber"
             />
 
-            <FormField
-              label={t(lang, "register.dietary")}
-              value={dietaryNeeds}
-              onChangeText={setDietaryNeeds}
-            />
+            {dietaryEnabled && (
+              <>
+                <FormField
+                  label={t(lang, "register.dietary")}
+                  value={dietaryNeeds}
+                  onChangeText={setDietaryNeeds}
+                />
 
-            <FormField
-              label={t(lang, "register.allergies")}
-              value={allergies}
-              onChangeText={setAllergies}
-            />
+                <FormField
+                  label={t(lang, "register.allergies")}
+                  value={allergies}
+                  onChangeText={setAllergies}
+                />
+              </>
+            )}
 
             <FormField
               label={t(lang, "register.specialRequests")}

@@ -1030,7 +1030,7 @@ function OverviewScreenInner() {
             )}
 
             {/* Open in Maps */}
-            {hotel?.address && (
+            {portal?.mapEnabled !== false && hotel?.address && (
               <Pressable
                 style={styles.openMapsBtn}
                 onPress={() => Linking.openURL(`https://maps.apple.com/?q=${encodeURIComponent(hotel.address!)}`)}

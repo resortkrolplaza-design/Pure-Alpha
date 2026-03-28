@@ -35,7 +35,7 @@ import { Icon } from "@/lib/icons";
 import { useScalePress, useSlideUp } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { groupFetch, submitRsvp } from "@/lib/group-api";
+import { groupFetch, submitRsvp, fetchPortalInit } from "@/lib/group-api";
 import type { GroupGuestData, RsvpPayload } from "@/lib/types";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
@@ -118,6 +118,19 @@ function RsvpScreenInner() {
   const headerSlide = useSlideUp(0, 12);
   const formSlide = useSlideUp(80, 16);
   const { scaleStyle, onPressIn, onPressOut } = useScalePress();
+
+  // Read portal flags (shared cache with overview + _layout)
+  const { data: portalData } = useQuery({
+    queryKey: ["portal-init", trackingId],
+    queryFn: async () => {
+      if (!trackingId) return null;
+      const res = await fetchPortalInit(trackingId);
+      return res.status === "success" ? res.data : null;
+    },
+    enabled: !!trackingId,
+    staleTime: 60_000,
+  });
+  const dietaryEnabled = portalData?.portal?.dietaryEnabled !== false;
 
   // Fetch guest list for selection
   const { data: guests, isLoading } = useQuery({
@@ -369,27 +382,31 @@ function RsvpScreenInner() {
             {/* Step 3: Dietary + Note (only when confirming) */}
             {rsvpStatus === "confirmed" && (
               <View style={styles.section}>
-                <Text style={styles.inputLabel}>{t(lang, "rsvp.dietary")}</Text>
-                <TextInput
-                  style={styles.input}
-                  value={dietaryNeeds}
-                  onChangeText={setDietaryNeeds}
-                  placeholder={t(lang, "rsvp.dietary")}
-                  placeholderTextColor={group.textMuted}
-                  maxLength={500}
-                />
+                {dietaryEnabled && (
+                  <>
+                    <Text style={styles.inputLabel}>{t(lang, "rsvp.dietary")}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={dietaryNeeds}
+                      onChangeText={setDietaryNeeds}
+                      placeholder={t(lang, "rsvp.dietary")}
+                      placeholderTextColor={group.textMuted}
+                      maxLength={500}
+                    />
 
-                <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>
-                  {t(lang, "rsvp.allergies")}
-                </Text>
-                <TextInput
-                  style={styles.input}
-                  value={allergies}
-                  onChangeText={setAllergies}
-                  placeholder={t(lang, "rsvp.allergies")}
-                  placeholderTextColor={group.textMuted}
-                  maxLength={500}
-                />
+                    <Text style={[styles.inputLabel, { marginTop: spacing.md }]}>
+                      {t(lang, "rsvp.allergies")}
+                    </Text>
+                    <TextInput
+                      style={styles.input}
+                      value={allergies}
+                      onChangeText={setAllergies}
+                      placeholder={t(lang, "rsvp.allergies")}
+                      placeholderTextColor={group.textMuted}
+                      maxLength={500}
+                    />
+                  </>
+                )}
 
                 <Pressable
                   style={styles.consentRow}
