@@ -69,21 +69,26 @@ export default function GroupLayout() {
   const portalRole = useAppStore((s) => s.portalRole);
   const isParticipant = portalRole === "participant";
 
-  // Read feature flags from /init cache (already fetched by overview)
+  // Fix 1: Unified queryFn -- MUST match overview.tsx shape (unwrapped PortalInitData)
+  // Both use queryKey ["portal-init", trackingId]. React Query caches ONE shape per key.
   const { data: initData } = useQuery({
     queryKey: ["portal-init", trackingId],
-    queryFn: () => fetchPortalInit(trackingId),
+    queryFn: async () => {
+      if (!trackingId) return null;
+      const res = await fetchPortalInit(trackingId);
+      return res.status === "success" ? res.data : null;
+    },
     enabled: !!trackingId,
     staleTime: 60_000,
   });
 
-  const portal = initData?.status === "success" ? initData.data?.portal : null;
+  const portal = initData?.portal ?? null;
 
-  // Determine tab visibility based on feature flags + role
+  // Fix 2: Consistent defaults -- ALL optional tabs hidden until data loads
   const hideGuests = !portal?.guestListEnabled || isParticipant;
-  const hideMessages = portal ? !portal.messagingEnabled : false;
+  const hideMessages = !portal?.messagingEnabled;
   const hideDocuments = !portal?.documentsEnabled || isParticipant;
-  const hidePhotos = portal ? !portal.photoWallEnabled : false;
+  const hidePhotos = !portal?.photoWallEnabled;
 
   return (
     <Tabs
@@ -117,7 +122,7 @@ export default function GroupLayout() {
       <Tabs.Screen
         name="guests"
         options={{
-          href: hideGuests ? null : undefined,
+          tabBarItemStyle: hideGuests ? { display: "none" } : undefined,
           tabBarLabel: ({ focused }) => (
             <TabLabel focused={focused} label={t(lang, "group.tab.guests")} />
           ),
@@ -133,7 +138,7 @@ export default function GroupLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          href: hideMessages ? null : undefined,
+          tabBarItemStyle: hideMessages ? { display: "none" } : undefined,
           tabBarLabel: ({ focused }) => (
             <TabLabel focused={focused} label={t(lang, "group.tab.messages")} />
           ),
@@ -149,7 +154,7 @@ export default function GroupLayout() {
       <Tabs.Screen
         name="documents"
         options={{
-          href: hideDocuments ? null : undefined,
+          tabBarItemStyle: hideDocuments ? { display: "none" } : undefined,
           tabBarLabel: ({ focused }) => (
             <TabLabel
               focused={focused}
@@ -168,7 +173,7 @@ export default function GroupLayout() {
       <Tabs.Screen
         name="photos"
         options={{
-          href: hidePhotos ? null : undefined,
+          tabBarItemStyle: hidePhotos ? { display: "none" } : undefined,
           tabBarLabel: ({ focused }) => (
             <TabLabel focused={focused} label={t(lang, "group.tab.photos")} />
           ),
