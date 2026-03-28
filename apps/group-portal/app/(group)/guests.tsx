@@ -936,7 +936,7 @@ function GuestCard({
 
 // -- Main Screen (exported for hub reuse) -----------------------------------
 
-export function GuestsContent() {
+export function GuestsContent({ embedded }: { embedded?: boolean } = {}) {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -1215,13 +1215,15 @@ export function GuestsContent() {
   const totalCount = guests?.length ?? 0;
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+    <View style={[styles.container, !embedded && { paddingTop: insets.top + spacing.lg }]}>
       <Animated.View style={[styles.headerContainer, headerSlide]}>
         {/* Title + Count + Import */}
         <View style={styles.header}>
-          <Text style={styles.title}>
-            {t(lang, "group.tab.guests")}
-          </Text>
+          {!embedded && (
+            <Text style={styles.title}>
+              {t(lang, "group.tab.guests")}
+            </Text>
+          )}
           {totalCount > 0 && (
             <View style={styles.countBadge}>
               <Text style={styles.countBadgeText}>{totalCount}</Text>

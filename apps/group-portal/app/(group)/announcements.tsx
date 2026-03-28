@@ -351,11 +351,13 @@ function CreateForm({
 // =============================================================================
 
 // Exported for embedding inside Messages tab (sub-tab "Ogloszenia")
-export function AnnouncementsContent() {
-  return <AnnouncementsScreenInner />;
+// When embedded=true: skip header (back button + title) and safe-area top padding
+// because the parent Messages screen provides those.
+export function AnnouncementsContent({ embedded }: { embedded?: boolean }) {
+  return <AnnouncementsScreenInner embedded={embedded} />;
 }
 
-function AnnouncementsScreenInner() {
+function AnnouncementsScreenInner({ embedded }: { embedded?: boolean }) {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -528,19 +530,21 @@ function AnnouncementsScreenInner() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel={t(lang, "common.back")}
-          style={styles.backBtn}
-        >
-          <Icon name="chevron-back" size={24} color={group.text} />
-        </Pressable>
-        <Text style={styles.headerTitle}>{t(lang, "announcements.title")}</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      {/* Header -- skip when embedded inside Messages tab (parent provides header) */}
+      {!embedded && (
+        <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "common.back")}
+            style={styles.backBtn}
+          >
+            <Icon name="chevron-back" size={24} color={group.text} />
+          </Pressable>
+          <Text style={styles.headerTitle}>{t(lang, "announcements.title")}</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={[

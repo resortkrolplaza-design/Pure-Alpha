@@ -22,7 +22,6 @@ import {
   Image,
   Modal,
   Dimensions,
-  ActivityIndicator,
   Animated,
   Linking,
   Platform,
@@ -528,7 +527,11 @@ function GallerySection({
                 </View>
               ) : (
                 <Image
-                  source={{ uri: item.thumbnailUrl || item.url }}
+                  source={{
+                    uri: isImageUrlSafe(item.thumbnailUrl)
+                      ? item.thumbnailUrl!
+                      : item.url,
+                  }}
                   style={styles.galleryImageThumb}
                   resizeMode="cover"
                   onError={() =>
@@ -581,7 +584,7 @@ function ServiceCard({
   return (
     <View
       style={styles.serviceCard}
-      accessibilityRole="summary"
+      accessibilityRole="text"
       accessibilityLabel={name}
     >
       <View style={styles.serviceIconCircle}>
@@ -680,7 +683,7 @@ function AttractionCard({
   return (
     <View
       style={styles.attractionCard}
-      accessibilityRole="summary"
+      accessibilityRole="text"
       accessibilityLabel={name}
     >
       {hasImage ? (
@@ -747,14 +750,16 @@ function AttractionCard({
                 style={styles.attractionActionBtn}
                 onPress={() => Linking.openURL(websiteUrl as string)}
                 accessibilityRole="link"
-                accessibilityLabel="Website"
+                accessibilityLabel={t(lang, "attractions.website")}
               >
                 <Icon
                   name="globe-outline"
                   size={16}
                   color={group.primary}
                 />
-                <Text style={styles.attractionActionBtnText}>Web</Text>
+                <Text style={styles.attractionActionBtnText}>
+                  {t(lang, "attractions.website")}
+                </Text>
               </Pressable>
             ) : null}
           </View>
@@ -1320,7 +1325,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: group.primaryLight,
     marginTop: spacing.xs,
-    minHeight: 32,
+    minHeight: TOUCH_TARGET,
   },
   agendaCalendarBtnText: {
     fontSize: fontSize.xs,
@@ -1496,7 +1501,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: 36,
+    minHeight: TOUCH_TARGET,
   },
   attractionActionBtnText: {
     fontSize: fontSize.sm,

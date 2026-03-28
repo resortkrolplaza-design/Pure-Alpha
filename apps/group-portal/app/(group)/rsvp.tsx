@@ -5,7 +5,7 @@
 //   Organizer:   Guest list (CRUD) + Documents
 // =============================================================================
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   Text,
@@ -187,7 +187,7 @@ function RsvpFormContent() {
 
   // Fetch guest list for selection
   const { data: guests, isLoading } = useQuery({
-    queryKey: ["group-guests-rsvp", trackingId],
+    queryKey: ["group-guests", trackingId],
     queryFn: async () => {
       if (!trackingId) return [];
       const res = await groupFetch<GroupGuestData[]>(trackingId, "/guests");
@@ -265,7 +265,7 @@ function RsvpFormContent() {
   if (submitted) {
     return (
       <View style={formStyles.successContainer}>
-        <View style={formStyles.successCircle}>
+        <View style={[formStyles.successCircle, { backgroundColor: rsvpStatus === "confirmed" ? semantic.success : semantic.danger }]}>
           <Icon
             name={rsvpStatus === "confirmed" ? "checkmark" : "close"}
             size={40}
@@ -540,6 +540,13 @@ function ParticipantHub() {
 
   const [activeIdx, setActiveIdx] = useState(0);
 
+  // P2: Clamp index when segments shrink
+  useEffect(() => {
+    if (segments.length > 0 && activeIdx >= segments.length) {
+      setActiveIdx(0);
+    }
+  }, [segments.length, activeIdx]);
+
   return (
     <View style={hubStyles.flex}>
       {segments.length > 1 && (
@@ -552,7 +559,7 @@ function ParticipantHub() {
       {activeIdx === 0 ? (
         <RsvpFormContent />
       ) : (
-        <RegisterContent />
+        <RegisterContent embedded />
       )}
     </View>
   );
@@ -564,28 +571,73 @@ function ParticipantHub() {
 
 function OrganizerHub() {
   const lang = useAppStore((s) => s.lang);
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
 
-  const segments = useMemo(
-    () => [
-      t(lang, "group.segment.guestList"),
-      t(lang, "group.segment.documents"),
-    ] as const,
-    [lang],
+  const { data: portalData } = useQuery({
+    queryKey: ["portal-init", trackingId],
+    queryFn: async () => {
+      if (!trackingId) return null;
+      const res = await fetchPortalInit(trackingId);
+      return res.status === "success" ? res.data : null;
+    },
+    enabled: !!trackingId,
+    staleTime: 60_000,
+  });
+
+  // Build segments conditionally from feature flags
+  const segmentEntries = useMemo(() => {
+    const entries: { key: string; label: string }[] = [];
+    if (portalData?.portal?.guestListEnabled !== false) {
+      entries.push({ key: "guests", label: t(lang, "group.segment.guestList") });
+    }
+    if (portalData?.portal?.documentsEnabled !== false) {
+      entries.push({ key: "documents", label: t(lang, "group.segment.documents") });
+    }
+    return entries;
+  }, [lang, portalData]);
+
+  const segmentLabels = useMemo(
+    () => segmentEntries.map((e) => e.label),
+    [segmentEntries],
   );
 
   const [activeIdx, setActiveIdx] = useState(0);
 
+  // P2: Clamp index when segments shrink (e.g. feature toggled off)
+  useEffect(() => {
+    if (segmentEntries.length > 0 && activeIdx >= segmentEntries.length) {
+      setActiveIdx(0);
+    }
+  }, [segmentEntries.length, activeIdx]);
+
+  // Empty state: both features disabled
+  if (segmentEntries.length === 0) {
+    return (
+      <View style={hubStyles.emptyContainer}>
+        <Icon name="settings-outline" size={48} color={group.textMuted} />
+        <Text style={hubStyles.emptyText}>
+          {t(lang, "group.manage.noFeatures")}
+        </Text>
+      </View>
+    );
+  }
+
+  const activeKey = segmentEntries[activeIdx]?.key;
+
   return (
     <View style={hubStyles.flex}>
-      <SegmentControl
-        segments={segments}
-        activeIndex={activeIdx}
-        onSelect={setActiveIdx}
-      />
-      {activeIdx === 0 ? (
-        <GuestsContent />
+      {/* Only show segment control if more than one segment */}
+      {segmentEntries.length > 1 && (
+        <SegmentControl
+          segments={segmentLabels}
+          activeIndex={activeIdx}
+          onSelect={setActiveIdx}
+        />
+      )}
+      {activeKey === "guests" ? (
+        <GuestsContent embedded />
       ) : (
-        <DocumentsContent />
+        <DocumentsContent embedded />
       )}
     </View>
   );
@@ -685,6 +737,22 @@ const hubStyles = StyleSheet.create({
   segmentTextActive: {
     fontFamily: "Inter_600SemiBold",
     color: group.text,
+  },
+
+  // Empty state (no features enabled)
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.md,
+    padding: spacing["3xl"],
+  },
+  emptyText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    textAlign: "center",
+    lineHeight: 22,
   },
 });
 
@@ -904,7 +972,6 @@ const formStyles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: semantic.success,
     alignItems: "center",
     justifyContent: "center",
   },

@@ -45,6 +45,7 @@ const pl: Record<string, string> = {
   "group.segment.joinEvent": "Dolacz do wydarzenia",
   "group.segment.guestList": "Lista gosci",
   "group.segment.documents": "Dokumenty",
+  "group.manage.noFeatures": "Brak wlaczonych funkcji w tym portalu.",
   "group.agenda": "Agenda",
   "group.announcements": "Ogłoszenia",
   "group.countdown": "Do wydarzenia",
@@ -285,6 +286,7 @@ const pl: Record<string, string> = {
 
   // ── Attractions ----
   "attractions.openHotelMaps": "Otw\u00F3rz hotel w Mapach",
+  "attractions.website": "Strona www",
 
   // ── Upsell ----
   "upsell.title": "Polecane us\u0142ugi",
@@ -392,6 +394,7 @@ const en: Record<string, string> = {
   "group.segment.joinEvent": "Join the event",
   "group.segment.guestList": "Guest list",
   "group.segment.documents": "Documents",
+  "group.manage.noFeatures": "No features enabled for this portal.",
   "group.agenda": "Agenda",
   "group.announcements": "Announcements",
   "group.countdown": "Until event",
@@ -632,6 +635,7 @@ const en: Record<string, string> = {
 
   // ── Attractions ----
   "attractions.openHotelMaps": "Open hotel in Maps",
+  "attractions.website": "Website",
 
   // ── Upsell ----
   "upsell.title": "Recommended services",

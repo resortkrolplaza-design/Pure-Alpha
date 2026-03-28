@@ -18,6 +18,7 @@ import { useScalePress, useSlideUp } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
+import { setSecureItem } from "@/lib/auth";
 import type { GroupMessage } from "@/lib/types";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import { AnnouncementsContent } from "./announcements";
@@ -183,6 +184,7 @@ type ListItem =
 function ChatContent() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
+  const guest = useAppStore((s) => s.guest);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
@@ -342,7 +344,22 @@ function ChatContent() {
 
     const { msg, isPinned } = item;
     const isOrg = msg.isOrganizer;
-    const isMine = !isOrg;
+    // P1 fix: isMine must compare sender identity against the current guest.
+    // GroupMessage has isParticipant + sender.firstName/lastName but no senderId.
+    // Match by comparing sender first+last name with the stored guest identity.
+    // Falls back to `!isOrg` only when guest data is unavailable (pre-auth edge case).
+    const isMine = (() => {
+      if (isOrg) return false;
+      if (!msg.isParticipant) return false;
+      if (guest?.firstName && msg.sender.firstName) {
+        const sameFirst = msg.sender.firstName === guest.firstName;
+        const sameLast = !guest.lastName || msg.sender.lastName === guest.lastName;
+        return sameFirst && sameLast;
+      }
+      // Fallback: if no guest identity loaded yet, assume participant messages are ours
+      // (single-participant chat with organizer). This is the legacy behavior.
+      return !isOrg;
+    })();
     const safeFirstName = msg.sender.firstName ? stripBidiChars(msg.sender.firstName) : null;
     const safeLastName = msg.sender.lastName ? stripBidiChars(msg.sender.lastName) : null;
     const safeBody = stripBidiChars(msg.body);
@@ -388,7 +405,7 @@ function ChatContent() {
         </View>
       </Animated.View>
     );
-  }, [lang, getFadeAnim]);
+  }, [lang, guest, getFadeAnim]);
 
   const hasText = text.trim().length > 0;
 
@@ -477,7 +494,9 @@ function ChatContent() {
 function GroupMessagesScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
   const headerSlide = useSlideUp(0, 12);
+  const queryClient = useQueryClient();
 
   // Accept `tab` route param to auto-select a segment on navigation
   const { tab } = useLocalSearchParams<{ tab?: string }>();
@@ -498,6 +517,22 @@ function GroupMessagesScreenInner() {
     }
   }, [tab]);
 
+  // P1 fix: Clear unread badge when chat segment is active.
+  // Uses the same LAST_SEEN_KEY as _layout.tsx so badge state stays in sync.
+  useEffect(() => {
+    if (activeSegment !== "chat" || !trackingId) return;
+    const LAST_SEEN_KEY = `pa_last_seen_msg_count_${trackingId}`;
+    // Read current message count from the query cache
+    const cached = queryClient.getQueryData<{
+      replies: unknown[];
+      anchorMessage: unknown | null;
+    }>(["group-messages", trackingId]);
+    const currentCount = cached?.replies?.length ?? 0;
+    setSecureItem(LAST_SEEN_KEY, String(currentCount)).catch(() => {});
+    // Also invalidate the badge query so _layout picks up the cleared state
+    queryClient.invalidateQueries({ queryKey: ["group-messages-count", trackingId] });
+  }, [activeSegment, trackingId, queryClient]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -512,11 +547,19 @@ function GroupMessagesScreenInner() {
         lang={lang}
       />
 
-      {/* Sub-tab content */}
+      {/* Sub-tab content -- all tabs stay mounted to preserve polling state
+          and animations. Hidden tabs use display:"none" instead of unmounting
+          (P1 fix: adaptive polling reset on segment switch). */}
       <View style={styles.content}>
-        {activeSegment === "chat" && <ChatContent />}
-        {activeSegment === "announcements" && <AnnouncementsContent />}
-        {activeSegment === "polls" && <PollsContent />}
+        <View style={{ display: activeSegment === "chat" ? "flex" : "none", flex: 1 }}>
+          <ChatContent />
+        </View>
+        <View style={{ display: activeSegment === "announcements" ? "flex" : "none", flex: 1 }}>
+          <AnnouncementsContent embedded />
+        </View>
+        <View style={{ display: activeSegment === "polls" ? "flex" : "none", flex: 1 }}>
+          <PollsContent embedded />
+        </View>
       </View>
     </View>
   );

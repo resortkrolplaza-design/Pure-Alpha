@@ -482,11 +482,13 @@ function CreatePollForm({
 // =============================================================================
 
 // Exported for embedding inside Messages tab (sub-tab "Ankiety")
-export function PollsContent() {
-  return <PollsScreenContent />;
+// When embedded=true: skip header (back button + title) and safe-area top padding
+// because the parent Messages screen provides those.
+export function PollsContent({ embedded }: { embedded?: boolean }) {
+  return <PollsScreenContent embedded={embedded} />;
 }
 
-function PollsScreenContent() {
+function PollsScreenContent({ embedded }: { embedded?: boolean }) {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -699,19 +701,21 @@ function PollsScreenContent() {
   }, []);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.headerBack}
-          accessibilityRole="button"
-          accessibilityLabel={t(lang, "common.back")}
-        >
-          <Icon name="chevron-back" size={20} color={group.primary} />
-        </Pressable>
-        <Text style={styles.title}>{t(lang, "polls.title")}</Text>
-      </View>
+    <View style={[styles.container, !embedded && { paddingTop: insets.top }]}>
+      {/* Header -- skip when embedded inside Messages tab (parent provides header) */}
+      {!embedded && (
+        <View style={styles.header}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.headerBack}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "common.back")}
+          >
+            <Icon name="chevron-back" size={20} color={group.primary} />
+          </Pressable>
+          <Text style={styles.title}>{t(lang, "polls.title")}</Text>
+        </View>
+      )}
 
       {/* P2-2: Search bar (only shown when >2 polls) */}
       {showSearch && (

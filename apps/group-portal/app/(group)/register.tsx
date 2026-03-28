@@ -84,7 +84,7 @@ function FormField({
 // Main Screen Content
 // =============================================================================
 
-export function RegisterContent() {
+export function RegisterContent({ embedded }: { embedded?: boolean } = {}) {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -205,21 +205,23 @@ export function RegisterContent() {
   // ── Success state ----
   if (success) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
+      <View style={[styles.container, !embedded && { paddingTop: insets.top + 20 }]}>
         <Animated.View style={[styles.successContainer, successSlide]}>
           <View style={styles.successIconCircle}>
             <Icon name="checkmark-circle" size={56} color={group.primary} />
           </View>
           <Text style={styles.successTitle}>{t(lang, "register.success")}</Text>
           <Text style={styles.successDesc}>{t(lang, "register.successDesc")}</Text>
-          <Pressable
-            style={styles.backBtn}
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel={t(lang, "common.back")}
-          >
-            <Text style={styles.backBtnText}>{t(lang, "common.back")}</Text>
-          </Pressable>
+          {!embedded && (
+            <Pressable
+              style={styles.backBtn}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.back")}
+            >
+              <Text style={styles.backBtnText}>{t(lang, "common.back")}</Text>
+            </Pressable>
+          )}
         </Animated.View>
       </View>
     );
@@ -227,7 +229,7 @@ export function RegisterContent() {
 
   // ── Form ----
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, !embedded && { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -238,19 +240,21 @@ export function RegisterContent() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Header */}
-          <Animated.View style={[styles.header, headerSlide]}>
-            <Pressable
-              style={styles.headerBackBtn}
-              onPress={() => router.back()}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t(lang, "common.back")}
-            >
-              <Icon name="chevron-back" size={24} color={group.text} />
-            </Pressable>
-            <Text style={styles.title}>{t(lang, "register.title")}</Text>
-          </Animated.View>
+          {/* Header (hidden when embedded in hub) */}
+          {!embedded && (
+            <Animated.View style={[styles.header, headerSlide]}>
+              <Pressable
+                style={styles.headerBackBtn}
+                onPress={() => router.back()}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={t(lang, "common.back")}
+              >
+                <Icon name="chevron-back" size={24} color={group.text} />
+              </Pressable>
+              <Text style={styles.title}>{t(lang, "register.title")}</Text>
+            </Animated.View>
+          )}
 
           {/* Form card */}
           <Animated.View style={[styles.formCard, formSlide]}>

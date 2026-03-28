@@ -40,7 +40,7 @@ import {
 } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import type { IconName } from "@/lib/icons";
-import { useSlideUp, useScalePress, configureListAnimation } from "@/lib/animations";
+import { useSlideUp, useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { logout, setPersistedLang, getSecureItem, setSecureItem } from "@/lib/auth";
@@ -48,7 +48,7 @@ import { isImageUrlSafe, isExternalUrlSafe, sanitizePhone, sanitizeEmail } from 
 import { fetchPortalInit, fetchPolls, votePoll, groupFetch } from "@/lib/group-api";
 import { usePushNotifications } from "@/lib/usePushNotifications";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
-import type { AgendaItemData, GroupAnnouncementData, PortalInitData, PollData } from "@/lib/types";
+import type { GroupAnnouncementData, PortalInitData, PollData } from "@/lib/types";
 
 // =============================================================================
 // DeviceId (stable per install, used for poll vote dedup -- same as polls.tsx)
@@ -153,22 +153,6 @@ function socialIcon(platform: string): IconName {
   return "globe-outline";
 }
 
-/** Map timeline checkpoint icon string to Ionicon name */
-function checkpointIcon(icon: string | undefined): IconName {
-  if (!icon) return "ellipse";
-  const m: Record<string, IconName> = {
-    check: "checkmark-circle",
-    calendar: "calendar-outline",
-    people: "people-outline",
-    document: "document-text-outline",
-    camera: "camera-outline",
-    home: "home-outline",
-    bed: "bed-outline",
-    star: "star-outline",
-  };
-  return m[icon] ?? "ellipse";
-}
-
 // =============================================================================
 // QUICK ACTIONS config
 // =============================================================================
@@ -254,9 +238,9 @@ function AnnouncementCard({
   return (
     <Animated.View style={slideStyle}>
       <View style={styles.announcementCard}>
-        {announcement.imageUrl && (
+        {isImageUrlSafe(announcement.imageUrl) && (
           <Image
-            source={{ uri: announcement.imageUrl }}
+            source={{ uri: announcement.imageUrl! }}
             style={styles.announcementImage}
             resizeMode="cover"
             accessibilityLabel={announcement.content}
@@ -275,56 +259,6 @@ function AnnouncementCard({
         </View>
       </View>
     </Animated.View>
-  );
-}
-
-// -- FAQ Accordion Item -------------------------------------------------------
-
-function FaqItem({
-  question,
-  answer,
-}: {
-  question: string;
-  answer: string;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-
-  const toggle = useCallback(() => {
-    configureListAnimation();
-    setExpanded((prev) => {
-      Animated.timing(rotateAnim, {
-        toValue: prev ? 0 : 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-      return !prev;
-    });
-  }, [rotateAnim]);
-
-  const rotate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "180deg"],
-  });
-
-  return (
-    <View style={styles.faqItem}>
-      <Pressable
-        onPress={toggle}
-        accessibilityRole="button"
-        accessibilityLabel={question}
-        accessibilityState={{ expanded }}
-        style={styles.faqHeader}
-      >
-        <Text style={styles.faqQuestion}>{question}</Text>
-        <Animated.View style={{ transform: [{ rotate }] }}>
-          <Icon name="chevron-down" size={18} color={group.textMuted} />
-        </Animated.View>
-      </Pressable>
-      {expanded && (
-        <Text style={styles.faqAnswer}>{answer}</Text>
-      )}
-    </View>
   );
 }
 
@@ -511,7 +445,7 @@ function PollPopupModal({
                       pollStyles.optionProgressBg,
                       {
                         width: votedIdx !== null
-                          ? (`${Math.min(pct, 100)}%` as unknown as number)
+                          ? `${Math.min(pct, 100)}%`
                           : 0,
                       },
                     ]}
@@ -1201,7 +1135,7 @@ function OverviewScreenInner() {
                 return true;
               }).map((action) => (
                 <QuickActionCircle
-                  key={action.tab}
+                  key={action.labelKey}
                   label={t(lang, action.labelKey)}
                   iconName={action.icon}
                   bg={action.bg}
@@ -1285,7 +1219,7 @@ function OverviewScreenInner() {
             )}
             {hotel?.phone && (
               <Pressable
-                onPress={() => Linking.openURL(`tel:${hotel.phone}`)}
+                onPress={() => Linking.openURL(`tel:${sanitizePhone(hotel.phone!)}`)}
                 style={styles.contactRow}
                 accessibilityRole="link"
               >
@@ -1297,7 +1231,7 @@ function OverviewScreenInner() {
             )}
             {hotel?.email && (
               <Pressable
-                onPress={() => Linking.openURL(`mailto:${hotel.email}`)}
+                onPress={() => Linking.openURL(`mailto:${sanitizeEmail(hotel.email!)}`)}
                 style={styles.contactRow}
                 accessibilityRole="link"
               >
@@ -1322,7 +1256,7 @@ function OverviewScreenInner() {
                 )}
                 {salesperson.email && (
                   <Pressable
-                    onPress={() => Linking.openURL(`mailto:${salesperson.email}`)}
+                    onPress={() => Linking.openURL(`mailto:${sanitizeEmail(salesperson.email!)}`)}
                     style={styles.contactRow}
                     accessibilityRole="link"
                   >
@@ -1334,7 +1268,7 @@ function OverviewScreenInner() {
                 )}
                 {salesperson.phone && (
                   <Pressable
-                    onPress={() => Linking.openURL(`tel:${salesperson.phone}`)}
+                    onPress={() => Linking.openURL(`tel:${sanitizePhone(salesperson.phone!)}`)}
                     style={styles.contactRow}
                     accessibilityRole="link"
                   >
@@ -1363,7 +1297,7 @@ function OverviewScreenInner() {
             {/* Social links */}
             {socialLinks && socialLinks.length > 0 && (
               <View style={styles.socialRow}>
-                {socialLinks.map((link, idx) => (
+                {socialLinks.filter((link) => isExternalUrlSafe(link.url)).map((link, idx) => (
                   <Pressable
                     key={idx}
                     onPress={() => Linking.openURL(link.url)}
@@ -2013,72 +1947,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // ── Timeline Agenda ──
-  timelineContainer: {
-    gap: 0,
-  },
-  timelineRow: {
-    flexDirection: "row",
-    minHeight: 72,
-  },
-  timelineRail: {
-    width: 24,
-    alignItems: "center",
-    paddingTop: 6,
-  },
-  timelineDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: group.primary,
-  },
-  timelineLine: {
-    flex: 1,
-    width: 2,
-    backgroundColor: group.primaryLight,
-    marginTop: 4,
-  },
-  agendaCard: {
-    flex: 1,
-    backgroundColor: group.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: group.cardBorder,
-    padding: spacing.lg,
-    marginLeft: spacing.md,
-    marginBottom: spacing.sm,
-    gap: spacing.xs,
-    ...shadow.sm,
-  },
-  agendaTimePill: {
-    alignSelf: "flex-start",
-    backgroundColor: group.primaryLight,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-  },
-  agendaTimeText: {
-    fontSize: fontSize.xs,
-    fontFamily: "Inter_600SemiBold",
-    color: group.primary,
-  },
-  agendaTitle: {
-    fontSize: fontSize.base,
-    fontFamily: "Inter_500Medium",
-    color: group.text,
-    lineHeight: 21,
-  },
-  agendaLocationRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-  },
-  agendaLocation: {
-    fontSize: fontSize.xs,
-    fontFamily: "Inter_400Regular",
-    color: group.textMuted,
-  },
-
   // ── Announcements ──
   announcementsList: {
     gap: spacing.md,
@@ -2112,102 +1980,6 @@ const styles = StyleSheet.create({
     paddingRight: spacing["2xl"],
   },
   announcementDate: {
-    fontSize: fontSize.xs,
-    fontFamily: "Inter_400Regular",
-    color: group.textMuted,
-  },
-
-  // ── FAQ ──
-  faqList: {
-    backgroundColor: group.card,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: group.cardBorder,
-    overflow: "hidden",
-    ...shadow.sm,
-  },
-  faqItem: {
-    borderBottomWidth: 1,
-    borderBottomColor: group.cardBorder,
-  },
-  faqHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.lg,
-    minHeight: 44,
-  },
-  faqQuestion: {
-    fontSize: fontSize.base,
-    fontFamily: "Inter_600SemiBold",
-    color: group.text,
-    flex: 1,
-    paddingRight: spacing.md,
-    lineHeight: 21,
-  },
-  faqAnswer: {
-    fontSize: fontSize.sm,
-    fontFamily: "Inter_400Regular",
-    color: group.textSecondary,
-    lineHeight: 20,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-
-  // ── Gallery ──
-  galleryThumb: {
-    width: 160,
-    height: 120,
-    borderRadius: radius.lg,
-  },
-
-  // ── Services ──
-  serviceCard: {
-    backgroundColor: group.white,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    gap: spacing.xs,
-    marginHorizontal: spacing.xl,
-    ...shadow.sm,
-  },
-  serviceCardName: {
-    fontSize: fontSize.base,
-    fontFamily: "Inter_600SemiBold",
-    color: group.text,
-  },
-  serviceCardDesc: {
-    fontSize: fontSize.sm,
-    fontFamily: "Inter_400Regular",
-    color: group.textMuted,
-  },
-  serviceCardPrice: {
-    fontSize: fontSize.sm,
-    fontFamily: "Inter_700Bold",
-    color: group.primary,
-  },
-
-  // ── Attractions ──
-  attractionCard: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    backgroundColor: group.white,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    gap: spacing.sm,
-    marginHorizontal: spacing.xl,
-    minHeight: 44,
-    ...shadow.sm,
-  },
-  attractionInfo: {
-    flex: 1,
-  },
-  attractionName: {
-    fontSize: fontSize.base,
-    fontFamily: "Inter_600SemiBold",
-    color: group.text,
-  },
-  attractionDistance: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: group.textMuted,

@@ -372,7 +372,7 @@ function AnimatedDocCard({
 
 // ── Main screen ───────────────────────────────────────────────────────────────
 
-export function DocumentsContent() {
+export function DocumentsContent({ embedded }: { embedded?: boolean } = {}) {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
@@ -426,16 +426,18 @@ export function DocumentsContent() {
   }, [lang, handleDownload]);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 20 }]}>
-      {/* Header */}
-      <Animated.View style={[styles.header, headerSlide]}>
-        <Text style={styles.title}>{t(lang, "group.tab.documents")}</Text>
-        {docCount > 0 && (
-          <Text style={styles.count}>
-            {docCount} {t(lang, "group.documentsCount")}
-          </Text>
-        )}
-      </Animated.View>
+    <View style={[styles.container, !embedded && { paddingTop: insets.top + 20 }]}>
+      {/* Header (hidden when embedded in hub) */}
+      {!embedded && (
+        <Animated.View style={[styles.header, headerSlide]}>
+          <Text style={styles.title}>{t(lang, "group.tab.documents")}</Text>
+          {docCount > 0 && (
+            <Text style={styles.count}>
+              {docCount} {t(lang, "group.documentsCount")}
+            </Text>
+          )}
+        </Animated.View>
+      )}
 
       <FlatList
         data={documents ?? []}
