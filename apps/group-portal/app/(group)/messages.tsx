@@ -190,6 +190,7 @@ function ChatContent() {
   const [text, setText] = useState("");
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
+  const sentMsgIds = useRef<Set<string>>(new Set());
 
   // TASK 3: Read prefill from upsell "Zapytaj" navigation param
   const { prefill } = useLocalSearchParams<{ prefill?: string }>();
@@ -291,14 +292,16 @@ function ChatContent() {
   const sendMutation = useMutation({
     mutationFn: async (body: string) => {
       if (!trackingId) throw new Error("No trackingId");
+      const senderName = guest ? [guest.firstName, guest.lastName].filter(Boolean).join(" ") : undefined;
       const res = await groupFetch<GroupMessage>(trackingId, "/messages", {
         method: "POST",
-        body: JSON.stringify({ body }),
+        body: JSON.stringify({ body, senderName }),
       });
       if (res.status !== "success") throw new Error(res.errorMessage || "Send failed");
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data?.id) sentMsgIds.current.add(data.id);
       queryClient.invalidateQueries({ queryKey: ["group-messages"] });
       setText("");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -348,17 +351,17 @@ function ChatContent() {
     // GroupMessage has isParticipant + sender.firstName/lastName but no senderId.
     // Match by comparing sender first+last name with the stored guest identity.
     // Falls back to `!isOrg` only when guest data is unavailable (pre-auth edge case).
+    // A message is "mine" if:
+    // 1. We sent it this session (tracked by ID in sentMsgIds ref), OR
+    // 2. It's a participant message AND sender name matches our guest identity
     const isMine = (() => {
-      if (isOrg) return false;
+      if (isOrg) return false; // Hotel/admin messages are never mine
+      if (sentMsgIds.current.has(msg.id)) return true; // We sent this
       if (!msg.isParticipant) return false;
       if (guest?.firstName && msg.sender.firstName) {
-        const sameFirst = msg.sender.firstName === guest.firstName;
-        const sameLast = !guest.lastName || msg.sender.lastName === guest.lastName;
-        return sameFirst && sameLast;
+        return msg.sender.firstName === guest.firstName;
       }
-      // Fallback: if no guest identity loaded yet, assume participant messages are ours
-      // (single-participant chat with organizer). This is the legacy behavior.
-      return !isOrg;
+      return false; // Unknown sender = not mine (safe default)
     })();
     const safeFirstName = msg.sender.firstName ? stripBidiChars(msg.sender.firstName) : null;
     const safeLastName = msg.sender.lastName ? stripBidiChars(msg.sender.lastName) : null;

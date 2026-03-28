@@ -103,6 +103,18 @@ function countdownLabel(diffDays: number, lang: "pl" | "en"): string {
   return t(lang, "overview.hero.daysUntil").replace("{n}", String(diffDays));
 }
 
+// Safe URL opener -- prevents crash in Expo Go dev mode
+async function safeOpenURL(url: string) {
+  try {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await safeOpenURL(url);
+    }
+  } catch {
+    /* silently ignore -- Expo Go dev mode throws on some URLs */
+  }
+}
+
 // =============================================================================
 // Live Event Banner — pulsing green dot + "Event is live!" text
 // =============================================================================
@@ -671,7 +683,7 @@ function OverviewScreenInner() {
   const handlePollPopupDismiss = useCallback(() => {
     if (activePollForPopup) {
       const dismissKey = `poll_dismissed_${activePollForPopup.id}`;
-      setSecureItem(dismissKey, "1").catch(() => {});
+      setSecureItem(dismissKey, "1");
     }
     setPollPopupVisible(false);
   }, [activePollForPopup]);
@@ -699,13 +711,13 @@ function OverviewScreenInner() {
     const key = `welcome_seen_${trackingId}`;
     getSecureItem(key).then((val) => {
       if (!val) setWelcomeVisible(true);
-    }).catch(() => {});
+    });
   }, [pinnedAnnouncement, trackingId]);
 
   const handleWelcomeDismiss = useCallback(() => {
     setWelcomeVisible(false);
     if (trackingId) {
-      setSecureItem(`welcome_seen_${trackingId}`, "1").catch(() => {});
+      setSecureItem(`welcome_seen_${trackingId}`, "1");
     }
   }, [trackingId]);
 
@@ -725,7 +737,7 @@ function OverviewScreenInner() {
     const key = `rated_${trackingId}`;
     getSecureItem(key).then((val) => {
       if (!val) setRatingVisible(true);
-    }).catch(() => {});
+    });
   }, [isParticipant, diffDays, trackingId]);
 
   const canSubmitRating = ratingOverall > 0;
@@ -1214,7 +1226,7 @@ function OverviewScreenInner() {
             )}
             {hotel?.phone && (
               <Pressable
-                onPress={() => Linking.openURL(`tel:${sanitizePhone(hotel.phone!)}`)}
+                onPress={() => safeOpenURL(`tel:${sanitizePhone(hotel.phone!)}`)}
                 style={styles.contactRow}
                 accessibilityRole="link"
               >
@@ -1226,7 +1238,7 @@ function OverviewScreenInner() {
             )}
             {hotel?.email && (
               <Pressable
-                onPress={() => Linking.openURL(`mailto:${sanitizeEmail(hotel.email!)}`)}
+                onPress={() => safeOpenURL(`mailto:${sanitizeEmail(hotel.email!)}`)}
                 style={styles.contactRow}
                 accessibilityRole="link"
               >
@@ -1251,7 +1263,7 @@ function OverviewScreenInner() {
                 )}
                 {salesperson.email && (
                   <Pressable
-                    onPress={() => Linking.openURL(`mailto:${sanitizeEmail(salesperson.email!)}`)}
+                    onPress={() => safeOpenURL(`mailto:${sanitizeEmail(salesperson.email!)}`)}
                     style={styles.contactRow}
                     accessibilityRole="link"
                   >
@@ -1263,7 +1275,7 @@ function OverviewScreenInner() {
                 )}
                 {salesperson.phone && (
                   <Pressable
-                    onPress={() => Linking.openURL(`tel:${sanitizePhone(salesperson.phone!)}`)}
+                    onPress={() => safeOpenURL(`tel:${sanitizePhone(salesperson.phone!)}`)}
                     style={styles.contactRow}
                     accessibilityRole="link"
                   >
@@ -1280,7 +1292,7 @@ function OverviewScreenInner() {
             {portal?.mapEnabled !== false && hotel?.address && (
               <Pressable
                 style={styles.openMapsBtn}
-                onPress={() => Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.address!)}`).catch(() => {})}
+                onPress={() => safeOpenURL(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotel.address!)}`)}
                 accessibilityRole="button"
                 accessibilityLabel={t(lang, "overview.openMaps")}
               >
@@ -1295,7 +1307,7 @@ function OverviewScreenInner() {
                 {socialLinks.filter((link) => isExternalUrlSafe(link.url)).map((link, idx) => (
                   <Pressable
                     key={idx}
-                    onPress={() => Linking.openURL(link.url)}
+                    onPress={() => safeOpenURL(link.url)}
                     accessibilityRole="link"
                     accessibilityLabel={link.platform}
                     style={styles.socialIconBtn}

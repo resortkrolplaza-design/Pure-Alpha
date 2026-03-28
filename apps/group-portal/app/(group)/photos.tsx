@@ -2,9 +2,11 @@
 // Group Portal — Photos Tab (2-column gallery with captions + fullscreen viewer)
 // =============================================================================
 
-import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, useWindowDimensions, Image, ActivityIndicator, Animated, Modal } from "react-native";
+import { View, Text, FlatList, Pressable, StyleSheet, RefreshControl, useWindowDimensions, Image, ActivityIndicator, Animated, Modal, Alert, ActionSheetIOS, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
 import { group, fontSize, radius, spacing, shadow, letterSpacing, TOUCH_TARGET } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
@@ -330,6 +332,73 @@ function PhotosScreen() {
     return (photos ?? []).filter((p) => isUrlAllowed(p.imageUrl));
   }, [photos]);
 
+  // ── Photo upload ──
+  const queryClient = useQueryClient();
+  const [uploading, setUploading] = useState(false);
+
+  const pickAndUpload = useCallback(async (source: "camera" | "gallery") => {
+    try {
+      const permResult = source === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permResult.granted) {
+        Alert.alert(t(lang, "common.error"), t(lang, "photos.permissionDenied"));
+        return;
+      }
+
+      const result = source === "camera"
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8, base64: true })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, base64: true });
+
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append("photo", {
+        uri: asset.uri,
+        type: asset.mimeType || "image/jpeg",
+        name: asset.fileName || `photo-${Date.now()}.jpg`,
+      } as unknown as Blob);
+
+      await groupFetch(trackingId, "/photos", {
+        method: "POST",
+        headers: { "Content-Type": "multipart/form-data" },
+        body: formData as unknown as string,
+      });
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["group-photos"] });
+    } catch {
+      Alert.alert(t(lang, "common.error"), t(lang, "photos.uploadFailed"));
+    } finally {
+      setUploading(false);
+    }
+  }, [trackingId, lang, queryClient]);
+
+  const handleAddPhoto = useCallback(() => {
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: [t(lang, "common.cancel"), t(lang, "photos.fromCamera"), t(lang, "photos.fromGallery")],
+          cancelButtonIndex: 0,
+        },
+        (idx) => {
+          if (idx === 1) pickAndUpload("camera");
+          if (idx === 2) pickAndUpload("gallery");
+        },
+      );
+    } else {
+      Alert.alert(t(lang, "photos.addPhoto"), undefined, [
+        { text: t(lang, "photos.fromCamera"), onPress: () => pickAndUpload("camera") },
+        { text: t(lang, "photos.fromGallery"), onPress: () => pickAndUpload("gallery") },
+        { text: t(lang, "common.cancel"), style: "cancel" },
+      ]);
+    }
+  }, [lang, pickAndUpload]);
+
   const renderPhoto = useCallback(({ item, index }: { item: GroupPhotoData; index: number }) => {
     // Find index in viewablePhotos for the viewer
     const viewableIdx = viewablePhotos.findIndex((p) => p.id === item.id);
@@ -398,6 +467,21 @@ function PhotosScreen() {
           )
         }
       />
+
+      {/* Upload FAB */}
+      <Pressable
+        style={styles.fab}
+        onPress={handleAddPhoto}
+        disabled={uploading}
+        accessibilityRole="button"
+        accessibilityLabel={t(lang, "photos.addPhoto")}
+      >
+        {uploading ? (
+          <ActivityIndicator size="small" color={group.white} />
+        ) : (
+          <Icon name="add" size={28} color={group.white} />
+        )}
+      </Pressable>
 
       {/* Fullscreen photo viewer */}
       <PhotoViewerModal
@@ -532,6 +616,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: "Inter_600SemiBold",
     color: group.white,
+  },
+  fab: {
+    position: "absolute" as const,
+    bottom: 100,
+    right: spacing.xl,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: group.primary,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    ...shadow.lg,
   },
 });
 

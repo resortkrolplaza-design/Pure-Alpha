@@ -60,6 +60,13 @@ if (
 // Section IDs (used for scrollTo route param)
 // =============================================================================
 
+async function safeOpenURL(url: string) {
+  try {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) await safeOpenURL(url);
+  } catch { /* Expo Go dev mode */ }
+}
+
 type SectionId = "agenda" | "gallery" | "services" | "attractions" | "faq";
 
 const SECTION_IDS: SectionId[] = [
@@ -731,7 +738,7 @@ function AttractionCard({
             {hasMap ? (
               <Pressable
                 style={styles.attractionActionBtn}
-                onPress={() => Linking.openURL(mapUrl as string)}
+                onPress={() => safeOpenURL(mapUrl as string)}
                 accessibilityRole="link"
                 accessibilityLabel={t(lang, "overview.openMaps")}
               >
@@ -748,7 +755,7 @@ function AttractionCard({
             {hasWebsite ? (
               <Pressable
                 style={styles.attractionActionBtn}
-                onPress={() => Linking.openURL(websiteUrl as string)}
+                onPress={() => safeOpenURL(websiteUrl as string)}
                 accessibilityRole="link"
                 accessibilityLabel={t(lang, "attractions.website")}
               >
@@ -793,7 +800,7 @@ function AttractionsSection({
         <Pressable
           style={styles.attractionHotelMapsBtn}
           onPress={() =>
-            Linking.openURL(
+            safeOpenURL(
               `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hotelAddress)}`,
             )
           }

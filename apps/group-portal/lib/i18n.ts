@@ -121,8 +121,13 @@ const pl: Record<string, string> = {
   "messages.pinnedMessage": "Przypięta wiadomość",
 
   // ── Empty states ----
-  "group.noPhotos": "Brak zdjęć",
-  "group.noPhotosDesc": "Zdjęcia z wydarzenia pojawią się tutaj",
+  "group.noPhotos": "Brak zdj\u0119\u0107",
+  "group.noPhotosDesc": "Zdj\u0119cia z wydarzenia pojawi\u0105 si\u0119 tutaj",
+  "photos.addPhoto": "Dodaj zdj\u0119cie",
+  "photos.fromCamera": "Zr\u00F3b zdj\u0119cie",
+  "photos.fromGallery": "Wybierz z galerii",
+  "photos.permissionDenied": "Brak dost\u0119pu do kamery lub galerii",
+  "photos.uploadFailed": "Nie uda\u0142o si\u0119 przes\u0142a\u0107 zdj\u0119cia",
   "group.noDocuments": "Brak dokumentów",
   "group.noDocumentsDesc": "Dokumenty do pobrania pojawią się tutaj",
   "group.noMessages": "Brak wiadomości",
@@ -482,6 +487,11 @@ const en: Record<string, string> = {
   // ── Empty states ----
   "group.noPhotos": "No photos",
   "group.noPhotosDesc": "Photos from the event will appear here",
+  "photos.addPhoto": "Add photo",
+  "photos.fromCamera": "Take photo",
+  "photos.fromGallery": "Choose from gallery",
+  "photos.permissionDenied": "Camera or gallery access denied",
+  "photos.uploadFailed": "Failed to upload photo",
   "group.noDocuments": "No documents",
   "group.noDocumentsDesc": "Downloadable documents will appear here",
   "group.noMessages": "No messages",
