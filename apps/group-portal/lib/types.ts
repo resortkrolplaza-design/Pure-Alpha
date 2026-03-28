@@ -37,6 +37,7 @@ export interface GroupGuestData {
   checkInDate?: string | null;
   checkOutDate?: string | null;
   addedBy?: string | null;
+  invitationSentAt?: string | null;
   createdAt?: string;
 }
 

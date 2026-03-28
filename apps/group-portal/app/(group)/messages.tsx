@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Animated,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import { group, fontSize, radius, spacing, shadow } from "@/lib/tokens";
@@ -83,6 +84,20 @@ function GroupMessagesScreenInner() {
   const queryClient = useQueryClient();
   const [text, setText] = useState("");
   const flatListRef = useRef<FlatList>(null);
+  const inputRef = useRef<TextInput>(null);
+
+  // TASK 3: Read prefill from upsell "Zapytaj" navigation param
+  const { prefill } = useLocalSearchParams<{ prefill?: string }>();
+  const prefillApplied = useRef(false);
+  useEffect(() => {
+    if (prefill && typeof prefill === "string" && !prefillApplied.current) {
+      prefillApplied.current = true;
+      setText(prefill);
+      // Focus input after a short delay to ensure layout is ready
+      const timer = setTimeout(() => inputRef.current?.focus(), 300);
+      return () => clearTimeout(timer);
+    }
+  }, [prefill]);
 
   const { scaleStyle, onPressIn, onPressOut } = useScalePress();
   const headerSlide = useSlideUp(0, 12);
@@ -300,6 +315,7 @@ function GroupMessagesScreenInner() {
         <View style={[styles.inputBar, { paddingBottom: insets.bottom + 8 }]}>
           <View style={styles.inputWrapper}>
             <TextInput
+              ref={inputRef}
               style={styles.input}
               placeholder={t(lang, "messages.placeholder")}
               placeholderTextColor={group.textMuted}

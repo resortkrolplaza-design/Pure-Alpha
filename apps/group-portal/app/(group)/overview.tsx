@@ -17,12 +17,15 @@ import {
   Alert,
   Linking,
   Platform,
+  Modal,
+  TextInput,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import Constants from "expo-constants";
 import {
   group,
   quickActionColors,
@@ -33,18 +36,36 @@ import {
   spacing,
   shadow,
   letterSpacing,
+  TOUCH_TARGET,
 } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import type { IconName } from "@/lib/icons";
 import { useSlideUp, useScalePress, configureListAnimation } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { logout, setPersistedLang } from "@/lib/auth";
+import { logout, setPersistedLang, getSecureItem, setSecureItem } from "@/lib/auth";
 import { isImageUrlSafe, isExternalUrlSafe, sanitizePhone, sanitizeEmail } from "@/lib/url-safety";
-import { fetchPortalInit } from "@/lib/group-api";
+import { fetchPortalInit, fetchPolls, votePoll, groupFetch } from "@/lib/group-api";
 import { usePushNotifications } from "@/lib/usePushNotifications";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
-import type { AgendaItemData, GroupAnnouncementData, PortalInitData } from "@/lib/types";
+import type { AgendaItemData, GroupAnnouncementData, PortalInitData, PollData } from "@/lib/types";
+
+// =============================================================================
+// DeviceId (stable per install, used for poll vote dedup -- same as polls.tsx)
+// =============================================================================
+
+function getDeviceId(): string {
+  const id =
+    Constants.installationId ??
+    (Constants.expoConfig?.extra as Record<string, unknown> | undefined)
+      ?.installationId ??
+    null;
+  return typeof id === "string" && id.length >= 8
+    ? id
+    : `${Platform.OS}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+const DEVICE_ID = getDeviceId();
 
 // =============================================================================
 // Helpers
@@ -354,6 +375,161 @@ function TimelineStepper({
 }
 
 // =============================================================================
+// Poll Popup Modal (auto-show first active unvoted poll on overview load)
+// =============================================================================
+
+function PollPopupModal({
+  poll,
+  lang,
+  visible,
+  onDismiss,
+}: {
+  poll: PollData;
+  lang: "pl" | "en";
+  visible: boolean;
+  onDismiss: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
+  const [votedIdx, setVotedIdx] = useState<number | null>(null);
+
+  const voteMutation = useMutation({
+    mutationFn: (optionIdx: number) =>
+      votePoll(trackingId, poll.id, optionIdx, DEVICE_ID),
+    onSuccess: (_data, optionIdx) => {
+      setVotedIdx(optionIdx);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["polls", trackingId] });
+      // Auto-dismiss after brief delay so user sees their vote
+      setTimeout(() => {
+        onDismiss();
+      }, 1200);
+    },
+  });
+
+  const options = poll.options ?? [];
+  const voteCounts = poll.voteCounts ?? [];
+  const totalVotes = poll.totalVotes ?? 0;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onDismiss}
+      statusBarTranslucent
+    >
+      <Pressable
+        style={pollStyles.overlay}
+        onPress={onDismiss}
+        accessibilityRole="button"
+        accessibilityLabel={t(lang, "pollPopup.skip")}
+      >
+        <Pressable
+          style={pollStyles.card}
+          onPress={() => {}}
+          accessibilityRole="none"
+        >
+          {/* Header */}
+          <View style={pollStyles.header}>
+            <Icon name="bar-chart-outline" size={22} color={group.primary} />
+            <Text style={pollStyles.headerLabel}>
+              {t(lang, "polls.title")}
+            </Text>
+          </View>
+
+          {/* Question */}
+          <Text style={pollStyles.question}>{String(poll.question)}</Text>
+
+          {/* Options */}
+          <View style={pollStyles.optionsList}>
+            {options.map((option, idx) => {
+              const count = voteCounts[idx] ?? 0;
+              const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+              const isVoted = votedIdx === idx;
+              const isVoting = voteMutation.isPending;
+
+              return (
+                <Pressable
+                  key={idx}
+                  style={[
+                    pollStyles.optionRow,
+                    isVoted && pollStyles.optionRowVoted,
+                  ]}
+                  onPress={() => {
+                    if (votedIdx !== null || isVoting) return;
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    voteMutation.mutate(idx);
+                  }}
+                  disabled={votedIdx !== null || isVoting}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${String(option)}, ${pct}%`}
+                  accessibilityState={{ selected: isVoted }}
+                >
+                  {/* Progress bar background */}
+                  <View
+                    style={[
+                      pollStyles.optionProgressBg,
+                      {
+                        width: votedIdx !== null
+                          ? (`${Math.min(pct, 100)}%` as unknown as number)
+                          : 0,
+                      },
+                    ]}
+                  />
+                  <Text style={pollStyles.optionText} numberOfLines={2}>
+                    {String(option)}
+                  </Text>
+                  {votedIdx !== null && (
+                    <Text style={pollStyles.optionPct}>{pct}%</Text>
+                  )}
+                  {isVoted && (
+                    <Icon name="checkmark-circle" size={18} color={group.primary} />
+                  )}
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Vote success message */}
+          {votedIdx !== null && (
+            <Text style={pollStyles.successMsg}>
+              {t(lang, "pollPopup.voteSuccess")}
+            </Text>
+          )}
+
+          {/* Skip button (only before voting) */}
+          {votedIdx === null && (
+            <Pressable
+              style={pollStyles.skipBtn}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onDismiss();
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "pollPopup.skip")}
+            >
+              <Text style={pollStyles.skipBtnText}>
+                {t(lang, "pollPopup.skip")}
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Loading indicator */}
+          {voteMutation.isPending && (
+            <ActivityIndicator
+              color={group.primary}
+              size="small"
+              style={{ marginTop: spacing.sm }}
+            />
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+}
+
+// =============================================================================
 // Main Screen
 // =============================================================================
 
@@ -479,6 +655,119 @@ function OverviewScreenInner() {
     totalGuestCount === 0 &&
     diffDays !== null &&
     diffDays > 0;
+
+  // -- TASK 1: Poll Popup (auto-show first active unvoted poll) --
+  const [pollPopupVisible, setPollPopupVisible] = useState(false);
+  const [activePollForPopup, setActivePollForPopup] = useState<PollData | null>(null);
+  const pollPopupChecked = useRef(false);
+
+  const { data: pollsData } = useQuery({
+    queryKey: ["polls", trackingId],
+    queryFn: async () => {
+      if (!trackingId) return [];
+      const res = await fetchPolls(trackingId);
+      return res.status === "success" && res.data ? res.data : [];
+    },
+    enabled: !!trackingId && !!portal?.pollsEnabled,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (pollPopupChecked.current) return;
+    if (!pollsData || pollsData.length === 0) return;
+
+    const activePolls = pollsData.filter((p) => p.isActive);
+    if (activePolls.length === 0) return;
+
+    // Check SecureStore for dismissed/voted polls
+    pollPopupChecked.current = true;
+
+    (async () => {
+      for (const poll of activePolls) {
+        const dismissKey = `poll_dismissed_${poll.id}`;
+        const wasDismissed = await getSecureItem(dismissKey).catch(() => null);
+        if (!wasDismissed) {
+          setActivePollForPopup(poll);
+          setPollPopupVisible(true);
+          return;
+        }
+      }
+    })();
+  }, [pollsData]);
+
+  const handlePollPopupDismiss = useCallback(() => {
+    if (activePollForPopup) {
+      const dismissKey = `poll_dismissed_${activePollForPopup.id}`;
+      setSecureItem(dismissKey, "1").catch(() => {});
+    }
+    setPollPopupVisible(false);
+  }, [activePollForPopup]);
+
+  // -- Reminder banner (organizer only, event upcoming) --
+  const [reminderDismissed, setReminderDismissed] = useState(false);
+  const confirmedCount = useMemo(() => {
+    if (!initData) return 0;
+    return initData.totalGuestCount;
+  }, [initData]);
+  const showReminder = !isParticipant && !reminderDismissed && diffDays !== null && diffDays > 0 && diffDays <= 30;
+
+  // -- Welcome popup (pinned announcement, once per portal) --
+  const [welcomeVisible, setWelcomeVisible] = useState(false);
+  const welcomeChecked = useRef(false);
+  const pinnedAnnouncement = useMemo(() => {
+    const anns = initData?.announcements;
+    if (!anns?.length) return null;
+    return anns.find((a) => a.isPinned) ?? null;
+  }, [initData]);
+
+  useEffect(() => {
+    if (welcomeChecked.current || !pinnedAnnouncement || !trackingId) return;
+    welcomeChecked.current = true;
+    const key = `welcome_seen_${trackingId}`;
+    getSecureItem(key).then((val) => {
+      if (!val) setWelcomeVisible(true);
+    }).catch(() => {});
+  }, [pinnedAnnouncement, trackingId]);
+
+  const handleWelcomeDismiss = useCallback(() => {
+    setWelcomeVisible(false);
+    if (trackingId) {
+      setSecureItem(`welcome_seen_${trackingId}`, "1").catch(() => {});
+    }
+  }, [trackingId]);
+
+  // -- Rating modal (participant, post-event) --
+  const [ratingVisible, setRatingVisible] = useState(false);
+  const [ratingValue, setRatingValue] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+  const ratingChecked = useRef(false);
+
+  useEffect(() => {
+    if (ratingChecked.current || !isParticipant || diffDays === null || diffDays >= -1 || !trackingId) return;
+    ratingChecked.current = true;
+    const key = `rated_${trackingId}`;
+    getSecureItem(key).then((val) => {
+      if (!val) setRatingVisible(true);
+    }).catch(() => {});
+  }, [isParticipant, diffDays, trackingId]);
+
+  const handleRatingSubmit = useCallback(async () => {
+    if (ratingValue === 0 || ratingSubmitting || !trackingId) return;
+    setRatingSubmitting(true);
+    try {
+      await groupFetch(trackingId, "/rating", {
+        method: "POST",
+        body: JSON.stringify({ rating: ratingValue, comment: ratingComment.trim() || undefined }),
+      });
+      await setSecureItem(`rated_${trackingId}`, "1");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch {
+      /* silent */
+    }
+    setRatingVisible(false);
+    setRatingSubmitting(false);
+  }, [ratingValue, ratingComment, ratingSubmitting, trackingId]);
 
   return (
     <View style={styles.container}>
@@ -688,6 +977,28 @@ function OverviewScreenInner() {
         ) : null}
 
         {/* ================================================================= */}
+        {/* C3. REMINDER BANNER (organizer, event upcoming)                   */}
+        {/* ================================================================= */}
+        {showReminder && (
+          <View style={styles.reminderBanner}>
+            <View style={styles.reminderContent}>
+              <Icon name="time-outline" size={18} color="#92400e" />
+              <Text style={styles.reminderText}>
+                {t(lang, "overview.reminder.prefix")} {diffDays} {t(lang, diffDays === 1 ? "overview.reminder.day" : "overview.reminder.days")} | {confirmedCount} {t(lang, "overview.guestsLabel")}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => setReminderDismissed(true)}
+              style={styles.reminderClose}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.close")}
+            >
+              <Icon name="close" size={14} color="#92400e" />
+            </Pressable>
+          </View>
+        )}
+
+        {/* ================================================================= */}
         {/* D. CTA ALERT                                                      */}
         {/* ================================================================= */}
         {showCta && (
@@ -797,10 +1108,14 @@ function OverviewScreenInner() {
                   style={styles.upsellAskBtn}
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.navigate("/(group)/messages" as any);
+                    const prefill = t(lang, "upsell.askAbout").replace("{name}", svc.name);
+                    router.navigate({
+                      pathname: "/(group)/messages" as any,
+                      params: { prefill },
+                    });
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel={t(lang, "upsell.ask")}
+                  accessibilityLabel={t(lang, "upsell.askAbout").replace("{name}", svc.name)}
                 >
                   <Icon name="chatbubble-outline" size={16} color={group.white} />
                   <Text style={styles.upsellAskText}>{t(lang, "upsell.ask")}</Text>
@@ -1005,6 +1320,72 @@ function OverviewScreenInner() {
           </View>
         )}
       </ScrollView>
+
+      {/* TASK 1: Poll Popup Modal */}
+      {activePollForPopup && (
+        <PollPopupModal
+          poll={activePollForPopup}
+          lang={lang}
+          visible={pollPopupVisible}
+          onDismiss={handlePollPopupDismiss}
+        />
+      )}
+
+      {/* Welcome Popup (pinned announcement, once per portal) */}
+      {pinnedAnnouncement && (
+        <Modal visible={welcomeVisible} transparent animationType="fade" onRequestClose={handleWelcomeDismiss}>
+          <Pressable style={styles.modalOverlay} onPress={handleWelcomeDismiss}>
+            <View style={styles.welcomeCard}>
+              <Icon name="megaphone" size={28} color={group.primary} />
+              <Text style={styles.welcomeTitle}>{t(lang, "group.announcements")}</Text>
+              <Text style={styles.welcomeContent}>{pinnedAnnouncement.content}</Text>
+              <Pressable style={styles.welcomeBtn} onPress={handleWelcomeDismiss} accessibilityRole="button">
+                <Text style={styles.welcomeBtnText}>{t(lang, "overview.welcome.dismiss")}</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
+
+      {/* Rating Modal (participant, post-event) */}
+      <Modal visible={ratingVisible} transparent animationType="fade" onRequestClose={() => setRatingVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setRatingVisible(false)}>
+          <View style={styles.ratingCard}>
+            <Text style={styles.ratingTitle}>{t(lang, "overview.rating.title")}</Text>
+            <Text style={styles.ratingSubtitle}>{t(lang, "overview.rating.subtitle")}</Text>
+            <View style={styles.starsRow}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Pressable key={star} onPress={() => setRatingValue(star)} style={styles.starBtn}>
+                  <Icon
+                    name={star <= ratingValue ? "star" : "star-outline"}
+                    size={36}
+                    color={star <= ratingValue ? "#f59e0b" : group.textMuted}
+                  />
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              style={styles.ratingInput}
+              placeholder={t(lang, "overview.rating.commentPlaceholder")}
+              placeholderTextColor={group.textMuted}
+              value={ratingComment}
+              onChangeText={setRatingComment}
+              multiline
+              maxLength={500}
+            />
+            <Pressable
+              style={[styles.ratingSubmit, ratingValue === 0 && styles.ratingSubmitDisabled]}
+              onPress={handleRatingSubmit}
+              disabled={ratingValue === 0 || ratingSubmitting}
+              accessibilityRole="button"
+            >
+              <Text style={styles.ratingSubmitText}>
+                {ratingSubmitting ? t(lang, "common.loading") : t(lang, "overview.rating.submit")}
+              </Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -1812,6 +2193,244 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: group.text,
     textAlign: "center",
+  },
+
+  // ── Reminder Banner ──
+  reminderBanner: {
+    flexDirection: "row" as const,
+    backgroundColor: "#fef3c7",
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    alignItems: "center" as const,
+  },
+  reminderContent: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.sm,
+  },
+  reminderText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: "#92400e",
+    flex: 1,
+  },
+  reminderClose: {
+    padding: spacing.xs,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+
+  // ── Modal Overlay (shared) ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    padding: spacing.xl,
+  },
+
+  // ── Welcome Popup ──
+  welcomeCard: {
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    padding: spacing["3xl"],
+    width: "100%" as const,
+    maxWidth: 340,
+    alignItems: "center" as const,
+    gap: spacing.md,
+    ...shadow.lg,
+  },
+  welcomeTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  welcomeContent: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
+    textAlign: "center" as const,
+    lineHeight: 22,
+  },
+  welcomeBtn: {
+    backgroundColor: group.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing["2xl"],
+    marginTop: spacing.sm,
+  },
+  welcomeBtnText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
+  },
+
+  // ── Rating Modal ──
+  ratingCard: {
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    padding: spacing["3xl"],
+    width: "100%" as const,
+    maxWidth: 340,
+    alignItems: "center" as const,
+    gap: spacing.md,
+    ...shadow.lg,
+  },
+  ratingTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  ratingSubtitle: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    textAlign: "center" as const,
+  },
+  starsRow: {
+    flexDirection: "row" as const,
+    gap: spacing.sm,
+    marginVertical: spacing.sm,
+  },
+  starBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+  },
+  ratingInput: {
+    width: "100%" as const,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.text,
+    backgroundColor: group.inputBg,
+    minHeight: 80,
+    textAlignVertical: "top" as const,
+  },
+  ratingSubmit: {
+    backgroundColor: group.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing["2xl"],
+    width: "100%" as const,
+    alignItems: "center" as const,
+  },
+  ratingSubmitDisabled: {
+    opacity: 0.5,
+  },
+  ratingSubmitText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
+  },
+});
+
+// =============================================================================
+// Poll Popup Styles
+// =============================================================================
+
+const pollStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.xl,
+  },
+  card: {
+    backgroundColor: group.white,
+    borderRadius: radius["2xl"],
+    padding: spacing["2xl"],
+    width: "100%",
+    maxWidth: 400,
+    ...shadow.lg,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
+  headerLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.primary,
+    letterSpacing: letterSpacing.tight,
+    textTransform: "uppercase",
+  },
+  question: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+    lineHeight: 24,
+    marginBottom: spacing.lg,
+  },
+  optionsList: {
+    gap: spacing.sm,
+  },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: group.inputBg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    minHeight: TOUCH_TARGET,
+    overflow: "hidden",
+    position: "relative",
+  },
+  optionRowVoted: {
+    backgroundColor: group.primaryLight,
+    borderWidth: 1,
+    borderColor: group.primary,
+  },
+  optionProgressBg: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: "rgba(99,102,241,0.08)",
+    borderRadius: radius.md,
+  },
+  optionText: {
+    flex: 1,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_500Medium",
+    color: group.text,
+  },
+  optionPct: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.textSecondary,
+    marginLeft: spacing.sm,
+  },
+  successMsg: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: semantic.success,
+    textAlign: "center",
+    marginTop: spacing.lg,
+  },
+  skipBtn: {
+    marginTop: spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: TOUCH_TARGET,
+    borderRadius: radius.md,
+    backgroundColor: group.inputBg,
+  },
+  skipBtnText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_500Medium",
+    color: group.textMuted,
   },
 });
 

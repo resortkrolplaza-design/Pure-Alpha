@@ -35,6 +35,16 @@ async function deleteItem(key: string): Promise<void> {
   await SecureStore.deleteItemAsync(key);
 }
 
+// ── Public accessors for generic key-value storage (polls, badges, etc.) ----
+
+export async function getSecureItem(key: string): Promise<string | null> {
+  return getItem(key);
+}
+
+export async function setSecureItem(key: string, value: string): Promise<void> {
+  return setItem(key, value);
+}
+
 const MODE_KEY = "pa_app_mode";
 const GROUP_ID_KEY = "pa_group_tracking_id";
 const GROUP_TOKEN_KEY = "pa_group_jwt_token";

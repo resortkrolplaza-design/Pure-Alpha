@@ -4,14 +4,16 @@
 
 import { Tabs } from "expo-router";
 import { Platform, StyleSheet, Animated, Text } from "react-native";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import * as Haptics from "expo-haptics";
 import { useQuery } from "@tanstack/react-query";
 import { group, fontSize, spacing } from "@/lib/tokens";
 import { Icon, type IconName } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { fetchPortalInit } from "@/lib/group-api";
+import { fetchPortalInit, groupFetch } from "@/lib/group-api";
+import { getSecureItem, setSecureItem } from "@/lib/auth";
+import type { GroupMessage } from "@/lib/types";
 
 // -- Animated Tab Icon with scale effect on active state --------------------
 
@@ -84,6 +86,39 @@ export default function GroupLayout() {
 
   const portal = initData?.portal ?? null;
 
+  // ── TASK 2: Unread message badge ──
+  const LAST_SEEN_KEY = `pa_last_seen_msg_count_${trackingId}`;
+  const [unreadBadge, setUnreadBadge] = useState<number | undefined>(undefined);
+
+  const { data: msgData } = useQuery({
+    queryKey: ["group-messages-count", trackingId],
+    queryFn: async () => {
+      if (!trackingId) return { replies: [], anchorMessage: null };
+      const res = await groupFetch<{ replies: GroupMessage[]; anchorMessage: GroupMessage | null; unreadCount?: number }>(trackingId, "/messages");
+      return res.data ?? { replies: [], anchorMessage: null };
+    },
+    enabled: !!trackingId && !!portal?.messagingEnabled,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+  });
+
+  useEffect(() => {
+    if (!msgData) return;
+    const currentCount = msgData.replies?.length ?? 0;
+    getSecureItem(LAST_SEEN_KEY).then((stored) => {
+      const lastSeen = stored ? parseInt(stored, 10) : 0;
+      const diff = currentCount - (isNaN(lastSeen) ? 0 : lastSeen);
+      setUnreadBadge(diff > 0 ? diff : undefined);
+    }).catch(() => setUnreadBadge(undefined));
+  }, [msgData, LAST_SEEN_KEY]);
+
+  // When user taps Messages tab, mark all as seen
+  const markMessagesSeen = useCallback(() => {
+    const currentCount = msgData?.replies?.length ?? 0;
+    setSecureItem(LAST_SEEN_KEY, String(currentCount)).catch(() => {});
+    setUnreadBadge(undefined);
+  }, [msgData, LAST_SEEN_KEY]);
+
   // Fix 2: Consistent defaults -- ALL optional tabs hidden until data loads
   const hideGuests = !portal?.guestListEnabled || isParticipant;
   const hideMessages = !portal?.messagingEnabled;
@@ -139,6 +174,8 @@ export default function GroupLayout() {
         name="messages"
         options={{
           tabBarItemStyle: hideMessages ? { display: "none" } : undefined,
+          tabBarBadge: unreadBadge,
+          tabBarBadgeStyle: styles.tabBadge,
           tabBarLabel: ({ focused }) => (
             <TabLabel focused={focused} label={t(lang, "group.tab.messages")} />
           ),
@@ -149,6 +186,9 @@ export default function GroupLayout() {
               inactiveName="chatbubbles-outline"
             />
           ),
+        }}
+        listeners={{
+          tabPress: () => markMessagesSeen(),
         }}
       />
       <Tabs.Screen
@@ -219,5 +259,14 @@ const styles = StyleSheet.create({
   tabLabelInactive: {
     fontFamily: "Inter_400Regular",
     color: group.textMuted,
+  },
+  tabBadge: {
+    backgroundColor: group.primary,
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_600SemiBold",
+    minWidth: 18,
+    height: 18,
+    lineHeight: 18,
+    borderRadius: 9,
   },
 });

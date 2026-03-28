@@ -138,6 +138,14 @@ const pl: Record<string, string> = {
   "overview.openMaps": "Otw\u00F3rz w Mapach",
   "overview.timeline.complete": "ukonczone",
   "overview.timeline.current": "aktualny",
+  "overview.reminder.prefix": "Za",
+  "overview.reminder.day": "dzien",
+  "overview.reminder.days": "dni",
+  "overview.welcome.dismiss": "Rozumiem",
+  "overview.rating.title": "Jak oceniasz wydarzenie?",
+  "overview.rating.subtitle": "Twoja opinia pomoze nam poprawic przyszle wydarzenia",
+  "overview.rating.commentPlaceholder": "Dodatkowy komentarz (opcjonalnie)...",
+  "overview.rating.submit": "Wyslij ocene",
   "overview.seeAll": "Zobacz wszystkie",
   "overview.noItems": "Brak danych",
   "gallery.hotelTitle": "Galeria hotelu",
@@ -239,6 +247,18 @@ const pl: Record<string, string> = {
   "guests.lastNameRequired": "Nazwisko jest wymagane",
   "guests.cannotEditAdmin": "Nie mo\u017Cna edytowa\u0107 go\u015Bci dodanych przez hotel",
   "guests.limitReached": "Osi\u0105gni\u0119to limit go\u015Bci",
+  "guests.import": "Importuj",
+  "guests.importTitle": "Import go\u015Bci z CSV",
+  "guests.importPaste": "Wklej dane CSV...",
+  "guests.importPreview": "Znaleziono {count} go\u015Bci",
+  "guests.importing": "Importowanie...",
+  "guests.imported": "Zaimportowano {count} go\u015Bci",
+  "guests.importError": "B\u0142\u0105d importu",
+  "guests.importNoData": "Nie znaleziono danych do importu",
+  "guests.sendInvite": "Wy\u015Blij zaproszenie",
+  "guests.inviteSent": "Zaproszenie wys\u0142ane",
+  "guests.inviteSending": "Wysy\u0142anie...",
+  "guests.inviteError": "B\u0142\u0105d wysy\u0142ania zaproszenia",
 
   // ── Attractions ----
   "attractions.openHotelMaps": "Otw\u00F3rz hotel w Mapach",
@@ -246,7 +266,12 @@ const pl: Record<string, string> = {
   // ── Upsell ----
   "upsell.title": "Polecane us\u0142ugi",
   "upsell.ask": "Zapytaj",
+  "upsell.askAbout": "Zapytaj o {name}",
   "upsell.seeAll": "Zobacz wszystkie us\u0142ugi",
+
+  // ── Poll Popup ----
+  "pollPopup.skip": "Pomi\u0144",
+  "pollPopup.voteSuccess": "Dzi\u0119kujemy za g\u0142os!",
 
   // ── Notes ----
   "notes.title": "Informacje od organizatora",
@@ -390,6 +415,14 @@ const en: Record<string, string> = {
   "overview.openMaps": "Open in Maps",
   "overview.timeline.complete": "complete",
   "overview.timeline.current": "current",
+  "overview.reminder.prefix": "In",
+  "overview.reminder.day": "day",
+  "overview.reminder.days": "days",
+  "overview.welcome.dismiss": "Got it",
+  "overview.rating.title": "How was the event?",
+  "overview.rating.subtitle": "Your feedback helps us improve future events",
+  "overview.rating.commentPlaceholder": "Additional comment (optional)...",
+  "overview.rating.submit": "Submit rating",
   "overview.seeAll": "See all",
   "overview.noItems": "No data",
   "gallery.hotelTitle": "Hotel gallery",
@@ -491,6 +524,18 @@ const en: Record<string, string> = {
   "guests.lastNameRequired": "Last name is required",
   "guests.cannotEditAdmin": "Cannot edit guests added by the hotel",
   "guests.limitReached": "Guest limit reached",
+  "guests.import": "Import",
+  "guests.importTitle": "Import guests from CSV",
+  "guests.importPaste": "Paste CSV data...",
+  "guests.importPreview": "Found {count} guests",
+  "guests.importing": "Importing...",
+  "guests.imported": "Imported {count} guests",
+  "guests.importError": "Import error",
+  "guests.importNoData": "No data found for import",
+  "guests.sendInvite": "Send invitation",
+  "guests.inviteSent": "Invitation sent",
+  "guests.inviteSending": "Sending...",
+  "guests.inviteError": "Failed to send invitation",
 
   // ── Attractions ----
   "attractions.openHotelMaps": "Open hotel in Maps",
@@ -498,7 +543,12 @@ const en: Record<string, string> = {
   // ── Upsell ----
   "upsell.title": "Recommended services",
   "upsell.ask": "Inquire",
+  "upsell.askAbout": "Ask about {name}",
   "upsell.seeAll": "See all services",
+
+  // ── Poll Popup ----
+  "pollPopup.skip": "Skip",
+  "pollPopup.voteSuccess": "Thank you for your vote!",
 
   // ── Notes ----
   "notes.title": "Notes from the organizer",

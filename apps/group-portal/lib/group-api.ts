@@ -198,6 +198,57 @@ export async function deleteGuest(
   );
 }
 
+// ── Guest CSV Import (organizer only) ----
+
+export interface ImportGuestsPayload {
+  guests: Array<{
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+    dietaryNeeds?: string;
+    allergies?: string;
+  }>;
+}
+
+export interface ImportGuestsResponse {
+  imported: number;
+  skipped: number;
+}
+
+export async function importGuests(
+  trackingId: string,
+  payload: ImportGuestsPayload,
+): Promise<ApiResponse<ImportGuestsResponse>> {
+  return groupFetch(trackingId, "/guests/import", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+// ── Guest Invitation (organizer only) ----
+
+export interface SendInvitationPayload {
+  guestIds: string[];
+  customMessage?: string;
+}
+
+export interface SendInvitationResponse {
+  sent: number;
+  failed: string[];
+  total: number;
+}
+
+export async function sendInvitation(
+  trackingId: string,
+  payload: SendInvitationPayload,
+): Promise<ApiResponse<SendInvitationResponse>> {
+  return groupFetch(trackingId, "/guests/invite", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 // ── Announcements ----
 
 export async function fetchAnnouncements(
