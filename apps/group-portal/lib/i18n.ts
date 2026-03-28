@@ -152,7 +152,8 @@ const pl: Record<string, string> = {
   "overview.rating.title": "Jak oceniasz wydarzenie?",
   "overview.rating.subtitle": "Twoja opinia pomoze nam poprawic przyszle wydarzenia",
   "overview.rating.commentPlaceholder": "Dodatkowy komentarz (opcjonalnie)...",
-  "overview.rating.submit": "Wyslij ocene",
+  "overview.rating.submit": "Wy\u015Blij ocen\u0119",
+  "overview.rating.error": "Nie uda\u0142o si\u0119 wys\u0142a\u0107 oceny",
   "overview.rating.overall": "Og\u00F3lna",
   "overview.rating.organization": "Organizacja",
   "overview.rating.food": "Jedzenie",
@@ -319,6 +320,14 @@ const pl: Record<string, string> = {
 
   // ── Notes ----
   "notes.title": "Informacje od organizatora",
+
+  // ── Agenda Categories ----
+  "agenda.category.ceremony": "Ceremonia",
+  "agenda.category.dinner": "Kolacja",
+  "agenda.category.meeting": "Spotkanie",
+  "agenda.category.activity": "Aktywno\u015B\u0107",
+  "agenda.category.transport": "Transport",
+  "agenda.category.other": "Inne",
 
   // ── Document Categories ----
   "doc.category.offer": "Oferta",
@@ -502,6 +511,7 @@ const en: Record<string, string> = {
   "overview.rating.subtitle": "Your feedback helps us improve future events",
   "overview.rating.commentPlaceholder": "Additional comment (optional)...",
   "overview.rating.submit": "Submit rating",
+  "overview.rating.error": "Failed to submit rating",
   "overview.rating.overall": "Overall",
   "overview.rating.organization": "Organization",
   "overview.rating.food": "Food",
@@ -668,6 +678,14 @@ const en: Record<string, string> = {
 
   // ── Notes ----
   "notes.title": "Notes from the organizer",
+
+  // ── Agenda Categories ----
+  "agenda.category.ceremony": "Ceremony",
+  "agenda.category.dinner": "Dinner",
+  "agenda.category.meeting": "Meeting",
+  "agenda.category.activity": "Activity",
+  "agenda.category.transport": "Transport",
+  "agenda.category.other": "Other",
 
   // ── Document Categories ----
   "doc.category.offer": "Offer",

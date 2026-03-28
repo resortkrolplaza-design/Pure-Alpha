@@ -168,10 +168,10 @@ const QUICK_ACTIONS: Array<{
   organizerOnly?: boolean;
 }> = [
   { labelKey: "quickAction.rsvp", icon: "checkmark-circle", tab: "rsvp", bg: quickActionColors.rsvp.bg, color: quickActionColors.rsvp.icon },
-  { labelKey: "group.quickGuests", icon: "people", tab: "rsvp", bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon, flag: "guestListEnabled", organizerOnly: true },
+  { labelKey: "group.quickGuests", icon: "people", tab: "rsvp", params: { section: "guests" }, bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon, flag: "guestListEnabled", organizerOnly: true },
   { labelKey: "quickAction.agenda", icon: "calendar", tab: "event", params: { scrollTo: "agenda" }, bg: quickActionColors.agenda.bg, color: quickActionColors.agenda.icon, flag: "agendaEnabled" },
   { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: quickActionColors.messages.bg, color: quickActionColors.messages.icon, flag: "messagingEnabled" },
-  { labelKey: "group.quickDocuments", icon: "document-text", tab: "rsvp", bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon, flag: "documentsEnabled", organizerOnly: true },
+  { labelKey: "group.quickDocuments", icon: "document-text", tab: "rsvp", params: { section: "documents" }, bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon, flag: "documentsEnabled", organizerOnly: true },
   { labelKey: "group.quickPhotos", icon: "camera", tab: "photos", bg: quickActionColors.photos.bg, color: quickActionColors.photos.icon, flag: "photoWallEnabled" },
   { labelKey: "quickAction.gallery", icon: "images", tab: "event", params: { scrollTo: "gallery" }, bg: quickActionColors.gallery.bg, color: quickActionColors.gallery.icon, flag: "galleryEnabled" },
   { labelKey: "quickAction.services", icon: "pricetag", tab: "event", params: { scrollTo: "services" }, bg: quickActionColors.services.bg, color: quickActionColors.services.icon, flag: "servicesEnabled" },
@@ -608,13 +608,6 @@ function OverviewScreenInner() {
 
   const handleQuickAction = useCallback((tab: string, params?: Record<string, string>) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (tab === "_announcements") {
-      // Scroll to announcements section using onLayout-captured Y offset
-      if (announcementsY.current > 0) {
-        scrollRef.current?.scrollTo({ y: announcementsY.current, animated: true });
-      }
-      return;
-    }
     if (params && Object.keys(params).length > 0) {
       router.navigate({
         pathname: `/(group)/${tab}` as any,
@@ -754,7 +747,9 @@ function OverviewScreenInner() {
       await setSecureItem(`rated_${trackingId}`, "1");
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      /* silent */
+      Alert.alert(t(lang, "common.error"), t(lang, "overview.rating.error"));
+      setRatingSubmitting(false);
+      return;
     }
     setRatingVisible(false);
     setRatingSubmitting(false);
