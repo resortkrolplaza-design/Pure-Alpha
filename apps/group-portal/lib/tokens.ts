@@ -37,6 +37,12 @@ export const quickActionColors = {
   announcements: { bg: "#fff7ed", icon: "#f97316" },
   messages: { bg: "#eff6ff", icon: "#3b82f6" },
   photos: { bg: "#fdf2f8", icon: "#ec4899" },
+  agenda: { bg: "#fef3c7", icon: "#d97706" },
+  faq: { bg: "#dbeafe", icon: "#2563eb" },
+  services: { bg: "#d1fae5", icon: "#059669" },
+  attractions: { bg: "#fce7f3", icon: "#db2777" },
+  gallery: { bg: "#e0e7ff", icon: "#4f46e5" },
+  rsvp: { bg: "#f0fdf4", icon: "#16a34a" },
 } as const;
 
 // ── Timeline Colors ----

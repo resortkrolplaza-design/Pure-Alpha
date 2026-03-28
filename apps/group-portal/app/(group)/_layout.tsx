@@ -187,14 +187,13 @@ export default function GroupLayout() {
         }}
       />
       {/* Hidden screens (no tab bar item) */}
-      <Tabs.Screen
-        name="rsvp"
-        options={{ href: null }}
-      />
-      <Tabs.Screen
-        name="register"
-        options={{ href: null }}
-      />
+      <Tabs.Screen name="rsvp" options={{ href: null }} />
+      <Tabs.Screen name="register" options={{ href: null }} />
+      <Tabs.Screen name="agenda" options={{ href: null }} />
+      <Tabs.Screen name="faq" options={{ href: null }} />
+      <Tabs.Screen name="services" options={{ href: null }} />
+      <Tabs.Screen name="attractions" options={{ href: null }} />
+      <Tabs.Screen name="gallery" options={{ href: null }} />
     </Tabs>
   );
 }

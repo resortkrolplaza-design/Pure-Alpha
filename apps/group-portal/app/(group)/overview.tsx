@@ -123,11 +123,16 @@ const QUICK_ACTIONS: Array<{
   flag?: string;
   organizerOnly?: boolean;
 }> = [
+  { labelKey: "quickAction.rsvp", icon: "checkmark-circle", tab: "rsvp", bg: quickActionColors.rsvp.bg, color: quickActionColors.rsvp.icon },
   { labelKey: "group.quickGuests", icon: "people", tab: "guests", bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon, flag: "guestListEnabled", organizerOnly: true },
-  { labelKey: "group.quickDocuments", icon: "document-text", tab: "documents", bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon, flag: "documentsEnabled", organizerOnly: true },
-  { labelKey: "overview.quickAnnouncements", icon: "megaphone", tab: "_announcements", bg: quickActionColors.announcements.bg, color: quickActionColors.announcements.icon },
+  { labelKey: "quickAction.agenda", icon: "calendar", tab: "agenda", bg: quickActionColors.agenda.bg, color: quickActionColors.agenda.icon, flag: "agendaEnabled" },
   { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: quickActionColors.messages.bg, color: quickActionColors.messages.icon, flag: "messagingEnabled" },
-  { labelKey: "group.quickPhotos", icon: "images", tab: "photos", bg: quickActionColors.photos.bg, color: quickActionColors.photos.icon, flag: "photoWallEnabled" },
+  { labelKey: "group.quickDocuments", icon: "document-text", tab: "documents", bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon, flag: "documentsEnabled", organizerOnly: true },
+  { labelKey: "group.quickPhotos", icon: "camera", tab: "photos", bg: quickActionColors.photos.bg, color: quickActionColors.photos.icon, flag: "photoWallEnabled" },
+  { labelKey: "quickAction.gallery", icon: "images", tab: "gallery", bg: quickActionColors.gallery.bg, color: quickActionColors.gallery.icon, flag: "galleryEnabled" },
+  { labelKey: "quickAction.services", icon: "pricetag", tab: "services", bg: quickActionColors.services.bg, color: quickActionColors.services.icon, flag: "servicesEnabled" },
+  { labelKey: "quickAction.attractions", icon: "compass", tab: "attractions", bg: quickActionColors.attractions.bg, color: quickActionColors.attractions.icon, flag: "attractionsEnabled" },
+  { labelKey: "quickAction.faq", icon: "help-circle", tab: "faq", bg: quickActionColors.faq.bg, color: quickActionColors.faq.icon, flag: "faqEnabled" },
 ];
 
 // =============================================================================
@@ -363,7 +368,6 @@ function OverviewScreenInner() {
   // Register push notifications on first load
   usePushNotifications();
 
-  const [showAllAgenda, setShowAllAgenda] = useState(false);
   const [ctaDismissed, setCtaDismissed] = useState(false);
   const [coverError, setCoverError] = useState(false);
   const announcementsRef = useRef<View>(null);
@@ -451,17 +455,6 @@ function OverviewScreenInner() {
     await refetch();
     setRefreshing(false);
   }, [refetch]);
-
-  // -- Agenda slicing --
-  const agendaItems = useMemo(() => {
-    if (!agenda?.length) return [];
-    return showAllAgenda ? agenda : agenda.slice(0, 5);
-  }, [agenda, showAllAgenda]);
-
-  const handleSeeAll = useCallback(() => {
-    configureListAnimation();
-    setShowAllAgenda(true);
-  }, []);
 
   const handleQuickAction = useCallback((tab: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -806,144 +799,8 @@ function OverviewScreenInner() {
           </View>
         )}
 
-        {/* ================================================================= */}
-        {/* G. AGENDA PREVIEW                                                 */}
-        {/* ================================================================= */}
-        {!isLoading && !isError && initData && portal?.agendaEnabled !== false && (
-          <View style={styles.section} accessibilityLiveRegion="polite">
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>
-                {t(lang, "group.agenda")}
-              </Text>
-              {agenda && agenda.length > 5 && !showAllAgenda && (
-                <Pressable
-                  onPress={handleSeeAll}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(lang, "group.seeAllAgenda")}
-                  style={styles.seeAllBtn}
-                >
-                  <Text style={styles.seeAllText}>
-                    {t(lang, "group.seeAllAgenda")}
-                  </Text>
-                  <Icon name="chevron-forward" size={14} color={group.primary} />
-                </Pressable>
-              )}
-            </View>
-
-            {!agenda?.length ? (
-              <View style={styles.emptyCard}>
-                <Icon name="calendar-outline" size={36} color={group.textMuted} />
-                <Text style={styles.emptyText}>
-                  {t(lang, "group.noAgenda")}
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.timelineContainer}>
-                {agendaItems.map((item, idx) => (
-                  <View key={item.id} style={styles.timelineRow}>
-                    {/* Timeline rail */}
-                    <View style={styles.timelineRail}>
-                      <View style={styles.timelineDot} />
-                      {idx < agendaItems.length - 1 && (
-                        <View style={styles.timelineLine} />
-                      )}
-                    </View>
-                    {/* Content */}
-                    <View style={styles.agendaCard}>
-                      <View style={styles.agendaTimePill}>
-                        <Text style={styles.agendaTimeText}>
-                          {item.startTime ?? "\u2014"}
-                        </Text>
-                      </View>
-                      <Text style={styles.agendaTitle}>{item.title}</Text>
-                      {item.location && (
-                        <View style={styles.agendaLocationRow}>
-                          <Icon name="location-outline" size={12} color={group.textMuted} />
-                          <Text style={styles.agendaLocation}>
-                            {item.location}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* ================================================================= */}
-        {/* H. FAQ SECTION                                                    */}
-        {/* ================================================================= */}
-        {!isLoading && !isError && portal?.faqEnabled !== false && faq && faq.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>
-              {t(lang, "overview.faq.title")}
-            </Text>
-            <View style={styles.faqList}>
-              {faq.map((item) => (
-                <FaqItem
-                  key={item.id}
-                  question={item.question}
-                  answer={item.answer}
-                />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* ================================================================= */}
-        {/* I. HOTEL GALLERY                                                  */}
-        {/* ================================================================= */}
-        {portal?.galleryEnabled && gallery && gallery.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t(lang, "group.tab.photos")}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: spacing.xl }}>
-              {gallery.map((img) => (
-                <Image key={img.id} source={{ uri: img.url }} style={styles.galleryThumb} resizeMode="cover" />
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* ================================================================= */}
-        {/* J. SERVICES                                                       */}
-        {/* ================================================================= */}
-        {portal?.servicesEnabled && services && services.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t(lang, "overview.services")}</Text>
-            {services.map((svc) => (
-              <View key={svc.id} style={styles.serviceCard}>
-                <Text style={styles.serviceCardName}>{svc.name}</Text>
-                {svc.description && <Text style={styles.serviceCardDesc} numberOfLines={2}>{svc.description}</Text>}
-                {svc.price != null && (
-                  <Text style={styles.serviceCardPrice}>
-                    {svc.price} {svc.currency ?? "PLN"}{svc.unit ? ` / ${svc.unit}` : ""}
-                  </Text>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* ================================================================= */}
-        {/* K. ATTRACTIONS                                                    */}
-        {/* ================================================================= */}
-        {portal?.attractionsEnabled !== false && attractions && attractions.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t(lang, "overview.attractions")}</Text>
-            {attractions.map((attr) => (
-              <Pressable key={attr.id} style={styles.attractionCard} onPress={() => attr.mapUrl && isExternalUrlSafe(attr.mapUrl) && Linking.openURL(attr.mapUrl)}>
-                <Icon name="location-outline" size={20} color={group.primary} />
-                <View style={styles.attractionInfo}>
-                  <Text style={styles.attractionName}>{attr.name}</Text>
-                  {attr.distance && <Text style={styles.attractionDistance}>{attr.distance}</Text>}
-                </View>
-                {attr.mapUrl && <Icon name="navigate-outline" size={18} color={group.textMuted} />}
-              </Pressable>
-            ))}
-          </View>
-        )}
+        {/* Sections G-K moved to dedicated screens (agenda, faq, gallery, services, attractions) */}
+        {/* Access via quick action grid above */}
 
         {/* ================================================================= */}
         {/* L. HOTEL CONTACT FOOTER                                           */}
