@@ -122,9 +122,10 @@ function stripBidiChars(str: string): string {
 }
 
 // P2-3: Adaptive polling backoff
-const POLL_FAST = 10_000;
-const POLL_MEDIUM = 30_000;
-const POLL_SLOW = 60_000;
+// Polling intervals -- will be replaced by WebSocket after AWS migration
+const POLL_FAST = 3_000;    // Active chat: 3s
+const POLL_MEDIUM = 10_000; // Idle 1min: 10s
+const POLL_SLOW = 30_000;   // Idle 5min: 30s
 const BACKOFF_MEDIUM_AFTER_MS = 60_000;
 const BACKOFF_SLOW_AFTER_MS = 300_000;
 
@@ -250,7 +251,8 @@ function ChatContent() {
   // Build flat list with date separators
   const listItems = useMemo<ListItem[]>(() => {
     const items: ListItem[] = [];
-    const replies = [...(msgData?.replies ?? [])].reverse();
+    // API returns oldest-first (orderBy createdAt asc) -- keep as-is for top-to-bottom display
+    const replies = msgData?.replies ?? [];
 
     if (msgData?.anchorMessage) {
       items.push({
@@ -292,7 +294,9 @@ function ChatContent() {
   const sendMutation = useMutation({
     mutationFn: async (body: string) => {
       if (!trackingId) throw new Error("No trackingId");
-      const senderName = guest ? [guest.firstName, guest.lastName].filter(Boolean).join(" ") : undefined;
+      const senderName = guest
+        ? [guest.firstName, guest.lastName].filter(Boolean).join(" ")
+        : "Uczestnik";
       const res = await groupFetch<GroupMessage>(trackingId, "/messages", {
         method: "POST",
         body: JSON.stringify({ body, senderName }),
