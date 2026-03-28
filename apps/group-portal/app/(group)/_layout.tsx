@@ -1,15 +1,17 @@
 // =============================================================================
-// Group Portal — Bottom Tab Navigator
+// Group Portal — Bottom Tab Navigator (dynamic tabs based on feature flags + role)
 // =============================================================================
 
 import { Tabs } from "expo-router";
 import { Platform, StyleSheet, Animated, Text } from "react-native";
 import { useRef, useEffect } from "react";
 import * as Haptics from "expo-haptics";
+import { useQuery } from "@tanstack/react-query";
 import { group, fontSize, spacing } from "@/lib/tokens";
 import { Icon, type IconName } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { fetchPortalInit } from "@/lib/group-api";
 
 // -- Animated Tab Icon with scale effect on active state --------------------
 
@@ -63,6 +65,25 @@ function TabLabel({ focused, label }: { focused: boolean; label: string }) {
 
 export default function GroupLayout() {
   const lang = useAppStore((s) => s.lang);
+  const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
+  const portalRole = useAppStore((s) => s.portalRole);
+  const isParticipant = portalRole === "participant";
+
+  // Read feature flags from /init cache (already fetched by overview)
+  const { data: initData } = useQuery({
+    queryKey: ["portal-init", trackingId],
+    queryFn: () => fetchPortalInit(trackingId),
+    enabled: !!trackingId,
+    staleTime: 60_000,
+  });
+
+  const portal = initData?.status === "success" ? initData.data?.portal : null;
+
+  // Determine tab visibility based on feature flags + role
+  const hideGuests = !portal?.guestListEnabled || isParticipant;
+  const hideMessages = portal ? !portal.messagingEnabled : false;
+  const hideDocuments = !portal?.documentsEnabled || isParticipant;
+  const hidePhotos = portal ? !portal.photoWallEnabled : false;
 
   return (
     <Tabs
@@ -96,6 +117,7 @@ export default function GroupLayout() {
       <Tabs.Screen
         name="guests"
         options={{
+          href: hideGuests ? null : undefined,
           tabBarLabel: ({ focused }) => (
             <TabLabel focused={focused} label={t(lang, "group.tab.guests")} />
           ),
@@ -111,6 +133,7 @@ export default function GroupLayout() {
       <Tabs.Screen
         name="messages"
         options={{
+          href: hideMessages ? null : undefined,
           tabBarLabel: ({ focused }) => (
             <TabLabel focused={focused} label={t(lang, "group.tab.messages")} />
           ),
@@ -126,6 +149,7 @@ export default function GroupLayout() {
       <Tabs.Screen
         name="documents"
         options={{
+          href: hideDocuments ? null : undefined,
           tabBarLabel: ({ focused }) => (
             <TabLabel
               focused={focused}
@@ -144,6 +168,7 @@ export default function GroupLayout() {
       <Tabs.Screen
         name="photos"
         options={{
+          href: hidePhotos ? null : undefined,
           tabBarLabel: ({ focused }) => (
             <TabLabel focused={focused} label={t(lang, "group.tab.photos")} />
           ),

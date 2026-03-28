@@ -4,7 +4,7 @@
 
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import type { AppMode } from "./types";
+import type { AppMode, PortalRole } from "./types";
 
 // Web fallback -- SecureStore doesn't work on web.
 // Use localStorage so tokens survive page refreshes.
@@ -41,6 +41,7 @@ const GROUP_TOKEN_KEY = "pa_group_jwt_token";
 const RSVP_TOKEN_KEY = "pa_rsvp_token";
 const GUEST_IDENTITY_KEY = "pa_guest_identity";
 const LANG_KEY = "pa_lang";
+const ROLE_KEY = "pa_portal_role";
 
 // ── Language Persistence ----
 
@@ -139,6 +140,22 @@ export async function clearGuestIdentity(): Promise<void> {
   await deleteItem(GUEST_IDENTITY_KEY);
 }
 
+// ── Portal Role ----
+
+export async function getPersistedRole(): Promise<PortalRole> {
+  try {
+    const role = await getItem(ROLE_KEY);
+    if (role === "organizer" || role === "participant") return role;
+    return "participant";
+  } catch {
+    return "participant";
+  }
+}
+
+export async function setPersistedRole(role: PortalRole): Promise<void> {
+  await setItem(ROLE_KEY, role);
+}
+
 // ── App Mode ----
 
 export type { AppMode };
@@ -166,6 +183,7 @@ export async function logout(): Promise<void> {
     clearRsvpToken(),
     clearGuestIdentity(),
     deleteItem(MODE_KEY),
+    deleteItem(ROLE_KEY),
   ]);
 }
 

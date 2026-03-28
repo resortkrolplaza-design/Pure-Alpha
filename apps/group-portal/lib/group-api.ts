@@ -7,6 +7,7 @@ import { getGroupToken } from "./auth";
 import type {
   ApiResponse,
   PortalInitData,
+  PortalRole,
   RsvpPayload,
   RsvpResponse,
   SelfRegisterPayload,
@@ -73,7 +74,7 @@ export async function fetchPortalInit(
 
 export async function loginByLink(
   trackingId: string,
-): Promise<ApiResponse<{ token: string; role: string; hotelName?: string; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
+): Promise<ApiResponse<{ token: string; role: PortalRole; hotelName?: string; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
   return groupFetch(trackingId, "/auth-by-link", {
     method: "POST",
     body: JSON.stringify({}),
@@ -84,7 +85,7 @@ export async function verifyPin(
   trackingId: string,
   pin: string,
   email: string,
-): Promise<ApiResponse<{ token: string; role: string; email?: string | null; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
+): Promise<ApiResponse<{ token: string; role: PortalRole; email?: string | null; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
   return groupFetch(trackingId, "/verify-pin", {
     method: "POST",
     body: JSON.stringify({ pin, email }),

@@ -120,12 +120,14 @@ const QUICK_ACTIONS: Array<{
   tab: string;
   bg: string;
   color: string;
+  flag?: string;
+  organizerOnly?: boolean;
 }> = [
-  { labelKey: "group.quickGuests", icon: "people", tab: "guests", bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon },
-  { labelKey: "group.quickDocuments", icon: "document-text", tab: "documents", bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon },
+  { labelKey: "group.quickGuests", icon: "people", tab: "guests", bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon, flag: "guestListEnabled", organizerOnly: true },
+  { labelKey: "group.quickDocuments", icon: "document-text", tab: "documents", bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon, flag: "documentsEnabled", organizerOnly: true },
   { labelKey: "overview.quickAnnouncements", icon: "megaphone", tab: "_announcements", bg: quickActionColors.announcements.bg, color: quickActionColors.announcements.icon },
-  { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: quickActionColors.messages.bg, color: quickActionColors.messages.icon },
-  { labelKey: "group.quickPhotos", icon: "images", tab: "photos", bg: quickActionColors.photos.bg, color: quickActionColors.photos.icon },
+  { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: quickActionColors.messages.bg, color: quickActionColors.messages.icon, flag: "messagingEnabled" },
+  { labelKey: "group.quickPhotos", icon: "images", tab: "photos", bg: quickActionColors.photos.bg, color: quickActionColors.photos.icon, flag: "photoWallEnabled" },
 ];
 
 // =============================================================================
@@ -355,6 +357,8 @@ function OverviewScreenInner() {
   const setLang = useAppStore((s) => s.setLang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
   const guest = useAppStore((s) => s.guest);
+  const portalRole = useAppStore((s) => s.portalRole);
+  const isParticipant = portalRole === "participant";
 
   // Register push notifications on first load
   usePushNotifications();
@@ -479,6 +483,7 @@ function OverviewScreenInner() {
 
   // -- Show CTA? --
   const showCta =
+    !isParticipant &&
     !ctaDismissed &&
     totalGuestCount === 0 &&
     diffDays !== null &&
@@ -674,7 +679,7 @@ function OverviewScreenInner() {
         {/* ================================================================= */}
         {/* C. TIMELINE STEPPER                                               */}
         {/* ================================================================= */}
-        {!isLoading && portal?.timelineCheckpoints && portal.timelineCheckpoints.length > 0 && (
+        {!isLoading && portal?.timelineEnabled !== false && portal?.timelineCheckpoints && portal.timelineCheckpoints.length > 0 && (
           <TimelineStepper checkpoints={portal.timelineCheckpoints} lang={lang} />
         )}
 
@@ -755,7 +760,11 @@ function OverviewScreenInner() {
         {!isLoading && !isError && initData && (
           <Animated.View style={quickActionsSlide}>
             <View style={styles.quickActionsGrid}>
-              {QUICK_ACTIONS.map((action) => (
+              {QUICK_ACTIONS.filter((action) => {
+                if (action.organizerOnly && isParticipant) return false;
+                if (action.flag && portal && !(portal as Record<string, unknown>)[action.flag]) return false;
+                return true;
+              }).map((action) => (
                 <QuickActionCircle
                   key={action.tab}
                   label={t(lang, action.labelKey)}
@@ -803,7 +812,7 @@ function OverviewScreenInner() {
         {/* ================================================================= */}
         {/* G. AGENDA PREVIEW                                                 */}
         {/* ================================================================= */}
-        {!isLoading && !isError && initData && (
+        {!isLoading && !isError && initData && portal?.agendaEnabled !== false && (
           <View style={styles.section} accessibilityLiveRegion="polite">
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
@@ -869,7 +878,7 @@ function OverviewScreenInner() {
         {/* ================================================================= */}
         {/* H. FAQ SECTION                                                    */}
         {/* ================================================================= */}
-        {!isLoading && !isError && faq && faq.length > 0 && (
+        {!isLoading && !isError && portal?.faqEnabled !== false && faq && faq.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               {t(lang, "overview.faq.title")}
@@ -889,7 +898,7 @@ function OverviewScreenInner() {
         {/* ================================================================= */}
         {/* I. HOTEL GALLERY                                                  */}
         {/* ================================================================= */}
-        {gallery && gallery.length > 0 && (
+        {portal?.galleryEnabled && gallery && gallery.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t(lang, "group.tab.photos")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: spacing.xl }}>
@@ -903,7 +912,7 @@ function OverviewScreenInner() {
         {/* ================================================================= */}
         {/* J. SERVICES                                                       */}
         {/* ================================================================= */}
-        {services && services.length > 0 && (
+        {portal?.servicesEnabled && services && services.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t(lang, "overview.services")}</Text>
             {services.map((svc) => (
@@ -923,7 +932,7 @@ function OverviewScreenInner() {
         {/* ================================================================= */}
         {/* K. ATTRACTIONS                                                    */}
         {/* ================================================================= */}
-        {attractions && attractions.length > 0 && (
+        {portal?.attractionsEnabled !== false && attractions && attractions.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t(lang, "overview.attractions")}</Text>
             {attractions.map((attr) => (

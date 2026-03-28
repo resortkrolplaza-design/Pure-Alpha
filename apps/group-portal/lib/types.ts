@@ -15,6 +15,8 @@ export interface ApiResponse<T> {
 
 export type AppMode = "group";
 
+export type PortalRole = "organizer" | "participant";
+
 // ── Group Guest ----
 
 export interface GroupGuestData {
@@ -90,6 +92,13 @@ export interface PortalInitData {
     servicesEnabled: boolean;
     upsellEnabled: boolean;
     dietaryEnabled: boolean;
+    pollsEnabled: boolean;
+    photoWallEnabled: boolean;
+    mapEnabled: boolean;
+    attractionsEnabled: boolean;
+    faqEnabled: boolean;
+    agendaEnabled: boolean;
+    timelineEnabled: boolean;
     timelineCheckpoints: Array<{
       label: string;
       labelEn?: string;

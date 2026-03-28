@@ -3,11 +3,13 @@
 // Used by: index.tsx (deep link), pin.tsx (PIN + no-PIN login)
 // =============================================================================
 
-import { setGroupToken, setGroupTrackingId, setAppMode, setRsvpToken, setGuestIdentity } from "./auth";
+import { setGroupToken, setGroupTrackingId, setAppMode, setRsvpToken, setGuestIdentity, setPersistedRole } from "./auth";
 import { useAppStore } from "./store";
+import type { PortalRole } from "./types";
 
 interface LoginData {
   token: string;
+  role?: PortalRole | null;
   rsvpToken?: string | null;
   guest?: {
     id: string;
@@ -22,10 +24,13 @@ interface LoginData {
  * Call this after successful auth (PIN verify, auth-by-link, etc.)
  */
 export async function persistLogin(trackingId: string, data: LoginData): Promise<void> {
+  const role: PortalRole = data.role ?? "participant";
+
   const ops: Promise<void>[] = [
     setGroupToken(data.token),
     setGroupTrackingId(trackingId),
     setAppMode("group"),
+    setPersistedRole(role),
   ];
   if (data.rsvpToken) ops.push(setRsvpToken(data.rsvpToken));
   if (data.guest) ops.push(setGuestIdentity(data.guest));
@@ -35,6 +40,7 @@ export async function persistLogin(trackingId: string, data: LoginData): Promise
   store.setGroupTrackingId(trackingId);
   store.setAuthenticated(true);
   store.setMode("group");
+  store.setPortalRole(role);
   if (data.guest) store.setGuest(data.guest);
   if (data.rsvpToken) store.setRsvpTokenState(data.rsvpToken);
 }

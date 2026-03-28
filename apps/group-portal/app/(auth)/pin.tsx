@@ -15,8 +15,8 @@ import { group, fontSize, radius, spacing, letterSpacing, shadow } from "@/lib/t
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { setGroupTrackingId as persistGroupId, setGroupToken, setAppMode, setRsvpToken, setGuestIdentity } from "@/lib/auth";
 import { verifyPin, fetchPortalInfo, loginByLink } from "@/lib/group-api";
+import { persistLogin } from "@/lib/login-flow";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 const PIN_LENGTH = 6;
@@ -109,21 +109,12 @@ function PinScreenInner() {
       }
       const res = await verifyPin(trackingId.trim(), pinValue, email.trim().toLowerCase());
       if (res.status === "success" && res.data?.token) {
-        setGroupTrackingId(trackingId.trim());
-        const persistOps = [
-          setGroupToken(res.data.token),
-          persistGroupId(trackingId.trim()),
-          setAppMode("group"),
-        ];
-        if (res.data.rsvpToken) {
-          persistOps.push(setRsvpToken(res.data.rsvpToken));
-        }
-        if (res.data.guest) persistOps.push(setGuestIdentity(res.data.guest));
-        await Promise.all(persistOps);
-        const store = useAppStore.getState();
-        store.setAuthenticated(true);
-        if (res.data.guest) store.setGuest(res.data.guest);
-        if (res.data.rsvpToken) store.setRsvpTokenState(res.data.rsvpToken);
+        await persistLogin(trackingId.trim(), {
+          token: res.data.token,
+          role: res.data.role ?? "participant",
+          rsvpToken: res.data.rsvpToken,
+          guest: res.data.guest,
+        });
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         router.replace("/(group)/overview");
       } else {
@@ -300,19 +291,12 @@ function PinScreenInner() {
                       try {
                         const res = await loginByLink(trackingId.trim());
                         if (res.status === "success" && res.data?.token) {
-                          setGroupTrackingId(trackingId.trim());
-                          const ops = [
-                            setGroupToken(res.data.token),
-                            persistGroupId(trackingId.trim()),
-                            setAppMode("group"),
-                            ...(res.data.rsvpToken ? [setRsvpToken(res.data.rsvpToken)] : []),
-                            ...(res.data.guest ? [setGuestIdentity(res.data.guest)] : []),
-                          ];
-                          await Promise.all(ops);
-                          const store = useAppStore.getState();
-                          store.setAuthenticated(true);
-                          if (res.data.guest) store.setGuest(res.data.guest);
-                          if (res.data.rsvpToken) store.setRsvpTokenState(res.data.rsvpToken);
+                          await persistLogin(trackingId.trim(), {
+                            token: res.data.token,
+                            role: res.data.role ?? "participant",
+                            rsvpToken: res.data.rsvpToken,
+                            guest: res.data.guest,
+                          });
                           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                           router.replace("/(group)/overview");
                         } else {
