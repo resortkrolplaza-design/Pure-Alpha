@@ -191,7 +191,6 @@ function ChatContent() {
   const [text, setText] = useState("");
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
-  const sentMsgIds = useRef<Set<string>>(new Set());
 
   // TASK 3: Read prefill from upsell "Zapytaj" navigation param
   const { prefill } = useLocalSearchParams<{ prefill?: string }>();
@@ -305,7 +304,6 @@ function ChatContent() {
       return res.data;
     },
     onSuccess: (data) => {
-      if (data?.id) sentMsgIds.current.add(data.id);
       queryClient.invalidateQueries({ queryKey: ["group-messages"] });
       setText("");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -351,26 +349,17 @@ function ChatContent() {
 
     const { msg, isPinned } = item;
     const isOrg = msg.isOrganizer;
-    // P1 fix: isMine must compare sender identity against the current guest.
-    // GroupMessage has isParticipant + sender.firstName/lastName but no senderId.
-    // Match by comparing sender first+last name with the stored guest identity.
-    // Falls back to `!isOrg` only when guest data is unavailable (pre-auth edge case).
-    // A message is "mine" if:
-    // 1. We sent it this session (tracked by ID in sentMsgIds ref), OR
-    // 2. It's a participant message AND sender name matches our guest identity
-    const isMine = (() => {
-      if (isOrg) return false; // Hotel/admin messages are never mine
-      if (sentMsgIds.current.has(msg.id)) return true; // We sent this
-      if (!msg.isParticipant) return false;
-      if (guest?.firstName && msg.sender.firstName) {
-        return msg.sender.firstName === guest.firstName;
-      }
-      return false; // Unknown sender = not mine (safe default)
-    })();
-    const safeFirstName = msg.sender.firstName ? stripBidiChars(msg.sender.firstName) : null;
-    const safeLastName = msg.sender.lastName ? stripBidiChars(msg.sender.lastName) : null;
+    // Portal chat = 1 participant + hotel. All participant msgs are "mine".
+    const isMine = !!msg.isParticipant;
     const safeBody = stripBidiChars(msg.body);
-    const senderName = [safeFirstName, safeLastName].filter(Boolean).join(" ");
+    // For hotel/organizer messages: show hotel staff name
+    // For participant (mine) messages: no sender label needed
+    const senderName = isOrg
+      ? [
+          msg.sender.firstName ? stripBidiChars(msg.sender.firstName) : null,
+          msg.sender.lastName ? stripBidiChars(msg.sender.lastName) : null,
+        ].filter(Boolean).join(" ")
+      : null;
     const fadeOpacity = getFadeAnim(item.key);
 
     return (
@@ -383,8 +372,8 @@ function ChatContent() {
         )}
         <View style={[chatStyles.msgRow, isMine ? chatStyles.msgRowMine : chatStyles.msgRowTheirs]}>
           {isOrg && (
-            <View style={[chatStyles.avatar, { backgroundColor: getAvatarColor(senderName || "Org") }]}>
-              <Text style={chatStyles.avatarText}>{getInitials(safeFirstName, safeLastName)}</Text>
+            <View style={[chatStyles.avatar, { backgroundColor: getAvatarColor(senderName || "Hotel") }]}>
+              <Text style={chatStyles.avatarText}>{getInitials(msg.sender.firstName, msg.sender.lastName)}</Text>
             </View>
           )}
 
