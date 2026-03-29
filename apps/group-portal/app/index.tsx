@@ -8,7 +8,7 @@ import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { group } from "@/lib/tokens";
 import { useAppStore } from "@/lib/store";
-import { getAppMode, getGroupTrackingId, getGroupToken, isTokenExpired, logout, setGroupToken, setGroupTrackingId as persistGroupId, setAppMode, setRsvpToken, getRsvpToken, getGuestIdentity, setGuestIdentity, getPersistedLang, getPersistedRole, getPersistedEmail } from "@/lib/auth";
+import { getAppMode, getGroupTrackingId, getGroupToken, isTokenExpired, logout, getRsvpToken, getGuestIdentity, getPersistedLang, getPersistedRole, getPersistedEmail } from "@/lib/auth";
 import { loginByLink } from "@/lib/group-api";
 import { persistLogin } from "@/lib/login-flow";
 

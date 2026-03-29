@@ -109,7 +109,7 @@ function PinScreenInner() {
         return;
       }
       const trimmedEmail = email.trim().toLowerCase() || undefined;
-      const res = await verifyPin(trackingId.trim(), pinValue, trimmedEmail ?? "");
+      const res = await verifyPin(trackingId.trim(), pinValue, trimmedEmail);
       if (res.status === "success" && res.data?.token) {
         await persistLogin(trackingId.trim(), {
           token: res.data.token,

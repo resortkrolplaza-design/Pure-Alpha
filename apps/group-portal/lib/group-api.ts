@@ -98,11 +98,11 @@ export async function loginByLink(
 export async function verifyPin(
   trackingId: string,
   pin: string,
-  email: string,
+  email?: string,
 ): Promise<ApiResponse<{ token: string; role: PortalRole; email?: string | null; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
   return groupFetch(trackingId, "/verify-pin", {
     method: "POST",
-    body: JSON.stringify({ pin, email }),
+    body: JSON.stringify(email ? { pin, email } : { pin }),
   });
 }
 
