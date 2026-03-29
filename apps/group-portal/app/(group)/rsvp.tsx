@@ -149,369 +149,143 @@ function GuestSearchItem({
   );
 }
 
-function RsvpFormContent() {
-  const insets = useSafeAreaInsets();
+function RsvpStatusContent() {
   const lang = useAppStore((s) => s.lang);
+  const guest = useAppStore((s) => s.guest);
+  const setGuest = useAppStore((s) => s.setGuest);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
-  const storedGuest = useAppStore((s) => s.guest);
-  const storedRsvpToken = useAppStore((s) => s.rsvpToken);
+  const rsvpToken = useAppStore((s) => s.rsvpToken);
   const queryClient = useQueryClient();
+  const [changing, setChanging] = useState(false);
+  const [newStatus, setNewStatus] = useState<"confirmed" | "declined" | null>(null);
 
-  const [search, setSearch] = useState("");
-  const [selectedGuestId, setSelectedGuestId] = useState<string | null>(
-    storedGuest?.id ?? null,
-  );
-  const [emailVerify, setEmailVerify] = useState("");
-  const [rsvpStatus, setRsvpStatus] = useState<"confirmed" | "declined" | null>(null);
-  const [dietaryNeeds, setDietaryNeeds] = useState("");
-  const [allergies, setAllergies] = useState("");
-  const [rsvpNote, setRsvpNote] = useState("");
-  const [marketingConsent, setMarketingConsent] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-
-  const formSlide = useSlideUp(80, 16);
-  const { scaleStyle, onPressIn, onPressOut } = useScalePress();
-
-  // Read portal flags (shared cache with overview + _layout)
-  const { data: portalData } = useQuery({
-    queryKey: ["portal-init", trackingId],
-    queryFn: async () => {
-      if (!trackingId) return null;
-      const res = await fetchPortalInit(trackingId);
-      return res.status === "success" ? res.data : null;
+  // Change answer mutation
+  const changeMutation = useMutation({
+    mutationFn: async (status: "confirmed" | "declined") => {
+      if (!guest) throw new Error("No guest");
+      const payload: RsvpPayload = { rsvpStatus: status };
+      if (rsvpToken) payload.rsvpToken = rsvpToken;
+      const res = await submitRsvp(trackingId, guest.id, payload);
+      if (res.status !== "success") throw new Error(res.errorMessage || "Failed");
+      return status;
     },
-    enabled: !!trackingId,
-    staleTime: 60_000,
-  });
-  const dietaryEnabled = portalData?.portal?.dietaryEnabled !== false;
-
-  // Fetch guest list for selection
-  const { data: guests, isLoading } = useQuery({
-    queryKey: ["group-guests", trackingId],
-    queryFn: async () => {
-      if (!trackingId) return [];
-      const res = await groupFetch<GroupGuestData[]>(trackingId, "/guests");
-      if (res.status === "error") throw new Error(res.errorMessage || "Failed to load guests");
-      return res.data ?? [];
-    },
-    enabled: !!trackingId,
-  });
-
-  // Filter guests by search
-  const filteredGuests = useMemo(() => {
-    if (!guests?.length) return [];
-    if (!search.trim()) return guests;
-    const q = search.trim().toLowerCase();
-    return guests.filter(
-      (g) =>
-        g.firstName.toLowerCase().includes(q) ||
-        g.lastName.toLowerCase().includes(q),
-    );
-  }, [guests, search]);
-
-  // Pre-identified: user logged in and we know their guest record
-  const isPreIdentified = !!storedGuest && !!storedRsvpToken;
-
-  // Can submit: guest selected + status chosen + identity verified
-  const canSubmit =
-    !!selectedGuestId &&
-    !!rsvpStatus &&
-    (isPreIdentified || emailVerify.trim().length > 0);
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedGuestId || !rsvpStatus) throw new Error("Invalid state");
-      const payload: RsvpPayload = { rsvpStatus };
-      if (rsvpStatus === "confirmed") {
-        if (dietaryNeeds.trim()) payload.dietaryNeeds = dietaryNeeds.trim();
-        if (allergies.trim()) payload.allergies = allergies.trim();
-        if (marketingConsent) payload.marketingConsent = true;
-      }
-      if (rsvpNote.trim()) payload.rsvpNote = rsvpNote.trim();
-
-      // Identity: prefer rsvpToken, fallback to email
-      if (storedRsvpToken) {
-        payload.rsvpToken = storedRsvpToken;
-      } else if (emailVerify.trim()) {
-        payload.emailVerify = emailVerify.trim().toLowerCase();
-      }
-
-      const res = await submitRsvp(trackingId, selectedGuestId, payload);
-      if (res.status !== "success") {
-        throw new Error(res.errorMessage || t(lang, "common.error"));
-      }
-      return res.data;
-    },
-    onSuccess: () => {
-      setSubmitted(true);
-      queryClient.invalidateQueries({ queryKey: ["group-guests"] });
-      queryClient.invalidateQueries({ queryKey: ["portal-init"] });
+    onSuccess: (status) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (guest) setGuest({ ...guest, rsvpStatus: status });
+      queryClient.invalidateQueries({ queryKey: ["portal-init"] });
+      setChanging(false);
+      setNewStatus(null);
     },
-    onError: (err) => {
-      Alert.alert(
-        t(lang, "common.error"),
-        err instanceof Error ? err.message : t(lang, "common.error"),
-      );
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    onError: () => {
+      Alert.alert(t(lang, "common.error"), t(lang, "common.error"));
     },
   });
 
-  const handleSubmit = useCallback(() => {
-    if (!canSubmit || mutation.isPending) return;
-    mutation.mutate();
-  }, [canSubmit, mutation]);
+  const status = guest?.rsvpStatus ?? "pending";
+  const statusConfig = {
+    confirmed: { icon: "checkmark-circle" as const, color: semantic.success, labelKey: "rsvp.status.confirmed" },
+    declined: { icon: "close-circle" as const, color: semantic.danger, labelKey: "rsvp.status.declined" },
+    pending: { icon: "time-outline" as const, color: group.textMuted, labelKey: "rsvp.status.pending" },
+  };
+  const cfg = statusConfig[status as keyof typeof statusConfig] ?? statusConfig.pending;
 
-  // -- Success state ----------------------------------------------------------
-  if (submitted) {
+  // No guest record -- prompt to self-register
+  if (!guest) {
     return (
       <View style={formStyles.successContainer}>
-        <View style={[formStyles.successCircle, { backgroundColor: rsvpStatus === "confirmed" ? semantic.success : semantic.danger }]}>
-          <Icon
-            name={rsvpStatus === "confirmed" ? "checkmark" : "close"}
-            size={40}
-            color={group.white}
-          />
-        </View>
-        <Text style={formStyles.successTitle}>
-          {t(lang, rsvpStatus === "confirmed" ? "rsvp.success" : "rsvp.declineSuccess")}
-        </Text>
-        <Pressable
-          style={formStyles.backBtn}
-          onPress={() => router.back()}
-          accessibilityRole="button"
-        >
-          <Text style={formStyles.backBtnText}>{t(lang, "common.back")}</Text>
-        </Pressable>
+        <Icon name="person-add-outline" size={48} color={group.primary} />
+        <Text style={formStyles.unknownGuestTitle}>{t(lang, "rsvp.notOnList")}</Text>
+        <Text style={formStyles.unknownGuestDesc}>{t(lang, "rsvp.notOnListDesc")}</Text>
       </View>
     );
   }
 
-  // -- Main form --------------------------------------------------------------
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={hubStyles.flex}
-    >
-      <ScrollView
-        contentContainerStyle={[
-          formStyles.scroll,
-          { paddingBottom: insets.bottom + 100 },
-        ]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View style={formSlide}>
-          {/* Step 1: Select guest (skip if pre-identified) */}
-          {!isPreIdentified && (
-            <View style={formStyles.section}>
-              <Text style={formStyles.sectionTitle}>
-                {t(lang, "rsvp.selectGuest")}
-              </Text>
-              <TextInput
-                style={formStyles.searchInput}
-                placeholder={t(lang, "rsvp.searchGuest")}
-                placeholderTextColor={group.textMuted}
-                value={search}
-                onChangeText={setSearch}
-                autoCapitalize="words"
-                accessibilityLabel={t(lang, "rsvp.searchGuest")}
+    <View style={formStyles.statusViewContainer}>
+      {/* Status card */}
+      <View style={formStyles.statusCard}>
+        <View style={[formStyles.statusIconCircle, { backgroundColor: `${cfg.color}18` }]}>
+          <Icon name={cfg.icon} size={40} color={cfg.color} />
+        </View>
+        <Text style={formStyles.statusLabel}>{t(lang, "rsvp.yourStatus")}</Text>
+        <Text style={[formStyles.statusValue, { color: cfg.color }]}>
+          {t(lang, cfg.labelKey)}
+        </Text>
+        <Text style={formStyles.statusGuestName}>
+          {guest.firstName} {guest.lastName ?? ""}
+        </Text>
+      </View>
+
+      {/* Change answer */}
+      {!changing ? (
+        <Pressable
+          style={formStyles.changeAnswerBtn}
+          onPress={() => setChanging(true)}
+          accessibilityRole="button"
+        >
+          <Icon name="create-outline" size={18} color={group.primary} />
+          <Text style={formStyles.changeAnswerText}>{t(lang, "rsvp.changeAnswer")}</Text>
+        </Pressable>
+      ) : (
+        <View style={formStyles.changeSection}>
+          <View style={formStyles.statusRow}>
+            <Pressable
+              style={[formStyles.statusBtn, newStatus === "confirmed" && formStyles.statusBtnConfirmed]}
+              onPress={() => setNewStatus("confirmed")}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: newStatus === "confirmed" }}
+            >
+              <Icon
+                name={newStatus === "confirmed" ? "checkmark-circle" : "checkmark-circle-outline"}
+                size={22}
+                color={newStatus === "confirmed" ? group.white : semantic.success}
               />
-              {isLoading ? (
-                <ActivityIndicator color={group.primary} style={formStyles.loader} />
-              ) : filteredGuests.length === 0 ? (
-                <Text style={formStyles.emptyText}>{t(lang, "rsvp.noMatch")}</Text>
+              <Text style={[formStyles.statusBtnText, newStatus === "confirmed" && formStyles.statusBtnTextActive]}>
+                {t(lang, "rsvp.confirm")}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[formStyles.statusBtn, newStatus === "declined" && formStyles.statusBtnDeclined]}
+              onPress={() => setNewStatus("declined")}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: newStatus === "declined" }}
+            >
+              <Icon
+                name={newStatus === "declined" ? "close-circle" : "close-circle-outline"}
+                size={22}
+                color={newStatus === "declined" ? group.white : semantic.danger}
+              />
+              <Text style={[formStyles.statusBtnText, newStatus === "declined" && formStyles.statusBtnTextActive]}>
+                {t(lang, "rsvp.decline")}
+              </Text>
+            </Pressable>
+          </View>
+          {newStatus && (
+            <Pressable
+              style={[formStyles.submitBtn, newStatus === "confirmed" ? formStyles.submitBtnConfirm : formStyles.submitBtnDecline]}
+              onPress={() => changeMutation.mutate(newStatus)}
+              disabled={changeMutation.isPending}
+              accessibilityRole="button"
+            >
+              {changeMutation.isPending ? (
+                <ActivityIndicator color={group.white} />
               ) : (
-                filteredGuests.slice(0, 20).map((g) => (
-                  <GuestSearchItem
-                    key={g.id}
-                    guest={g}
-                    lang={lang}
-                    isSelected={g.id === selectedGuestId}
-                    onSelect={() => setSelectedGuestId(g.id)}
-                  />
-                ))
-              )}
-            </View>
-          )}
-
-          {/* Pre-identified banner */}
-          {isPreIdentified && storedGuest && (
-            <View style={formStyles.identifiedBanner}>
-              <Icon name="person-circle-outline" size={24} color={group.primary} />
-              <Text style={formStyles.identifiedText}>
-                {storedGuest.firstName} {storedGuest.lastName ?? ""}
-              </Text>
-            </View>
-          )}
-
-          {/* Email verification (only if not pre-identified and guest selected) */}
-          {!isPreIdentified && selectedGuestId && (
-            <View style={formStyles.section}>
-              <Text style={formStyles.sectionTitle}>
-                {t(lang, "rsvp.verifyEmail")}
-              </Text>
-              <TextInput
-                style={formStyles.input}
-                placeholder="jan@example.com"
-                placeholderTextColor={group.textMuted}
-                value={emailVerify}
-                onChangeText={setEmailVerify}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                maxLength={320}
-                accessibilityLabel={t(lang, "rsvp.verifyEmail")}
-              />
-            </View>
-          )}
-
-          {/* Step 2: Confirm / Decline */}
-          {(isPreIdentified || selectedGuestId) && (
-            <View style={formStyles.section}>
-              <View style={formStyles.statusRow}>
-                <Pressable
-                  style={[
-                    formStyles.statusBtn,
-                    rsvpStatus === "confirmed" && formStyles.statusBtnConfirmed,
-                  ]}
-                  onPress={() => setRsvpStatus("confirmed")}
-                  accessibilityRole="button"
-                >
-                  <Icon
-                    name="checkmark-circle-outline"
-                    size={22}
-                    color={rsvpStatus === "confirmed" ? group.white : semantic.success}
-                  />
-                  <Text
-                    style={[
-                      formStyles.statusBtnText,
-                      rsvpStatus === "confirmed" && formStyles.statusBtnTextActive,
-                    ]}
-                  >
-                    {t(lang, "rsvp.confirm")}
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[
-                    formStyles.statusBtn,
-                    rsvpStatus === "declined" && formStyles.statusBtnDeclined,
-                  ]}
-                  onPress={() => setRsvpStatus("declined")}
-                  accessibilityRole="button"
-                >
-                  <Icon
-                    name="close-circle-outline"
-                    size={22}
-                    color={rsvpStatus === "declined" ? group.white : semantic.danger}
-                  />
-                  <Text
-                    style={[
-                      formStyles.statusBtnText,
-                      rsvpStatus === "declined" && formStyles.statusBtnTextActive,
-                    ]}
-                  >
-                    {t(lang, "rsvp.decline")}
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
-          {/* Step 3: Dietary + Note (only when confirming) */}
-          {rsvpStatus === "confirmed" && (
-            <View style={formStyles.section}>
-              {dietaryEnabled && (
-                <>
-                  <Text style={formStyles.inputLabel}>{t(lang, "rsvp.dietary")}</Text>
-                  <TextInput
-                    style={formStyles.input}
-                    value={dietaryNeeds}
-                    onChangeText={setDietaryNeeds}
-                    placeholder={t(lang, "rsvp.dietary")}
-                    placeholderTextColor={group.textMuted}
-                    maxLength={500}
-                    accessibilityLabel={t(lang, "rsvp.dietary")}
-                  />
-
-                  <Text style={[formStyles.inputLabel, { marginTop: spacing.md }]}>
-                    {t(lang, "rsvp.allergies")}
-                  </Text>
-                  <TextInput
-                    style={formStyles.input}
-                    value={allergies}
-                    onChangeText={setAllergies}
-                    placeholder={t(lang, "rsvp.allergies")}
-                    placeholderTextColor={group.textMuted}
-                    maxLength={500}
-                    accessibilityLabel={t(lang, "rsvp.allergies")}
-                  />
-                </>
-              )}
-
-              <Pressable
-                style={formStyles.consentRow}
-                onPress={() => setMarketingConsent(!marketingConsent)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: marketingConsent }}
-              >
-                <Icon
-                  name={marketingConsent ? "checkbox" : "square-outline"}
-                  size={22}
-                  color={marketingConsent ? group.primary : group.textMuted}
-                />
-                <Text style={formStyles.consentText}>
-                  {t(lang, "rsvp.marketingConsent")}
+                <Text style={formStyles.submitBtnText}>
+                  {t(lang, newStatus === "confirmed" ? "rsvp.submitConfirm" : "rsvp.submitDecline")}
                 </Text>
-              </Pressable>
-            </View>
+              )}
+            </Pressable>
           )}
-
-          {/* Note (both confirm and decline) */}
-          {rsvpStatus && (
-            <View style={formStyles.section}>
-              <Text style={formStyles.inputLabel}>{t(lang, "rsvp.note")}</Text>
-              <TextInput
-                style={[formStyles.input, formStyles.textArea]}
-                value={rsvpNote}
-                onChangeText={setRsvpNote}
-                placeholder={t(lang, "rsvp.note")}
-                placeholderTextColor={group.textMuted}
-                multiline
-                maxLength={500}
-                accessibilityLabel={t(lang, "rsvp.note")}
-              />
-            </View>
-          )}
-
-          {/* Submit */}
-          {canSubmit && (
-            <Animated.View style={scaleStyle}>
-              <Pressable
-                style={[
-                  formStyles.submitBtn,
-                  mutation.isPending && formStyles.submitBtnDisabled,
-                ]}
-                onPress={handleSubmit}
-                onPressIn={onPressIn}
-                onPressOut={onPressOut}
-                disabled={mutation.isPending}
-                accessibilityRole="button"
-              >
-                {mutation.isPending ? (
-                  <ActivityIndicator color={group.white} />
-                ) : (
-                  <Text style={formStyles.submitBtnText}>
-                    {rsvpStatus === "confirmed"
-                      ? t(lang, "rsvp.confirm")
-                      : t(lang, "rsvp.decline")}
-                  </Text>
-                )}
-              </Pressable>
-            </Animated.View>
-          )}
-        </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <Pressable
+            style={formStyles.cancelChangeBtn}
+            onPress={() => { setChanging(false); setNewStatus(null); }}
+            accessibilityRole="button"
+          >
+            <Text style={formStyles.cancelChangeText}>{t(lang, "common.cancel")}</Text>
+          </Pressable>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -563,7 +337,7 @@ function ParticipantHub() {
         />
       )}
       {activeIdx === 0 ? (
-        <RsvpFormContent />
+        <RsvpStatusContent />
       ) : (
         <RegisterContent embedded />
       )}
@@ -772,6 +546,17 @@ const formStyles = StyleSheet.create({
     paddingTop: spacing.md,
   },
 
+  // Step labels
+  stepLabel: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_600SemiBold",
+    color: group.textMuted,
+    textTransform: "uppercase" as const,
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm,
+  },
+
   // Sections
   section: {
     marginBottom: spacing.xl,
@@ -855,7 +640,92 @@ const formStyles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
   },
 
-  // Identified banner
+  // Selected guest banner (replaces search after selection)
+  selectedGuestBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 2,
+    borderColor: group.primary,
+    marginBottom: spacing.md,
+  },
+  changeGuestBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: group.primaryLight,
+    minHeight: 44,
+    justifyContent: "center" as const,
+  },
+  changeGuestText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.primary,
+  },
+  alreadyRespondedText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_500Medium",
+    color: group.textMuted,
+  },
+  alreadyRespondedInfo: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
+    textAlign: "center" as const,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
+
+  // Email section
+  emailSection: {
+    marginTop: spacing.sm,
+  },
+  emailInputRow: {
+    position: "relative" as const,
+  },
+  emailInput: {
+    flex: 1,
+    paddingRight: 44,
+  },
+  emailValidIcon: {
+    position: "absolute" as const,
+    right: spacing.md,
+    top: 0,
+    bottom: 0,
+    justifyContent: "center" as const,
+  },
+  inputError: {
+    borderColor: semantic.danger,
+  },
+
+  // Unknown guest card (not on list)
+  unknownGuestCard: {
+    alignItems: "center" as const,
+    gap: spacing.md,
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    padding: spacing["2xl"],
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+  },
+  unknownGuestTitle: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+    textAlign: "center" as const,
+  },
+  unknownGuestDesc: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    textAlign: "center" as const,
+    lineHeight: 18,
+  },
+
+  // Identified banner (legacy, kept for backward compat)
   identifiedBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -947,8 +817,78 @@ const formStyles = StyleSheet.create({
     lineHeight: 18,
   },
 
-  // Submit
+  // Status view (read-only)
+  statusViewContainer: {
+    flex: 1,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing["2xl"],
+    gap: spacing.xl,
+  },
+  statusCard: {
+    backgroundColor: group.white,
+    borderRadius: radius["2xl"],
+    padding: spacing["3xl"],
+    alignItems: "center" as const,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    ...shadow.sm,
+  },
+  statusIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  statusLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.textMuted,
+    textTransform: "uppercase" as const,
+    letterSpacing: 1,
+  },
+  statusValue: {
+    fontSize: fontSize.xl,
+    fontFamily: "Inter_700Bold",
+  },
+  statusGuestName: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
+    marginTop: spacing.xs,
+  },
+  changeAnswerBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+    minHeight: 48,
+  },
+  changeAnswerText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_500Medium",
+    color: group.primary,
+  },
+  changeSection: {
+    gap: spacing.md,
+  },
+  cancelChangeBtn: {
+    alignItems: "center" as const,
+    paddingVertical: spacing.md,
+    minHeight: 44,
+  },
+  cancelChangeText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.textMuted,
+  },
+
+  // Submit (visually distinct from status toggle)
   submitBtn: {
+    flexDirection: "row" as const,
+    gap: spacing.sm,
     backgroundColor: group.primary,
     borderRadius: radius.xl,
     paddingVertical: spacing.lg,
@@ -956,6 +896,12 @@ const formStyles = StyleSheet.create({
     justifyContent: "center",
     minHeight: 56,
     ...shadow.md,
+  },
+  submitBtnConfirm: {
+    backgroundColor: semantic.success,
+  },
+  submitBtnDecline: {
+    backgroundColor: semantic.danger,
   },
   submitBtnDisabled: {
     backgroundColor: group.disabledBg,

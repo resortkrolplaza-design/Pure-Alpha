@@ -45,7 +45,8 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { logout, setPersistedLang, getSecureItem, setSecureItem } from "@/lib/auth";
 import { isImageUrlSafe, isExternalUrlSafe, sanitizePhone, sanitizeEmail } from "@/lib/url-safety";
-import { fetchPortalInit, fetchPolls, votePoll, groupFetch } from "@/lib/group-api";
+import { fetchPortalInit, fetchPolls, votePoll, groupFetch, submitRsvp } from "@/lib/group-api";
+import type { RsvpPayload } from "@/lib/types";
 import { usePushNotifications } from "@/lib/usePushNotifications";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { GroupAnnouncementData, PortalInitData, PollData } from "@/lib/types";
@@ -512,6 +513,7 @@ function OverviewScreenInner() {
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
   const guest = useAppStore((s) => s.guest);
   const portalRole = useAppStore((s) => s.portalRole);
+  const queryClient = useQueryClient();
   const isParticipant = portalRole === "participant";
 
   // Register push notifications on first load
@@ -674,6 +676,53 @@ function OverviewScreenInner() {
     }
     setPollPopupVisible(false);
   }, [activePollForPopup]);
+
+  // -- RSVP Confirmation Popup (participant, first login, status=pending) --
+  const [rsvpPopupVisible, setRsvpPopupVisible] = useState(false);
+  const [rsvpDietary, setRsvpDietary] = useState("");
+  const [rsvpAllergies, setRsvpAllergies] = useState("");
+  const rsvpPopupChecked = useRef(false);
+  const rsvpToken = useAppStore((s) => s.rsvpToken);
+  const setGuest = useAppStore((s) => s.setGuest);
+  const dietaryEnabled = portal?.dietaryEnabled !== false;
+
+  useEffect(() => {
+    if (rsvpPopupChecked.current) return;
+    if (!isParticipant || !guest || !trackingId) return;
+    // Only show when guest status is pending (not yet responded)
+    if (guest.rsvpStatus !== "pending") return;
+    rsvpPopupChecked.current = true;
+    // Small delay so overview renders first
+    const timer = setTimeout(() => setRsvpPopupVisible(true), 800);
+    return () => clearTimeout(timer);
+  }, [isParticipant, guest, trackingId]);
+
+  const rsvpPopupMutation = useMutation({
+    mutationFn: async (status: "confirmed" | "declined") => {
+      if (!guest) throw new Error("No guest");
+      const payload: RsvpPayload = { rsvpStatus: status };
+      if (status === "confirmed") {
+        if (rsvpDietary.trim()) payload.dietaryNeeds = rsvpDietary.trim();
+        if (rsvpAllergies.trim()) payload.allergies = rsvpAllergies.trim();
+      }
+      if (rsvpToken) payload.rsvpToken = rsvpToken;
+      const res = await submitRsvp(trackingId, guest.id, payload);
+      if (res.status !== "success") throw new Error(res.errorMessage || "Failed");
+      return status;
+    },
+    onSuccess: (status) => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Update local guest state so popup won't show again
+      if (guest) setGuest({ ...guest, rsvpStatus: status });
+      queryClient.invalidateQueries({ queryKey: ["portal-init"] });
+      queryClient.invalidateQueries({ queryKey: ["group-guests"] });
+      setTimeout(() => setRsvpPopupVisible(false), 1000);
+    },
+    onError: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(t(lang, "common.error"), t(lang, "common.error"));
+    },
+  });
 
   // -- Reminder banner (organizer only, event upcoming) --
   const [reminderDismissed, setReminderDismissed] = useState(false);
@@ -1429,6 +1478,107 @@ function OverviewScreenInner() {
                 {ratingSubmitting ? t(lang, "common.loading") : t(lang, "overview.rating.submit")}
               </Text>
             </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* RSVP Confirmation Popup (participant, pending status, once) */}
+      <Modal
+        visible={rsvpPopupVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRsvpPopupVisible(false)}
+        statusBarTranslucent
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setRsvpPopupVisible(false)}
+        >
+          <View
+            style={styles.rsvpPopupCard}
+            onStartShouldSetResponder={() => true}
+          >
+            <Icon name="calendar-outline" size={32} color={group.primary} />
+            <Text style={styles.rsvpPopupTitle}>
+              {t(lang, "rsvp.popup.title")}
+            </Text>
+            <Text style={styles.rsvpPopupSubtitle}>
+              {t(lang, "rsvp.popup.subtitle")}
+            </Text>
+
+            {/* Dietary fields (only if feature enabled) */}
+            {dietaryEnabled && (
+              <View style={styles.rsvpPopupFields}>
+                <TextInput
+                  style={styles.rsvpPopupInput}
+                  placeholder={t(lang, "rsvp.dietary")}
+                  placeholderTextColor={group.textMuted}
+                  value={rsvpDietary}
+                  onChangeText={setRsvpDietary}
+                  accessibilityLabel={t(lang, "rsvp.dietary")}
+                />
+                <TextInput
+                  style={styles.rsvpPopupInput}
+                  placeholder={t(lang, "rsvp.allergies")}
+                  placeholderTextColor={group.textMuted}
+                  value={rsvpAllergies}
+                  onChangeText={setRsvpAllergies}
+                  accessibilityLabel={t(lang, "rsvp.allergies")}
+                />
+              </View>
+            )}
+
+            {/* Confirm / Decline buttons */}
+            {!rsvpPopupMutation.isSuccess && (
+              <View style={styles.rsvpPopupButtons}>
+                <Pressable
+                  style={styles.rsvpPopupConfirmBtn}
+                  onPress={() => rsvpPopupMutation.mutate("confirmed")}
+                  disabled={rsvpPopupMutation.isPending}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(lang, "rsvp.confirm")}
+                >
+                  {rsvpPopupMutation.isPending && rsvpPopupMutation.variables === "confirmed" ? (
+                    <ActivityIndicator color={group.white} size="small" />
+                  ) : (
+                    <>
+                      <Icon name="checkmark-circle" size={20} color={group.white} />
+                      <Text style={styles.rsvpPopupBtnText}>{t(lang, "rsvp.confirm")}</Text>
+                    </>
+                  )}
+                </Pressable>
+                <Pressable
+                  style={styles.rsvpPopupDeclineBtn}
+                  onPress={() => rsvpPopupMutation.mutate("declined")}
+                  disabled={rsvpPopupMutation.isPending}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(lang, "rsvp.decline")}
+                >
+                  {rsvpPopupMutation.isPending && rsvpPopupMutation.variables === "declined" ? (
+                    <ActivityIndicator color={semantic.danger} size="small" />
+                  ) : (
+                    <>
+                      <Icon name="close-circle" size={20} color={semantic.danger} />
+                      <Text style={styles.rsvpPopupDeclineBtnText}>{t(lang, "rsvp.decline")}</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            )}
+
+            {/* Success feedback */}
+            {rsvpPopupMutation.isSuccess && (
+              <View style={styles.rsvpPopupSuccess}>
+                <Icon
+                  name={rsvpPopupMutation.data === "confirmed" ? "checkmark-circle" : "close-circle"}
+                  size={32}
+                  color={rsvpPopupMutation.data === "confirmed" ? semantic.success : semantic.danger}
+                />
+                <Text style={styles.rsvpPopupSuccessText}>
+                  {t(lang, rsvpPopupMutation.data === "confirmed" ? "rsvp.success" : "rsvp.declineSuccess")}
+                </Text>
+              </View>
+            )}
           </View>
         </Pressable>
       </Modal>
@@ -2251,6 +2401,99 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontFamily: "Inter_600SemiBold",
     color: group.white,
+  },
+
+  // ── RSVP Confirmation Popup ──
+  rsvpPopupCard: {
+    backgroundColor: group.white,
+    borderRadius: radius["2xl"],
+    padding: spacing["3xl"],
+    width: "100%" as const,
+    maxWidth: 340,
+    alignItems: "center" as const,
+    gap: spacing.md,
+    ...shadow.lg,
+  },
+  rsvpPopupTitle: {
+    fontSize: fontSize.xl,
+    fontFamily: "Inter_700Bold",
+    color: group.text,
+    textAlign: "center" as const,
+  },
+  rsvpPopupSubtitle: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+    textAlign: "center" as const,
+    lineHeight: 18,
+  },
+  rsvpPopupFields: {
+    width: "100%" as const,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  rsvpPopupInput: {
+    backgroundColor: group.bg,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.text,
+    minHeight: 44,
+  },
+  rsvpPopupButtons: {
+    flexDirection: "row" as const,
+    gap: spacing.md,
+    width: "100%" as const,
+    marginTop: spacing.sm,
+  },
+  rsvpPopupConfirmBtn: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: spacing.sm,
+    backgroundColor: semantic.success,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.lg,
+    minHeight: 52,
+    ...shadow.sm,
+  },
+  rsvpPopupDeclineBtn: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: spacing.sm,
+    backgroundColor: group.white,
+    borderRadius: radius.xl,
+    paddingVertical: spacing.lg,
+    minHeight: 52,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+  },
+  rsvpPopupBtnText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
+  },
+  rsvpPopupDeclineBtnText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: semantic.danger,
+  },
+  rsvpPopupSuccess: {
+    alignItems: "center" as const,
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+  rsvpPopupSuccessText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+    textAlign: "center" as const,
   },
 });
 
