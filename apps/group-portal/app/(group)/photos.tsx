@@ -351,12 +351,20 @@ function PhotosScreen() {
       }
 
       const result = source === "camera"
-        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8, base64: true })
-        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8, base64: true });
+        ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 })
+        : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
 
       if (result.canceled || !result.assets?.[0]) return;
 
       const asset = result.assets[0];
+
+      // P2: Reject oversized images (> 10 MB) to prevent OOM on upload
+      const MAX_FILE_SIZE = 10 * 1024 * 1024;
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        Alert.alert(t(lang, "common.error"), t(lang, "photos.fileTooLarge"));
+        return;
+      }
+
       setUploading(true);
 
       const formData = new FormData();
@@ -383,6 +391,7 @@ function PhotosScreen() {
         },
         body: formData,
       });
+      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
       const json = await res.json();
       if (json.status !== "success") throw new Error(json.errorMessage || "Upload failed");
 
@@ -393,7 +402,7 @@ function PhotosScreen() {
     } finally {
       setUploading(false);
     }
-  }, [trackingId, lang, queryClient]);
+  }, [trackingId, lang, queryClient, guest]);
 
   const handleAddPhoto = useCallback(() => {
     if (Platform.OS === "ios") {

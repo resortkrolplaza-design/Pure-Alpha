@@ -32,6 +32,7 @@ const pl: Record<string, string> = {
   "common.delete": "Usuń",
   "common.sessionExpired": "Sesja wygasła. Zaloguj się ponownie.",
   "common.networkError": "Brak połączenia z siecią",
+  "common.comingSoon": "Wkrotce",
 
   // ── Group Portal ----
   "group.tab.overview": "Przegląd",
@@ -128,6 +129,7 @@ const pl: Record<string, string> = {
   "photos.fromGallery": "Wybierz z galerii",
   "photos.permissionDenied": "Brak dost\u0119pu do kamery lub galerii",
   "photos.uploadFailed": "Nie uda\u0142o si\u0119 przes\u0142a\u0107 zdj\u0119cia",
+  "photos.fileTooLarge": "Zdjecie jest za duze (maks. 10 MB)",
   "group.noDocuments": "Brak dokumentów",
   "group.noDocumentsDesc": "Dokumenty do pobrania pojawią się tutaj",
   "group.noMessages": "Brak wiadomości",
@@ -396,6 +398,7 @@ const en: Record<string, string> = {
   "common.delete": "Delete",
   "common.sessionExpired": "Session expired. Please log in again.",
   "common.networkError": "No network connection",
+  "common.comingSoon": "Coming soon",
 
   // ── Group Portal ----
   "group.tab.overview": "Overview",
@@ -492,6 +495,7 @@ const en: Record<string, string> = {
   "photos.fromGallery": "Choose from gallery",
   "photos.permissionDenied": "Camera or gallery access denied",
   "photos.uploadFailed": "Failed to upload photo",
+  "photos.fileTooLarge": "Photo is too large (max 10 MB)",
   "group.noDocuments": "No documents",
   "group.noDocumentsDesc": "Downloadable documents will appear here",
   "group.noMessages": "No messages",

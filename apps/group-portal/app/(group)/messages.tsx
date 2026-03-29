@@ -254,6 +254,14 @@ function ChatContent() {
     const replies = msgData?.replies ?? [];
 
     if (msgData?.anchorMessage) {
+      // P2: Add date separator before pinned anchor message
+      const anchorDate = new Date(msgData.anchorMessage.createdAt);
+      const anchorDateKey = `${anchorDate.getUTCFullYear()}-${anchorDate.getUTCMonth()}-${anchorDate.getUTCDate()}`;
+      items.push({
+        type: "date",
+        key: `date-anchor-${anchorDateKey}`,
+        label: formatDateSeparator(anchorDate, lang),
+      });
       items.push({
         type: "message",
         key: `msg-${msgData.anchorMessage.id}`,
@@ -523,7 +531,7 @@ function GroupMessagesScreenInner() {
       replies: unknown[];
       anchorMessage: unknown | null;
     }>(["group-messages", trackingId]);
-    const currentCount = cached?.replies?.length ?? 0;
+    const currentCount = (cached?.replies?.length ?? 0) + (cached?.anchorMessage ? 1 : 0);
     setSecureItem(LAST_SEEN_KEY, String(currentCount)).catch(() => {});
     // Also invalidate the badge query so _layout picks up the cleared state
     queryClient.invalidateQueries({ queryKey: ["group-messages-count", trackingId] });

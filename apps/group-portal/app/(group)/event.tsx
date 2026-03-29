@@ -21,11 +21,12 @@ import {
   Pressable,
   Image,
   Modal,
-  Dimensions,
   Animated,
   Linking,
   Platform,
   UIManager,
+  Alert,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
@@ -251,12 +252,10 @@ function AgendaCard({
       )}
 
       <Pressable
-        style={styles.agendaCalendarBtn}
+        style={[styles.agendaCalendarBtn, { opacity: 0.5 }]}
         accessibilityRole="button"
         accessibilityLabel={t(lang, "group.agenda.addToCalendar")}
-        onPress={() => {
-          // Placeholder -- calendar integration not yet implemented
-        }}
+        onPress={() => Alert.alert(t(lang, "common.comingSoon"))}
       >
         <Icon name="calendar-outline" size={14} color={group.primary} />
         <Text style={styles.agendaCalendarBtnText}>
@@ -320,7 +319,7 @@ function GalleryViewerModal({
   lang: "pl" | "en";
 }) {
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = Dimensions.get("window");
+  const { width: screenWidth } = useWindowDimensions();
   const [navVisible, setNavVisible] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(viewerIndex ?? 0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -709,6 +708,7 @@ function AttractionCard({
   const hasImage = isImageUrlSafe(imageUrl);
   const hasMap = isExternalUrlSafe(mapUrl);
   const hasWebsite = isExternalUrlSafe(websiteUrl);
+  const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <View
@@ -716,14 +716,12 @@ function AttractionCard({
       accessibilityRole="text"
       accessibilityLabel={name}
     >
-      {hasImage ? (
+      {hasImage && !imageFailed ? (
         <Image
           source={{ uri: imageUrl as string }}
           style={styles.attractionThumbnail}
           accessibilityIgnoresInvertColors
-          onError={() => {
-            // Image failed to load -- silently ignored
-          }}
+          onError={() => setImageFailed(true)}
         />
       ) : null}
 
@@ -955,15 +953,6 @@ function EventScreenContent() {
 
   const scrollRef = useRef<ScrollView>(null);
 
-  // Section refs for scroll-to support
-  const sectionRefs = useRef<Record<SectionId, View | null>>({
-    agenda: null,
-    gallery: null,
-    services: null,
-    attractions: null,
-    faq: null,
-  });
-
   // Track Y offsets for each section via onLayout
   const sectionOffsets = useRef<Record<SectionId, number>>({
     agenda: 0,
@@ -1067,9 +1056,6 @@ function EventScreenContent() {
         {/* ---- Agenda ---- */}
         {agendaEnabled && (
           <View
-            ref={(ref) => {
-              sectionRefs.current.agenda = ref;
-            }}
             onLayout={(e) =>
               handleSectionLayout("agenda", e.nativeEvent.layout.y)
             }
@@ -1090,9 +1076,6 @@ function EventScreenContent() {
         {/* ---- Gallery ---- */}
         {galleryEnabled && (
           <View
-            ref={(ref) => {
-              sectionRefs.current.gallery = ref;
-            }}
             onLayout={(e) =>
               handleSectionLayout("gallery", e.nativeEvent.layout.y)
             }
@@ -1113,9 +1096,6 @@ function EventScreenContent() {
         {/* ---- Services ---- */}
         {servicesEnabled && (
           <View
-            ref={(ref) => {
-              sectionRefs.current.services = ref;
-            }}
             onLayout={(e) =>
               handleSectionLayout("services", e.nativeEvent.layout.y)
             }
@@ -1136,9 +1116,6 @@ function EventScreenContent() {
         {/* ---- Attractions ---- */}
         {attractionsEnabled && (
           <View
-            ref={(ref) => {
-              sectionRefs.current.attractions = ref;
-            }}
             onLayout={(e) =>
               handleSectionLayout("attractions", e.nativeEvent.layout.y)
             }
@@ -1163,9 +1140,6 @@ function EventScreenContent() {
         {/* ---- FAQ ---- */}
         {faqEnabled && (
           <View
-            ref={(ref) => {
-              sectionRefs.current.faq = ref;
-            }}
             onLayout={(e) =>
               handleSectionLayout("faq", e.nativeEvent.layout.y)
             }
