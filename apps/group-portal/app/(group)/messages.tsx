@@ -329,10 +329,15 @@ function ChatContent() {
     sendMutation.mutate(trimmed);
   };
 
-  // Fade-in animation values per message
+  // Fade-in animation values per message (pruned to max 100 entries)
   const fadeAnims = useRef<Map<string, Animated.Value>>(new Map());
   const getFadeAnim = useCallback((key: string) => {
     if (!fadeAnims.current.has(key)) {
+      // Prune oldest entries when map exceeds 100
+      if (fadeAnims.current.size > 100) {
+        const firstKey = fadeAnims.current.keys().next().value;
+        if (firstKey) fadeAnims.current.delete(firstKey);
+      }
       const anim = new Animated.Value(0);
       fadeAnims.current.set(key, anim);
       Animated.timing(anim, {
@@ -409,7 +414,7 @@ function ChatContent() {
         </View>
       </Animated.View>
     );
-  }, [lang, guest, getFadeAnim]);
+  }, [lang, getFadeAnim]);
 
   const hasText = text.trim().length > 0;
 

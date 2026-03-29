@@ -1018,7 +1018,7 @@ function EventScreenContent() {
         if (offset > 0) {
           scrollRef.current?.scrollTo({ y: offset, animated: true });
         }
-      }, 400);
+      }, 600);
       return () => clearTimeout(timer);
     }
   }, [scrollTo, visibleSections]);
