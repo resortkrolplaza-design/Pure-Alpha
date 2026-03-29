@@ -3,13 +3,14 @@
 // Used by: index.tsx (deep link), pin.tsx (PIN + no-PIN login)
 // =============================================================================
 
-import { setGroupToken, setGroupTrackingId, setAppMode, setRsvpToken, setGuestIdentity, setPersistedRole } from "./auth";
+import { setGroupToken, setGroupTrackingId, setAppMode, setRsvpToken, setGuestIdentity, setPersistedRole, setPersistedEmail } from "./auth";
 import { useAppStore } from "./store";
 import type { PortalRole } from "./types";
 
 interface LoginData {
   token: string;
   role?: PortalRole | null;
+  email?: string | null;
   rsvpToken?: string | null;
   guest?: {
     id: string;
@@ -34,6 +35,7 @@ export async function persistLogin(trackingId: string, data: LoginData): Promise
   ];
   if (data.rsvpToken) ops.push(setRsvpToken(data.rsvpToken));
   if (data.guest) ops.push(setGuestIdentity(data.guest));
+  if (data.email) ops.push(setPersistedEmail(data.email));
   await Promise.all(ops);
 
   const store = useAppStore.getState();

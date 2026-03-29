@@ -362,13 +362,13 @@ function ChatContent() {
     }
 
     const { msg, isPinned } = item;
-    const isOrg = msg.isOrganizer;
     // Portal chat = 1 participant + hotel. All participant msgs are "mine".
     const isMine = !!msg.isParticipant;
+    const isHotelSide = !isMine; // organizer, handlowiec, system -- all show on left with sender name
     const safeBody = stripBidiChars(msg.body);
-    // For hotel/organizer messages: show hotel staff name
+    // For hotel-side messages: show staff name (organizer, handlowiec, system)
     // For participant (mine) messages: no sender label needed
-    const senderName = isOrg
+    const senderName = isHotelSide
       ? [
           msg.sender.firstName ? stripBidiChars(msg.sender.firstName) : null,
           msg.sender.lastName ? stripBidiChars(msg.sender.lastName) : null,
@@ -385,14 +385,14 @@ function ChatContent() {
           </View>
         )}
         <View style={[chatStyles.msgRow, isMine ? chatStyles.msgRowMine : chatStyles.msgRowTheirs]}>
-          {isOrg && (
+          {isHotelSide && (
             <View style={[chatStyles.avatar, { backgroundColor: getAvatarColor(senderName || "Hotel") }]}>
               <Text style={chatStyles.avatarText}>{getInitials(msg.sender.firstName, msg.sender.lastName)}</Text>
             </View>
           )}
 
           <View style={[chatStyles.bubbleColumn, isMine && chatStyles.bubbleColumnMine]}>
-            {isOrg && senderName && (
+            {isHotelSide && senderName && (
               <Text style={chatStyles.senderName}>{senderName}</Text>
             )}
 

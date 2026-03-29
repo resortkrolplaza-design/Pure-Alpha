@@ -8,8 +8,9 @@ import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { group } from "@/lib/tokens";
 import { useAppStore } from "@/lib/store";
-import { getAppMode, getGroupTrackingId, getGroupToken, isTokenExpired, logout, setGroupToken, setGroupTrackingId as persistGroupId, setAppMode, setRsvpToken, getRsvpToken, getGuestIdentity, setGuestIdentity, getPersistedLang, getPersistedRole } from "@/lib/auth";
+import { getAppMode, getGroupTrackingId, getGroupToken, isTokenExpired, logout, setGroupToken, setGroupTrackingId as persistGroupId, setAppMode, setRsvpToken, getRsvpToken, getGuestIdentity, setGuestIdentity, getPersistedLang, getPersistedRole, getPersistedEmail } from "@/lib/auth";
 import { loginByLink } from "@/lib/group-api";
+import { persistLogin } from "@/lib/login-flow";
 
 export default function EntryScreen() {
   const setMode = useAppStore((s) => s.setMode);
@@ -22,20 +23,20 @@ export default function EntryScreen() {
     return match?.[1] ?? null;
   }, []);
 
-  // Deep link auto-login: call /auth-by-link, fall back to PIN screen on failure
+  // Deep link auto-login: call /auth-by-link with persisted email for guest recognition
   const handleDeepLinkLogin = useCallback(async (trackingId: string) => {
     try {
-      const res = await loginByLink(trackingId);
+      // Use saved email from previous login for cross-device guest recognition
+      const savedEmail = await getPersistedEmail();
+      const res = await loginByLink(trackingId, savedEmail || undefined);
       if (res.status === "success" && res.data?.token) {
-        await Promise.all([
-          setGroupToken(res.data.token),
-          persistGroupId(trackingId),
-          setAppMode("group"),
-          ...(res.data.rsvpToken ? [setRsvpToken(res.data.rsvpToken)] : []),
-        ]);
-        useAppStore.getState().setGroupTrackingId(trackingId);
-        useAppStore.getState().setAuthenticated(true);
-        useAppStore.getState().setMode("group");
+        await persistLogin(trackingId, {
+          token: res.data.token,
+          role: res.data.role ?? "participant",
+          email: savedEmail || undefined,
+          rsvpToken: res.data.rsvpToken,
+          guest: res.data.guest,
+        });
         router.replace("/(group)/overview");
         return;
       }

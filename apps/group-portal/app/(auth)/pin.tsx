@@ -108,11 +108,13 @@ function PinScreenInner() {
         setPin("");
         return;
       }
-      const res = await verifyPin(trackingId.trim(), pinValue, email.trim().toLowerCase());
+      const trimmedEmail = email.trim().toLowerCase() || undefined;
+      const res = await verifyPin(trackingId.trim(), pinValue, trimmedEmail ?? "");
       if (res.status === "success" && res.data?.token) {
         await persistLogin(trackingId.trim(), {
           token: res.data.token,
           role: res.data.role ?? "participant",
+          email: trimmedEmail,
           rsvpToken: res.data.rsvpToken,
           guest: res.data.guest,
         });
@@ -277,11 +279,13 @@ function PinScreenInner() {
                       if (loading) return;
                       setLoading(true);
                       try {
-                        const res = await loginByLink(trackingId.trim(), email.trim() || undefined);
+                        const linkEmail = email.trim().toLowerCase() || undefined;
+                        const res = await loginByLink(trackingId.trim(), linkEmail);
                         if (res.status === "success" && res.data?.token) {
                           await persistLogin(trackingId.trim(), {
                             token: res.data.token,
                             role: res.data.role ?? "participant",
+                            email: linkEmail,
                             rsvpToken: res.data.rsvpToken,
                             guest: res.data.guest,
                           });

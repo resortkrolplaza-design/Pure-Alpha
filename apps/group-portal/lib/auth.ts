@@ -52,6 +52,7 @@ const RSVP_TOKEN_KEY = "pa_rsvp_token";
 const GUEST_IDENTITY_KEY = "pa_guest_identity";
 const LANG_KEY = "pa_lang";
 const ROLE_KEY = "pa_portal_role";
+const EMAIL_KEY = "pa_user_email";
 
 // ── Language Persistence ----
 
@@ -164,6 +165,20 @@ export async function getPersistedRole(): Promise<PortalRole> {
 
 export async function setPersistedRole(role: PortalRole): Promise<void> {
   await setItem(ROLE_KEY, role);
+}
+
+// ── User Email (for deep link re-login) ----
+
+export async function getPersistedEmail(): Promise<string | null> {
+  try {
+    return await getItem(EMAIL_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function setPersistedEmail(email: string): Promise<void> {
+  await setItem(EMAIL_KEY, email);
 }
 
 // ── App Mode ----
