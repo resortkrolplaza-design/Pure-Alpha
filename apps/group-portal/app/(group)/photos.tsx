@@ -13,6 +13,8 @@ import { t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { groupFetch } from "@/lib/group-api";
+import { getGroupToken } from "@/lib/auth";
+import { API_BASE } from "@/lib/api";
 import type { GroupPhotoData } from "@/lib/types";
 import { useCallback, useState, useMemo, useRef, useEffect } from "react";
 import { useScalePress, useSlideUp } from "@/lib/animations";
@@ -293,6 +295,7 @@ function PhotosScreen() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
+  const guest = useAppStore((s) => s.guest);
   const { width: screenWidth } = useWindowDimensions();
   const headerSlide = useSlideUp(0, 12);
 
@@ -357,17 +360,31 @@ function PhotosScreen() {
       setUploading(true);
 
       const formData = new FormData();
-      formData.append("photo", {
+      formData.append("file", {
         uri: asset.uri,
         type: asset.mimeType || "image/jpeg",
         name: asset.fileName || `photo-${Date.now()}.jpg`,
       } as unknown as Blob);
 
-      await groupFetch(trackingId, "/photos", {
+      // Backend requires deviceId (min 8 chars) for dedup
+      const deviceId = trackingId.slice(0, 8) + "-" + Date.now().toString(36);
+      formData.append("deviceId", deviceId);
+
+      // Guest name for uploadedBy
+      const guestName = guest ? [guest.firstName, guest.lastName].filter(Boolean).join(" ") : "";
+      if (guestName) formData.append("uploadedBy", guestName);
+
+      const token = await getGroupToken();
+      const url = `${API_BASE}/api/portal/${encodeURIComponent(trackingId)}/photos`;
+      const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "multipart/form-data" },
-        body: formData as unknown as string,
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: formData,
       });
+      const json = await res.json();
+      if (json.status !== "success") throw new Error(json.errorMessage || "Upload failed");
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["group-photos"] });
