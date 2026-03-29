@@ -108,7 +108,7 @@ async function safeOpenURL(url: string) {
   try {
     const supported = await Linking.canOpenURL(url);
     if (supported) {
-      await safeOpenURL(url);
+      await Linking.openURL(url);
     }
   } catch {
     /* silently ignore -- Expo Go dev mode throws on some URLs */

@@ -29,7 +29,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import {
   group,
   fontSize,
@@ -63,7 +63,7 @@ if (
 async function safeOpenURL(url: string) {
   try {
     const supported = await Linking.canOpenURL(url);
-    if (supported) await safeOpenURL(url);
+    if (supported) await Linking.openURL(url);
   } catch { /* Expo Go dev mode */ }
 }
 
@@ -579,14 +579,24 @@ function ServiceCard({
   price,
   unit,
   currency,
+  lang,
 }: {
   name: string;
   description: string | null;
   price: number | null;
   unit: string | null;
   currency: string | null;
+  lang: "pl" | "en";
 }) {
   const priceLabel = formatPrice(price, unit, currency);
+
+  const handleAsk = useCallback(() => {
+    const prefill = t(lang, "upsell.askAbout").replace("{name}", name);
+    router.navigate({
+      pathname: "/(group)/messages" as any,
+      params: { prefill },
+    });
+  }, [lang, name]);
 
   return (
     <View
@@ -613,11 +623,23 @@ function ServiceCard({
           </Text>
         ) : null}
 
-        {priceLabel ? (
-          <View style={styles.servicePriceBadge}>
-            <Text style={styles.servicePriceBadgeText}>{priceLabel}</Text>
-          </View>
-        ) : null}
+        <View style={styles.serviceCardFooter}>
+          {priceLabel ? (
+            <View style={styles.servicePriceBadge}>
+              <Text style={styles.servicePriceBadgeText}>{priceLabel}</Text>
+            </View>
+          ) : null}
+
+          <Pressable
+            style={styles.serviceAskBtn}
+            onPress={handleAsk}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "upsell.ask")}
+          >
+            <Icon name="chatbubble-outline" size={14} color={group.white} />
+            <Text style={styles.serviceAskBtnText}>{t(lang, "upsell.ask")}</Text>
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -656,6 +678,7 @@ function ServicesSection({
           price={service.price}
           unit={service.unit}
           currency={service.currency}
+          lang={lang}
         />
       ))}
     </View>
@@ -1432,6 +1455,28 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: "Inter_600SemiBold",
     color: quickActionColors.services.icon,
+  },
+  serviceCardFooter: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+    marginTop: spacing.xs,
+    gap: spacing.sm,
+  },
+  serviceAskBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.xs,
+    backgroundColor: group.primary,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: TOUCH_TARGET,
+  },
+  serviceAskBtnText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
   },
 
   // ── Attractions ──
