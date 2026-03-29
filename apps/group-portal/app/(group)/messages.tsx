@@ -409,7 +409,7 @@ function ChatContent() {
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={chatStyles.keyboardView}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      keyboardVerticalOffset={Platform.OS === "ios" ? insets.top + 140 : 0}
     >
       {/* Content */}
       {isLoading ? (
