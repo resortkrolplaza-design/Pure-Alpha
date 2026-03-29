@@ -191,6 +191,7 @@ function RsvpFormContent() {
     queryFn: async () => {
       if (!trackingId) return [];
       const res = await groupFetch<GroupGuestData[]>(trackingId, "/guests");
+      if (res.status === "error") throw new Error(res.errorMessage || "Failed to load guests");
       return res.data ?? [];
     },
     enabled: !!trackingId,
@@ -314,6 +315,7 @@ function RsvpFormContent() {
                 value={search}
                 onChangeText={setSearch}
                 autoCapitalize="words"
+                accessibilityLabel={t(lang, "rsvp.searchGuest")}
               />
               {isLoading ? (
                 <ActivityIndicator color={group.primary} style={formStyles.loader} />
@@ -358,6 +360,7 @@ function RsvpFormContent() {
                 autoCapitalize="none"
                 keyboardType="email-address"
                 maxLength={320}
+                accessibilityLabel={t(lang, "rsvp.verifyEmail")}
               />
             </View>
           )}
@@ -427,6 +430,7 @@ function RsvpFormContent() {
                     placeholder={t(lang, "rsvp.dietary")}
                     placeholderTextColor={group.textMuted}
                     maxLength={500}
+                    accessibilityLabel={t(lang, "rsvp.dietary")}
                   />
 
                   <Text style={[formStyles.inputLabel, { marginTop: spacing.md }]}>
@@ -439,6 +443,7 @@ function RsvpFormContent() {
                     placeholder={t(lang, "rsvp.allergies")}
                     placeholderTextColor={group.textMuted}
                     maxLength={500}
+                    accessibilityLabel={t(lang, "rsvp.allergies")}
                   />
                 </>
               )}
@@ -473,6 +478,7 @@ function RsvpFormContent() {
                 placeholderTextColor={group.textMuted}
                 multiline
                 maxLength={500}
+                accessibilityLabel={t(lang, "rsvp.note")}
               />
             </View>
           )}

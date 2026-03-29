@@ -395,7 +395,8 @@ function AnnouncementsScreenInner({ embedded }: { embedded?: boolean }) {
     queryFn: async () => {
       if (!trackingId) return [];
       const res = await fetchAnnouncements(trackingId);
-      return res.status === "success" && res.data ? res.data : [];
+      if (res.status === "error") throw new Error(res.errorMessage || "Failed to load announcements");
+      return res.data ?? [];
     },
     enabled: !!trackingId,
     staleTime: 30_000,

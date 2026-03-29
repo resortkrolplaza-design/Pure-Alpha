@@ -76,6 +76,7 @@ function PinScreenInner() {
     } catch {
       setPinRequired(null);
       setPortalFound(false);
+      Alert.alert(t(lang, "auth.error"), t(lang, "common.error"));
     } finally {
       setCheckingInfo(false);
     }
@@ -174,6 +175,7 @@ function PinScreenInner() {
                 placeholder={t(lang, "pin.trackingIdPlaceholder")}
                 placeholderTextColor={group.textMuted}
                 value={trackingId}
+                accessibilityLabel={t(lang, "pin.eventId")}
                 onChangeText={(text) => {
                   setTrackingId(text);
                   // Reset portal state when ID changes
@@ -196,6 +198,7 @@ function PinScreenInner() {
                 style={styles.checkIdBtn}
                 onPress={handleCheckId}
                 accessibilityRole="button"
+                accessibilityLabel={t(lang, "common.confirm")}
               >
                 <Text style={styles.checkIdBtnText}>{t(lang, "common.confirm")}</Text>
                 <Icon name="arrow-forward" size={18} color={group.white} />
@@ -222,6 +225,7 @@ function PinScreenInner() {
                     keyboardType="email-address"
                     maxLength={320}
                     editable={!loading}
+                    accessibilityLabel={t(lang, "pin.yourEmail")}
                   />
                   <Text style={styles.inputHint}>{t(lang, "pin.emailHint")}</Text>
                 </View>
@@ -273,7 +277,7 @@ function PinScreenInner() {
                       if (loading) return;
                       setLoading(true);
                       try {
-                        const res = await loginByLink(trackingId.trim());
+                        const res = await loginByLink(trackingId.trim(), email.trim() || undefined);
                         if (res.status === "success" && res.data?.token) {
                           await persistLogin(trackingId.trim(), {
                             token: res.data.token,
@@ -295,6 +299,7 @@ function PinScreenInner() {
                     }}
                     disabled={loading || !trackingId.trim()}
                     accessibilityRole="button"
+                    accessibilityLabel={t(lang, "auth.login")}
                   >
                     {loading ? (
                       <ActivityIndicator color={group.white} />

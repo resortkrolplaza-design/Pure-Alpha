@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: 36,
+    minHeight: 44,
   },
   actionBtnText: {
     fontSize: fontSize.sm,

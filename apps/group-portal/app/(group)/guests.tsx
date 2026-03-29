@@ -964,6 +964,7 @@ export function GuestsContent({ embedded }: { embedded?: boolean } = {}) {
     queryFn: async () => {
       if (!trackingId) return [];
       const res = await groupFetch<GroupGuestData[]>(trackingId, "/guests");
+      if (res.status === "error") throw new Error(res.errorMessage || "Failed to load guests");
       return res.data ?? [];
     },
     enabled: !!trackingId,

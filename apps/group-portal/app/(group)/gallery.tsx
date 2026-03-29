@@ -93,6 +93,7 @@ function CategoryChip({
 function GalleryImageCard({
   item,
   imageSize,
+  lang,
   isFailed,
   isLoaded,
   onImageError,
@@ -101,6 +102,7 @@ function GalleryImageCard({
 }: {
   item: GalleryItem;
   imageSize: number;
+  lang: "pl" | "en";
   isFailed: boolean;
   isLoaded: boolean;
   onImageError: () => void;
@@ -118,7 +120,7 @@ function GalleryImageCard({
         onPressOut={onPressOut}
         onPress={onPress}
         style={[styles.imageCard, { width: imageSize, height: imageSize }]}
-        accessibilityLabel={item.alt || item.caption || t("pl", "gallery.hotelTitle")}
+        accessibilityLabel={item.alt || item.caption || t(lang, "gallery.hotelTitle")}
         accessibilityRole="image"
       >
         {isFailed ? (
@@ -379,6 +381,7 @@ function GalleryScreen() {
         <GalleryImageCard
           item={item}
           imageSize={imageSize}
+          lang={lang}
           isFailed={failedIds.has(item.id)}
           isLoaded={loadedIds.has(item.id)}
           onImageError={() => setFailedIds((prev) => new Set(prev).add(item.id))}
@@ -414,7 +417,7 @@ function GalleryScreen() {
       {hasMultipleCategories && (
         <View style={styles.chipRow}>
           <CategoryChip
-            label={lang === "pl" ? "Wszystkie" : "All"}
+            label={t(lang, "gallery.filterAll")}
             isActive={activeCategory === null}
             onPress={() => setActiveCategory(null)}
           />

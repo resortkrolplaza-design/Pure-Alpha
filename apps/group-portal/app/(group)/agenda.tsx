@@ -54,6 +54,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   transport: "#d97706",
   activity: "#8b5cf6",
   registration: "#0ea5e9",
+  event: "#0d9488",
+  meal: "#ea580c",
+  other: "#78716c",
 };
 
 function categoryColor(category: string | null): string {
@@ -136,7 +139,7 @@ function AgendaCard({
             ]}
           >
             <Text style={[styles.categoryText, { color: borderColor }]}>
-              {item.category}
+              {item.category ? t(lang, `agenda.category.${item.category}`) : item.category}
             </Text>
           </View>
         )}
@@ -398,7 +401,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     backgroundColor: group.primaryLight,
     marginTop: spacing.xs,
-    minHeight: 32,
+    minHeight: 44,
   },
   calendarBtnText: {
     fontSize: fontSize.xs,

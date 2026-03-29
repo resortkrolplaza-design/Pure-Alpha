@@ -44,11 +44,15 @@ export async function groupFetch<T>(
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        // Caller headers first, then auth on top -- prevents Authorization override
         ...(typeof options.headers === 'object' && options.headers !== null ? (options.headers as Record<string, string>) : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       signal: controller.signal,
     });
+
+    // Clear timeout after fetch succeeds -- prevents false "timeout" if json() is slow
+    clearTimeout(timeout);
 
     if (res.status === 401 || res.status === 403) {
       onGroupSessionExpired?.();
@@ -70,6 +74,11 @@ export async function groupFetch<T>(
   }
 }
 
+// Expose session-expiry trigger for raw-fetch callsites (e.g. photo upload)
+export function triggerSessionExpired() {
+  onGroupSessionExpired?.();
+}
+
 export async function fetchPortalInit(
   trackingId: string,
 ): Promise<ApiResponse<PortalInitData>> {
@@ -78,10 +87,11 @@ export async function fetchPortalInit(
 
 export async function loginByLink(
   trackingId: string,
+  email?: string,
 ): Promise<ApiResponse<{ token: string; role: PortalRole; hotelName?: string; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
   return groupFetch(trackingId, "/auth-by-link", {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify(email ? { email: email.trim().toLowerCase() } : {}),
   });
 }
 

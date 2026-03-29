@@ -95,6 +95,7 @@ export default function GroupLayout() {
     queryFn: async () => {
       if (!trackingId) return { replies: [], anchorMessage: null };
       const res = await groupFetch<{ replies: GroupMessage[]; anchorMessage: GroupMessage | null; unreadCount?: number }>(trackingId, "/messages");
+      if (res.status === "error") throw new Error(res.errorMessage || "Failed to load messages");
       return res.data ?? { replies: [], anchorMessage: null };
     },
     enabled: !!trackingId && !!portal?.messagingEnabled,
@@ -102,22 +103,27 @@ export default function GroupLayout() {
     refetchIntervalInBackground: false,
   });
 
+  // Consistent message count: replies + anchor (same formula as messages.tsx clearing)
+  const getMsgCount = useCallback(() => {
+    return (msgData?.replies?.length ?? 0) + (msgData?.anchorMessage ? 1 : 0);
+  }, [msgData]);
+
   useEffect(() => {
     if (!msgData) return;
-    const currentCount = msgData.replies?.length ?? 0;
+    const currentCount = getMsgCount();
     getSecureItem(LAST_SEEN_KEY).then((stored) => {
       const lastSeen = stored ? parseInt(stored, 10) : 0;
       const diff = currentCount - (isNaN(lastSeen) ? 0 : lastSeen);
       setUnreadBadge(diff > 0 ? diff : undefined);
     }).catch(() => setUnreadBadge(undefined));
-  }, [msgData, LAST_SEEN_KEY]);
+  }, [msgData, LAST_SEEN_KEY, getMsgCount]);
 
   // When user taps Messages tab, mark all as seen
   const markMessagesSeen = useCallback(() => {
-    const currentCount = msgData?.replies?.length ?? 0;
+    const currentCount = getMsgCount();
     setSecureItem(LAST_SEEN_KEY, String(currentCount)).catch(() => {});
     setUnreadBadge(undefined);
-  }, [msgData, LAST_SEEN_KEY]);
+  }, [getMsgCount, LAST_SEEN_KEY]);
 
   // Fix 2: Consistent defaults -- ALL optional tabs hidden until data loads
   const hideMessages = !portal?.messagingEnabled;

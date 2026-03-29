@@ -22,7 +22,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import Constants from "expo-constants";
 import {
   group,
   fontSize,
@@ -44,24 +43,8 @@ import {
   deletePoll,
 } from "@/lib/group-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
+import { getDeviceId } from "@/lib/device-id";
 import type { PollData } from "@/lib/types";
-
-// =============================================================================
-// DeviceId (stable per install, used for vote dedup)
-// =============================================================================
-
-function getDeviceId(): string {
-  const id =
-    Constants.installationId ??
-    (Constants.expoConfig?.extra as Record<string, unknown> | undefined)
-      ?.installationId ??
-    null;
-  return typeof id === "string" && id.length >= 8
-    ? id
-    : `${Platform.OS}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-const DEVICE_ID = getDeviceId();
 
 // =============================================================================
 // Constants
@@ -501,7 +484,6 @@ function PollsScreenContent({ embedded }: { embedded?: boolean }) {
   const [votingPollId, setVotingPollId] = useState<string | null>(null);
   const [myVotes, setMyVotes] = useState<Record<string, number>>({});
   const [changingVote, setChangingVote] = useState<string | null>(null);
-  const deviceIdRef = useRef(DEVICE_ID);
 
   // P2-2: Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -528,8 +510,8 @@ function PollsScreenContent({ embedded }: { embedded?: boolean }) {
     queryFn: async () => {
       if (!trackingId) return [];
       const res = await fetchPolls(trackingId);
-      if (res.status === "success" && res.data) return res.data;
-      return [];
+      if (res.status === "error") throw new Error(res.errorMessage || "Failed to load polls");
+      return res.data ?? [];
     },
     enabled: !!trackingId,
     staleTime: 10_000,
@@ -592,7 +574,8 @@ function PollsScreenContent({ embedded }: { embedded?: boolean }) {
       setVotingPollId(pollId);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       try {
-        const res = await votePoll(trackingId, pollId, optionIdx, deviceIdRef.current);
+        const deviceId = await getDeviceId();
+        const res = await votePoll(trackingId, pollId, optionIdx, deviceId);
         if (res.status === "success" && res.data) {
           // Record local vote
           setMyVotes((prev) => ({ ...prev, [pollId]: optionIdx }));

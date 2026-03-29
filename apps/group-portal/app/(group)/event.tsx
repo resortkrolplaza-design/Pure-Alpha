@@ -110,6 +110,9 @@ const CATEGORY_COLORS: Record<string, string> = {
   transport: "#d97706",
   activity: "#8b5cf6",
   registration: "#0ea5e9",
+  event: "#0d9488",
+  meal: "#ea580c",
+  other: "#78716c",
 };
 
 function categoryColor(category: string | null): string {
@@ -232,7 +235,7 @@ function AgendaCard({
             ]}
           >
             <Text style={[styles.agendaCategoryText, { color: borderColor }]}>
-              {item.category}
+              {item.category ? t(lang, `agenda.category.${item.category}`) : item.category}
             </Text>
           </View>
         )}
@@ -1011,11 +1014,11 @@ function EventScreenContent() {
       visibleSections.includes(scrollTo) &&
       !hasScrolled.current
     ) {
-      hasScrolled.current = true;
       // Delay to allow layout to complete
       const timer = setTimeout(() => {
         const offset = sectionOffsets.current[scrollTo];
         if (offset > 0) {
+          hasScrolled.current = true; // Only mark after confirmed valid offset
           scrollRef.current?.scrollTo({ y: offset, animated: true });
         }
       }, 600);

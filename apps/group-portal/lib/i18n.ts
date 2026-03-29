@@ -120,6 +120,7 @@ const pl: Record<string, string> = {
   "messages.sendFailed": "Nie udało się wysłać",
   "messages.errorLoading": "Nie udało się załadować wiadomości",
   "messages.pinnedMessage": "Przypięta wiadomość",
+  "messages.participant": "Uczestnik",
 
   // ── Empty states ----
   "group.noPhotos": "Brak zdj\u0119\u0107",
@@ -169,6 +170,7 @@ const pl: Record<string, string> = {
   "overview.seeAll": "Zobacz wszystkie",
   "overview.noItems": "Brak danych",
   "gallery.hotelTitle": "Galeria hotelu",
+  "gallery.filterAll": "Wszystkie",
   "quickAction.rsvp": "RSVP",
   "quickAction.agenda": "Program",
   "quickAction.services": "Us\u0142ugi",
@@ -335,6 +337,12 @@ const pl: Record<string, string> = {
   "agenda.category.meeting": "Spotkanie",
   "agenda.category.activity": "Aktywno\u015B\u0107",
   "agenda.category.transport": "Transport",
+  "agenda.category.party": "Impreza",
+  "agenda.category.workshop": "Warsztat",
+  "agenda.category.break": "Przerwa",
+  "agenda.category.registration": "Rejestracja",
+  "agenda.category.event": "Wydarzenie",
+  "agenda.category.meal": "Posi\u0142ek",
   "agenda.category.other": "Inne",
 
   // ── Document Categories ----
@@ -486,6 +494,7 @@ const en: Record<string, string> = {
   "messages.sendFailed": "Failed to send message",
   "messages.errorLoading": "Failed to load messages",
   "messages.pinnedMessage": "Pinned message",
+  "messages.participant": "Participant",
 
   // ── Empty states ----
   "group.noPhotos": "No photos",
@@ -535,6 +544,7 @@ const en: Record<string, string> = {
   "overview.seeAll": "See all",
   "overview.noItems": "No data",
   "gallery.hotelTitle": "Hotel gallery",
+  "gallery.filterAll": "All",
   "quickAction.rsvp": "RSVP",
   "quickAction.agenda": "Agenda",
   "quickAction.services": "Services",
@@ -701,6 +711,12 @@ const en: Record<string, string> = {
   "agenda.category.meeting": "Meeting",
   "agenda.category.activity": "Activity",
   "agenda.category.transport": "Transport",
+  "agenda.category.party": "Party",
+  "agenda.category.workshop": "Workshop",
+  "agenda.category.break": "Break",
+  "agenda.category.registration": "Registration",
+  "agenda.category.event": "Event",
+  "agenda.category.meal": "Meal",
   "agenda.category.other": "Other",
 
   // ── Document Categories ----

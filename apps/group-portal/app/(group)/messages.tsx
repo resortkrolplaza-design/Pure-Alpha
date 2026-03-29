@@ -216,6 +216,7 @@ function ChatContent() {
     queryFn: async () => {
       if (!trackingId) return { replies: [], anchorMessage: null };
       const res = await groupFetch<{ replies: GroupMessage[]; anchorMessage: GroupMessage | null; unreadCount?: number }>(trackingId, "/messages");
+      if (res.status === "error") throw new Error(res.errorMessage || "Failed to load messages");
       return res.data ?? { replies: [], anchorMessage: null };
     },
     enabled: !!trackingId,
@@ -303,7 +304,7 @@ function ChatContent() {
       if (!trackingId) throw new Error("No trackingId");
       const senderName = guest
         ? [guest.firstName, guest.lastName].filter(Boolean).join(" ")
-        : "Uczestnik";
+        : t(lang, "messages.participant");
       const res = await groupFetch<GroupMessage>(trackingId, "/messages", {
         method: "POST",
         body: JSON.stringify({ body, senderName }),

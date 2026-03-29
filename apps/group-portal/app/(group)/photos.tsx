@@ -12,7 +12,7 @@ import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { groupFetch } from "@/lib/group-api";
+import { groupFetch, triggerSessionExpired } from "@/lib/group-api";
 import { getGroupToken } from "@/lib/auth";
 import { API_BASE } from "@/lib/api";
 import type { GroupPhotoData } from "@/lib/types";
@@ -309,6 +309,7 @@ function PhotosScreen() {
     queryFn: async () => {
       if (!trackingId) return [];
       const res = await groupFetch<GroupPhotoData[]>(trackingId, "/photos");
+      if (res.status === "error") throw new Error(res.errorMessage || "Failed to load photos");
       return res.data ?? [];
     },
     enabled: !!trackingId,
@@ -391,6 +392,10 @@ function PhotosScreen() {
         },
         body: formData,
       });
+      if (res.status === 401 || res.status === 403) {
+        triggerSessionExpired();
+        throw new Error("Session expired");
+      }
       if (!res.ok) throw new Error(`Upload failed (${res.status})`);
       const json = await res.json();
       if (json.status !== "success") throw new Error(json.errorMessage || "Upload failed");

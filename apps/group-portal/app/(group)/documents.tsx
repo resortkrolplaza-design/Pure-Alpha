@@ -386,6 +386,7 @@ export function DocumentsContent({ embedded }: { embedded?: boolean } = {}) {
     queryFn: async () => {
       if (!trackingId) return [];
       const res = await groupFetch<GroupDocumentData[]>(trackingId, "/documents");
+      if (res.status === "error") throw new Error(res.errorMessage || "Failed to load documents");
       return res.data ?? [];
     },
     enabled: !!trackingId,

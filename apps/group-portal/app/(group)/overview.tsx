@@ -25,7 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import Constants from "expo-constants";
+import { getDeviceId } from "@/lib/device-id";
 import {
   group,
   quickActionColors,
@@ -50,22 +50,7 @@ import { usePushNotifications } from "@/lib/usePushNotifications";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { GroupAnnouncementData, PortalInitData, PollData } from "@/lib/types";
 
-// =============================================================================
-// DeviceId (stable per install, used for poll vote dedup -- same as polls.tsx)
-// =============================================================================
-
-function getDeviceId(): string {
-  const id =
-    Constants.installationId ??
-    (Constants.expoConfig?.extra as Record<string, unknown> | undefined)
-      ?.installationId ??
-    null;
-  return typeof id === "string" && id.length >= 8
-    ? id
-    : `${Platform.OS}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-const DEVICE_ID = getDeviceId();
+// DeviceId: imported from @/lib/device-id (persisted, prevents vote stuffing)
 
 // =============================================================================
 // Helpers
@@ -379,8 +364,10 @@ function PollPopupModal({
   const [votedIdx, setVotedIdx] = useState<number | null>(null);
 
   const voteMutation = useMutation({
-    mutationFn: (optionIdx: number) =>
-      votePoll(trackingId, poll.id, optionIdx, DEVICE_ID),
+    mutationFn: async (optionIdx: number) => {
+      const deviceId = await getDeviceId();
+      return votePoll(trackingId, poll.id, optionIdx, deviceId);
+    },
     onSuccess: (_data, optionIdx) => {
       setVotedIdx(optionIdx);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -2231,8 +2218,8 @@ const styles = StyleSheet.create({
     gap: spacing.xxs,
   },
   starBtn: {
-    minWidth: 36,
-    minHeight: 36,
+    minWidth: 44,
+    minHeight: 44,
     justifyContent: "center" as const,
     alignItems: "center" as const,
   },
