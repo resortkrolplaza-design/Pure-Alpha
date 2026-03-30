@@ -571,6 +571,7 @@ function ServiceCard({
   price,
   unit,
   currency,
+  upsellEnabled,
   lang,
 }: {
   name: string;
@@ -578,6 +579,7 @@ function ServiceCard({
   price: number | null;
   unit: string | null;
   currency: string | null;
+  upsellEnabled: boolean;
   lang: "pl" | "en";
 }) {
   const priceLabel = formatPrice(price, unit, currency);
@@ -622,15 +624,17 @@ function ServiceCard({
             </View>
           ) : null}
 
-          <Pressable
-            style={styles.serviceAskBtn}
-            onPress={handleAsk}
-            accessibilityRole="button"
-            accessibilityLabel={t(lang, "upsell.ask")}
-          >
-            <Icon name="chatbubble-outline" size={14} color={group.white} />
-            <Text style={styles.serviceAskBtnText}>{t(lang, "upsell.ask")}</Text>
-          </Pressable>
+          {upsellEnabled && (
+            <Pressable
+              style={styles.serviceAskBtn}
+              onPress={handleAsk}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "upsell.ask")}
+            >
+              <Icon name="chatbubble-outline" size={14} color={group.white} />
+              <Text style={styles.serviceAskBtnText}>{t(lang, "upsell.ask")}</Text>
+            </Pressable>
+          )}
         </View>
       </View>
     </View>
@@ -639,6 +643,7 @@ function ServiceCard({
 
 function ServicesSection({
   services,
+  upsellEnabled,
   lang,
 }: {
   services: Array<{
@@ -649,6 +654,7 @@ function ServicesSection({
     unit: string | null;
     currency: string | null;
   }>;
+  upsellEnabled: boolean;
   lang: "pl" | "en";
 }) {
   if (services.length === 0) {
@@ -670,6 +676,7 @@ function ServicesSection({
           price={service.price}
           unit={service.unit}
           currency={service.currency}
+          upsellEnabled={upsellEnabled}
           lang={lang}
         />
       ))}
@@ -1113,7 +1120,7 @@ function EventScreenContent() {
         {activeSegmentId === "services" && (
           <ErrorBoundary lang={lang}>
             <View style={styles.sectionContent}>
-              <ServicesSection services={services} lang={lang} />
+              <ServicesSection services={services} upsellEnabled={portal?.upsellEnabled !== false} lang={lang} />
             </View>
           </ErrorBoundary>
         )}

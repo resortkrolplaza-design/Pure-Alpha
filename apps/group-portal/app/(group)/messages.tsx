@@ -17,7 +17,7 @@ import { Icon } from "@/lib/icons";
 import { useScalePress, useSlideUp } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { groupFetch } from "@/lib/group-api";
+import { groupFetch, fetchPortalInit } from "@/lib/group-api";
 import { setSecureItem } from "@/lib/auth";
 import type { GroupMessage } from "@/lib/types";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
@@ -41,17 +41,19 @@ const SEGMENTS: Array<{ key: Segment; labelKey: string }> = [
 // =============================================================================
 
 function SegmentedControl({
+  segments,
   selected,
   onSelect,
   lang,
 }: {
+  segments: Array<{ key: Segment; labelKey: string }>;
   selected: Segment;
   onSelect: (seg: Segment) => void;
   lang: "pl" | "en";
 }) {
   return (
     <View style={segStyles.container} accessibilityRole="tablist">
-      {SEGMENTS.map((seg) => {
+      {segments.map((seg) => {
         const isActive = seg.key === selected;
         return (
           <Pressable
@@ -508,6 +510,19 @@ function GroupMessagesScreenInner() {
   const headerSlide = useSlideUp(0, 12);
   const queryClient = useQueryClient();
 
+  // Read portal init for feature flags (pollsEnabled)
+  const { data: portalInit } = useQuery({
+    queryKey: ["portal-init", trackingId],
+    queryFn: async () => {
+      if (!trackingId) return null;
+      const res = await fetchPortalInit(trackingId);
+      return res.status === "success" ? res.data : null;
+    },
+    enabled: !!trackingId,
+    staleTime: 60_000,
+  });
+  const pollsEnabled = portalInit?.portal?.pollsEnabled !== false;
+
   // Accept `tab` route param to auto-select a segment on navigation
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const [activeSegment, setActiveSegment] = useState<Segment>(() => {
@@ -550,8 +565,9 @@ function GroupMessagesScreenInner() {
         <Text style={styles.title}>{t(lang, "group.tab.messages")}</Text>
       </Animated.View>
 
-      {/* Segmented Control */}
+      {/* Segmented Control (polls segment hidden when pollsEnabled=false) */}
       <SegmentedControl
+        segments={pollsEnabled ? SEGMENTS : SEGMENTS.filter((s) => s.key !== "polls")}
         selected={activeSegment}
         onSelect={setActiveSegment}
         lang={lang}
