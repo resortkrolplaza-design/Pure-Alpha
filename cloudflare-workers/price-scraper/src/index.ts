@@ -13,6 +13,7 @@
 
 import { scrapeProfitroomPrices, scrapeProfitroomFull, scrapeProfitroomOffers, scrapeProfitroomCalendarFallback } from "./engines/profitroom";
 import { scrapeGenericPrices } from "./engines/generic";
+import { scrapePremiumHotelPrices } from "./engines/premiumhotel";
 import type { ScrapeParams } from "./engines/types";
 
 interface Env {
@@ -21,7 +22,7 @@ interface Env {
 }
 
 // Supported booking engines
-const SUPPORTED_ENGINES = ["PROFITROOM", "GENERIC"] as const;
+const SUPPORTED_ENGINES = ["PROFITROOM", "GENERIC", "PREMIUMHOTEL"] as const;
 type EngineType = (typeof SUPPORTED_ENGINES)[number];
 
 // P3-2 FIX: Per-siteKey rate limiter (in-memory, resets on cold start — acceptable for CF Workers)
@@ -284,6 +285,14 @@ export default {
             });
           }
 
+          return Response.json(result);
+        }
+        case "PREMIUMHOTEL": {
+          // PremiumHotel engine uses direct REST API — no browser needed
+          // premiumHotelTenant and premiumHotelContext passed via body
+          const tenant = (body as Record<string, unknown>).premiumHotelTenant as string | undefined;
+          const context = (body as Record<string, unknown>).premiumHotelContext as string | undefined;
+          const result = await scrapePremiumHotelPrices(env.BROWSER, params, tenant, context);
           return Response.json(result);
         }
         default:
