@@ -16,6 +16,17 @@ const pl: Record<string, string> = {
   "auth.password": "Has\u0142o",
   "auth.pinTab": "PIN",
   "auth.credentialsTab": "Dane logowania",
+  "auth.scanQr": "Skanuj kod QR",
+  "auth.scanQrDesc": "Zeskanuj kod QR hotelu",
+  "auth.enterManually": "Wpisz identyfikator",
+  "auth.biometricEnroll": "W\u0142\u0105cz logowanie biometryczne?",
+  "auth.biometricEnrollDesc": "U\u017cyj Face ID lub odcisku palca zamiast wpisywania PIN-u codziennie",
+  "auth.biometricAccept": "W\u0142\u0105cz",
+  "auth.biometricDecline": "Nie teraz",
+  "auth.biometricLoginFailed": "Logowanie biometryczne nie powiod\u0142o si\u0119",
+  "auth.biometricPrompt": "Potwierd\u017a to\u017csamo\u015b\u0107",
+  "auth.verifying": "Weryfikacja...",
+  "auth.changeHotel": "Zmie\u0144 hotel",
 
   // -- Welcome ----------------------------------------------------------------
   "welcome.title": "Pure Alpha Employee",
@@ -26,6 +37,26 @@ const pl: Record<string, string> = {
   "welcome.hotelSlugPlaceholder": "np. krol-plaza",
   "welcome.hotelNotFound": "Nie znaleziono hotelu",
   "welcome.enterHotelFirst": "Najpierw wprowad\u017A identyfikator hotelu",
+  "welcome.scanQr": "Skanuj kod QR",
+  "welcome.enterManually": "Wpisz identyfikator",
+
+  // -- Scan -------------------------------------------------------------------
+  "scan.title": "Skanuj kod QR",
+  "scan.scanning": "Szukam kodu QR...",
+  "scan.torch": "Latarka",
+  "scan.manual": "Wpisz r\u0119cznie",
+  "scan.permissionDenied": "Brak dost\u0119pu do kamery",
+  "scan.permissionDesc": "Aby zeskanowa\u0107 kod QR, zezw\u00f3l na dost\u0119p do kamery",
+  "scan.openSettings": "Otw\u00f3rz ustawienia",
+  "scan.hotelFound": "Znaleziono hotel",
+  "scan.invalidQr": "Nieprawid\u0142owy kod QR",
+
+  // -- Clock ------------------------------------------------------------------
+  "clock.biometricPrompt": "Potwierd\u017a obecno\u015b\u0107",
+  "clock.biometricFailed": "Weryfikacja nie powiod\u0142a si\u0119",
+  "clock.pinFallback": "Wprowad\u017a PIN",
+  "clock.pinWrong": "Nieprawid\u0142owy PIN",
+  "clock.biometricShield": "Chronione biometri\u0105",
 
   // -- Tabs -------------------------------------------------------------------
   "tab.dashboard": "Pulpit",
@@ -115,6 +146,16 @@ const pl: Record<string, string> = {
   "profile.logoutConfirm": "Czy na pewno chcesz si\u0119 wylogowa\u0107?",
   "profile.language": "J\u0119zyk",
   "profile.pinResetInfo": "Skontaktuj si\u0119 z managerem w celu zmiany PIN-u.",
+  "profile.biometric": "Logowanie biometryczne",
+  "profile.biometricFace": "Face ID aktywne",
+  "profile.biometricFingerprint": "Odcisk palca aktywny",
+  "profile.biometricIris": "Skan t\u0119cz\u00f3wki aktywny",
+  "profile.biometricOff": "Wy\u0142\u0105czone",
+  "profile.biometricConfirm": "Potwierd\u017a to\u017csamo\u015b\u0107",
+  "profile.biometricReloginNeeded": "Zaloguj si\u0119 ponownie, aby w\u0142\u0105czy\u0107 biometri\u0119",
+  "profile.biometricEnabled": "Biometria w\u0142\u0105czona",
+  "profile.biometricDisabled": "Biometria wy\u0142\u0105czona",
+  "profile.pinResetBiometric": "PIN mo\u017cna zmieni\u0107 po ponownym zalogowaniu. Biometria wymaga aktualnego PIN-u.",
 
   // -- App -------------------------------------------------------------------
   "app.subtitle": "Pure Alpha Employee",
@@ -148,6 +189,17 @@ const en: Record<string, string> = {
   "auth.password": "Password",
   "auth.pinTab": "PIN",
   "auth.credentialsTab": "Credentials",
+  "auth.scanQr": "Scan QR code",
+  "auth.scanQrDesc": "Scan hotel QR code",
+  "auth.enterManually": "Enter manually",
+  "auth.biometricEnroll": "Enable biometric login?",
+  "auth.biometricEnrollDesc": "Use Face ID or fingerprint instead of entering PIN every day",
+  "auth.biometricAccept": "Enable",
+  "auth.biometricDecline": "Not now",
+  "auth.biometricLoginFailed": "Biometric login failed",
+  "auth.biometricPrompt": "Confirm identity",
+  "auth.verifying": "Verifying...",
+  "auth.changeHotel": "Change hotel",
 
   // -- Welcome ----------------------------------------------------------------
   "welcome.title": "Pure Alpha Employee",
@@ -158,6 +210,26 @@ const en: Record<string, string> = {
   "welcome.hotelSlugPlaceholder": "e.g. krol-plaza",
   "welcome.hotelNotFound": "Hotel not found",
   "welcome.enterHotelFirst": "Enter hotel identifier first",
+  "welcome.scanQr": "Scan QR code",
+  "welcome.enterManually": "Enter identifier",
+
+  // -- Scan -------------------------------------------------------------------
+  "scan.title": "Scan QR code",
+  "scan.scanning": "Looking for QR code...",
+  "scan.torch": "Torch",
+  "scan.manual": "Enter manually",
+  "scan.permissionDenied": "Camera access denied",
+  "scan.permissionDesc": "To scan QR code, allow camera access",
+  "scan.openSettings": "Open settings",
+  "scan.hotelFound": "Hotel found",
+  "scan.invalidQr": "Invalid QR code",
+
+  // -- Clock ------------------------------------------------------------------
+  "clock.biometricPrompt": "Confirm attendance",
+  "clock.biometricFailed": "Verification failed",
+  "clock.pinFallback": "Enter PIN",
+  "clock.pinWrong": "Incorrect PIN",
+  "clock.biometricShield": "Protected by biometrics",
 
   // -- Tabs -------------------------------------------------------------------
   "tab.dashboard": "Dashboard",
@@ -247,6 +319,16 @@ const en: Record<string, string> = {
   "profile.logoutConfirm": "Are you sure you want to log out?",
   "profile.language": "Language",
   "profile.pinResetInfo": "Contact your manager to change your PIN.",
+  "profile.biometric": "Biometric login",
+  "profile.biometricFace": "Face ID active",
+  "profile.biometricFingerprint": "Fingerprint active",
+  "profile.biometricIris": "Iris scan active",
+  "profile.biometricOff": "Disabled",
+  "profile.biometricConfirm": "Confirm identity",
+  "profile.biometricReloginNeeded": "Log in again to enable biometrics",
+  "profile.biometricEnabled": "Biometrics enabled",
+  "profile.biometricDisabled": "Biometrics disabled",
+  "profile.pinResetBiometric": "PIN can be changed after re-login. Biometrics requires current PIN.",
 
   // -- App -------------------------------------------------------------------
   "app.subtitle": "Pure Alpha Employee",

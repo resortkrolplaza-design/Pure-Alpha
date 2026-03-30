@@ -225,8 +225,13 @@ function WelcomeScreenInner() {
     footerOpacity,
   ]);
 
-  const handleContinue = () => {
+  const handleScanQr = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push("/(auth)/scan");
+  };
+
+  const handleManualEntry = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push("/(auth)/login");
   };
 
@@ -299,23 +304,38 @@ function WelcomeScreenInner() {
         {/* Bottom spacer */}
         <View style={styles.spacer} />
 
-        {/* CTA Button */}
+        {/* CTA Buttons */}
         <Animated.View
           style={{
             opacity: btnOpacity,
             transform: [{ translateY: btnTranslateY }],
             width: "100%",
             maxWidth: 400,
+            gap: spacing.md,
           }}
         >
+          {/* Primary: Scan QR */}
           <Pressable
             style={styles.ctaButton}
-            onPress={handleContinue}
+            onPress={handleScanQr}
             accessibilityRole="button"
-            accessibilityLabel={t(lang, "welcome.continue")}
+            accessibilityLabel={t(lang, "welcome.scanQr")}
           >
-            <Text style={styles.ctaText}>{t(lang, "welcome.continue")}</Text>
-            <Icon name="arrow-forward" size={20} color={emp.white} />
+            <Icon name="qr-code-outline" size={22} color={emp.white} />
+            <Text style={styles.ctaText}>{t(lang, "welcome.scanQr")}</Text>
+          </Pressable>
+
+          {/* Secondary: Enter manually */}
+          <Pressable
+            style={styles.ctaSecondaryButton}
+            onPress={handleManualEntry}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "welcome.enterManually")}
+          >
+            <Icon name="keypad-outline" size={20} color={emp.primary} />
+            <Text style={styles.ctaSecondaryText}>
+              {t(lang, "welcome.enterManually")}
+            </Text>
           </Pressable>
         </Animated.View>
 
@@ -411,6 +431,24 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontFamily: "Inter_700Bold",
     color: emp.white,
+    letterSpacing: letterSpacing.tight,
+  },
+  ctaSecondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: "transparent",
+    borderRadius: radius["2xl"],
+    borderWidth: 1.5,
+    borderColor: emp.primary,
+    paddingVertical: spacing.lg,
+    minHeight: 56,
+  },
+  ctaSecondaryText: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_600SemiBold",
+    color: emp.primary,
     letterSpacing: letterSpacing.tight,
   },
 

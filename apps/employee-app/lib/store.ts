@@ -15,11 +15,15 @@ interface EmployeeState {
   hotelName: string | null;
   lang: "pl" | "en";
   isClockedIn: boolean;
+  isBiometricEnrolled: boolean;
+  isHotelOnboarded: boolean;
   setAuthenticated: (auth: boolean) => void;
   setEmployee: (data: { id: string; name: string; department?: string; position?: string }) => void;
   setHotel: (data: { slug: string; id: string; name: string }) => void;
   setLang: (lang: "pl" | "en") => void;
   setClockedIn: (value: boolean) => void;
+  setBiometricEnrolled: (v: boolean) => void;
+  setHotelOnboarded: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -34,6 +38,8 @@ const initialState = {
   hotelName: null,
   lang: "pl" as const,
   isClockedIn: false,
+  isBiometricEnrolled: false,
+  isHotelOnboarded: false,
 };
 
 export const useAppStore = create<EmployeeState>((set) => ({
@@ -52,5 +58,7 @@ export const useAppStore = create<EmployeeState>((set) => ({
   }),
   setLang: (lang) => set({ lang }),
   setClockedIn: (isClockedIn) => set({ isClockedIn }),
+  setBiometricEnrolled: (isBiometricEnrolled) => set({ isBiometricEnrolled }),
+  setHotelOnboarded: (isHotelOnboarded) => set({ isHotelOnboarded }),
   reset: () => set(initialState),
 }));

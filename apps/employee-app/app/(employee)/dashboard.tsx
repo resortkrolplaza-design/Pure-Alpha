@@ -2,7 +2,7 @@
 // Employee App -- Dashboard (warm cream + hero shift card + clock button)
 // =============================================================================
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   View, Text, ScrollView, Pressable, RefreshControl,
   StyleSheet, Animated, ActivityIndicator, Platform, Alert,
@@ -17,6 +17,8 @@ import { useFadeIn, useSlideUp, useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { employeeFetch, clockIn, clockOut } from "@/lib/employee-api";
+import { checkBiometricAvailability, authenticateWithBiometric } from "@/lib/biometric";
+import { isBiometricEnrolled, getCachedCredentials } from "@/lib/auth";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { DashboardData, ShiftData } from "@/lib/types";
 
@@ -40,6 +42,22 @@ function DashboardScreenInner() {
   const isClockedIn = useAppStore((s) => s.isClockedIn);
   const setClockedIn = useAppStore((s) => s.setClockedIn);
   const [refreshing, setRefreshing] = useState(false);
+  const [biometricShield, setBiometricShield] = useState(false);
+  const clockingRef = useRef(false);
+
+  // Check if biometric is enrolled to show shield badge
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const enrolled = await isBiometricEnrolled();
+      if (cancelled) return;
+      if (enrolled) {
+        const bio = await checkBiometricAvailability();
+        if (!cancelled) setBiometricShield(bio.available);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const queryClient = useQueryClient();
   const fadeStyle = useFadeIn();
@@ -74,16 +92,16 @@ function DashboardScreenInner() {
         queryClient.invalidateQueries({ queryKey: ["employee-dashboard"] });
       } else {
         Alert.alert(
-          lang === "pl" ? "B\u0142\u0105d" : "Error",
-          res.errorMessage ?? (lang === "pl" ? "Nieznany b\u0142\u0105d" : "Unknown error"),
+          t(lang, "common.error"),
+          res.errorMessage ?? t(lang, "common.error"),
         );
       }
     },
-    onError: (err: Error) => {
+    onError: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(
-        lang === "pl" ? "B\u0142\u0105d" : "Error",
-        err.message ?? (lang === "pl" ? "B\u0142\u0105d sieci" : "Network error"),
+        t(lang, "common.error"),
+        t(lang, "common.networkError"),
       );
     },
   });
@@ -94,10 +112,74 @@ function DashboardScreenInner() {
     setRefreshing(false);
   }, [refetch]);
 
-  const handleClock = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  const doClock = useCallback(() => {
     clockMutation.mutate(isClockedIn ? "clock-out" : "clock-in");
-  };
+  }, [clockMutation, isClockedIn]);
+
+  const handleClock = useCallback(async () => {
+    if (clockingRef.current) return;
+    clockingRef.current = true;
+
+    try {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+
+    // Check if biometric is enrolled for this user
+    const enrolled = await isBiometricEnrolled();
+    if (!enrolled) {
+      // No biometric enrolled -- proceed directly (no gate)
+      doClock();
+      return;
+    }
+
+    // Check device capability
+    const bio = await checkBiometricAvailability();
+    if (!bio.available) {
+      // Device lost biometric capability -- proceed directly
+      doClock();
+      return;
+    }
+
+    // Attempt biometric verification
+    const success = await authenticateWithBiometric(t(lang, "clock.biometricPrompt"));
+    if (success) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      doClock();
+      return;
+    }
+
+    // Biometric failed -- offer PIN fallback
+    if (Platform.OS === "ios") {
+      Alert.prompt(
+        t(lang, "clock.pinFallback"),
+        undefined,
+        async (enteredPin: string) => {
+          const creds = await getCachedCredentials();
+          if (creds && enteredPin === creds.pin) {
+            doClock();
+          } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Alert.alert(t(lang, "common.error"), t(lang, "clock.pinWrong"));
+          }
+        },
+        "secure-text",
+        undefined,
+        "number-pad",
+      );
+    } else {
+      // Android: Alert.prompt not available -- offer retry
+      Alert.alert(
+        t(lang, "clock.pinFallback"),
+        t(lang, "clock.biometricFailed"),
+        [
+          { text: t(lang, "common.cancel"), style: "cancel" },
+          { text: t(lang, "common.retry"), onPress: () => handleClock() },
+        ],
+      );
+    }
+    } finally {
+      clockingRef.current = false;
+    }
+  }, [lang, doClock]);
 
   const shiftColor = data?.todayShift
     ? shiftColors[data.todayShift.shiftType] ?? emp.primary
@@ -205,6 +287,11 @@ function DashboardScreenInner() {
                   {isClockedIn ? t(lang, "dash.clockOut") : t(lang, "dash.clockIn")}
                 </Text>
               </>
+            )}
+            {biometricShield && (
+              <View style={styles.shieldBadge} accessible accessibilityLabel={t(lang, "clock.biometricShield")}>
+                <Icon name="shield-checkmark-outline" size={14} color={emp.white} />
+              </View>
             )}
           </Pressable>
         </Animated.View>
@@ -417,6 +504,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: emp.white,
     letterSpacing: -0.3,
+  },
+  shieldBadge: {
+    position: "absolute",
+    top: spacing.sm,
+    right: spacing.md,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // -- Stats --------------------------------------------------------------------

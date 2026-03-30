@@ -41,18 +41,18 @@ export async function employeeFetch<T>(
 
     if (res.status === 401) {
       onEmployeeSessionExpired?.();
-      return { status: "error", errorMessage: "Sesja wygasla. Zaloguj sie ponownie." };
+      return { status: "error", errorMessage: "Sesja wygas\u0142a. Zaloguj si\u0119 ponownie." };
     }
 
     const json = (await res.json()) as ApiResponse<T>;
     return json;
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
-      return { status: "error", errorMessage: "Przekroczono limit czasu zapytania." };
+      return { status: "error", errorMessage: "Przekroczono limit czasu \u017c\u0105dania." };
     }
     return {
       status: "error",
-      errorMessage: "Blad sieci. Sprawdz polaczenie z internetem.",
+      errorMessage: "B\u0142\u0105d sieci. Sprawdz po\u0142\u0105czenie z internetem.",
     };
   } finally {
     clearTimeout(timeout);

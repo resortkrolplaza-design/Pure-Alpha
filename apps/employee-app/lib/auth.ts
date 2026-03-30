@@ -37,6 +37,10 @@ const TOKEN_KEY = "pa_employee_token";
 const HOTEL_SLUG_KEY = "pa_employee_hotel_slug";
 const HOTEL_ID_KEY = "pa_employee_hotel_id";
 const LANG_KEY = "pa_employee_lang";
+const BIOMETRIC_ENROLLED_KEY = "pa_employee_biometric_enrolled";
+const CACHED_LOGIN_KEY = "pa_employee_cached_login";
+const CACHED_PIN_KEY = "pa_employee_cached_pin";
+const HOTEL_ONBOARDED_KEY = "pa_employee_hotel_onboarded";
 
 // -- Employee Token -----------------------------------------------------------
 
@@ -100,6 +104,63 @@ export async function setPersistedLang(lang: "pl" | "en"): Promise<void> {
   await setItem(LANG_KEY, lang);
 }
 
+// -- Biometric Credentials ----------------------------------------------------
+
+export async function isBiometricEnrolled(): Promise<boolean> {
+  try {
+    const val = await getItem(BIOMETRIC_ENROLLED_KEY);
+    return val === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setBiometricCredentials(login: string, pin: string): Promise<void> {
+  // Never store credentials in web localStorage -- only native SecureStore (hardware-encrypted)
+  if (Platform.OS === "web") return;
+  await Promise.all([
+    setItem(BIOMETRIC_ENROLLED_KEY, "true"),
+    setItem(CACHED_LOGIN_KEY, login),
+    setItem(CACHED_PIN_KEY, pin),
+  ]);
+}
+
+export async function clearBiometricCredentials(): Promise<void> {
+  await Promise.all([
+    deleteItem(BIOMETRIC_ENROLLED_KEY),
+    deleteItem(CACHED_LOGIN_KEY),
+    deleteItem(CACHED_PIN_KEY),
+  ]);
+}
+
+export async function getCachedCredentials(): Promise<{ login: string; pin: string } | null> {
+  try {
+    const [login, pin] = await Promise.all([
+      getItem(CACHED_LOGIN_KEY),
+      getItem(CACHED_PIN_KEY),
+    ]);
+    if (login && pin) return { login, pin };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+// -- Hotel Onboarded ----------------------------------------------------------
+
+export async function isHotelOnboarded(): Promise<boolean> {
+  try {
+    const val = await getItem(HOTEL_ONBOARDED_KEY);
+    return val === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setHotelOnboarded(): Promise<void> {
+  await setItem(HOTEL_ONBOARDED_KEY, "true");
+}
+
 // -- Logout -------------------------------------------------------------------
 
 export async function logout(): Promise<void> {
@@ -107,6 +168,7 @@ export async function logout(): Promise<void> {
     clearEmployeeToken(),
     deleteItem(HOTEL_SLUG_KEY),
     deleteItem(HOTEL_ID_KEY),
+    clearBiometricCredentials(),
   ]);
 }
 

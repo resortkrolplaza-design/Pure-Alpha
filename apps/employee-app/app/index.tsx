@@ -1,18 +1,31 @@
 // =============================================================================
 // Employee App -- Entry Point (check saved session -> redirect)
+// Supports biometric auto-login when token expired but credentials cached
 // =============================================================================
 
 import { useEffect, useState } from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { router } from "expo-router";
-import { emp } from "@/lib/tokens";
+import { emp, fontSize, spacing } from "@/lib/tokens";
 import { useAppStore } from "@/lib/store";
-import { getEmployeeToken, getHotelSlug, getHotelId, getPersistedLang, isTokenExpired, decodeTokenPayload, logout } from "@/lib/auth";
+import { t } from "@/lib/i18n";
+import {
+  getEmployeeToken, setEmployeeToken, getHotelSlug, getHotelId, getPersistedLang,
+  isTokenExpired, decodeTokenPayload, logout,
+  isBiometricEnrolled, getCachedCredentials, isHotelOnboarded,
+} from "@/lib/auth";
+import { authenticateWithBiometric, checkBiometricAvailability } from "@/lib/biometric";
+import { loginWithPin } from "@/lib/employee-api";
+
+type ScreenState = "loading" | "verifying" | "ready";
 
 export default function EntryScreen() {
-  const [ready, setReady] = useState(false);
+  const [state, setState] = useState<ScreenState>("loading");
+  const lang = useAppStore((s) => s.lang);
 
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
       const [token, slug, hotelId, savedLang] = await Promise.all([
         getEmployeeToken(),
@@ -20,6 +33,7 @@ export default function EntryScreen() {
         getHotelId(),
         getPersistedLang(),
       ]);
+      if (cancelled) return;
 
       const store = useAppStore.getState();
 
@@ -28,12 +42,62 @@ export default function EntryScreen() {
 
       if (token && slug && hotelId) {
         if (isTokenExpired(token)) {
+          // -- Biometric auto-login: token expired but biometric enrolled --------
+          const [bioEnrolled, onboarded] = await Promise.all([
+            isBiometricEnrolled(),
+            isHotelOnboarded(),
+          ]);
+          if (cancelled) return;
+
+          if (bioEnrolled && onboarded) {
+            const bio = await checkBiometricAvailability();
+            if (cancelled) return;
+
+            if (bio.available) {
+              setState("verifying");
+
+              const currentLang = savedLang ?? "pl";
+              const prompt = t(currentLang, "auth.biometricPrompt");
+              const success = await authenticateWithBiometric(prompt);
+              if (cancelled) return;
+
+              if (success) {
+                const creds = await getCachedCredentials();
+                if (cancelled) return;
+
+                if (creds) {
+                  const res = await loginWithPin(creds.login, creds.pin, hotelId);
+                  if (cancelled) return;
+
+                  if (res.status === "success" && res.data) {
+                    await setEmployeeToken(res.data.token);
+
+                    store.setEmployee({
+                      id: res.data.employee.id,
+                      name: res.data.employee.name,
+                      department: res.data.employee.department,
+                      position: res.data.employee.position,
+                    });
+                    store.setHotel({ slug, id: hotelId, name: slug });
+                    store.setAuthenticated(true);
+                    store.setBiometricEnrolled(true);
+                    store.setHotelOnboarded(true);
+                    router.replace("/(employee)/dashboard");
+                    return;
+                  }
+                }
+              }
+            }
+          }
+
+          // Biometric auto-login failed or not available -- fall through
           await logout();
-          setReady(true);
+          if (cancelled) return;
+          setState("ready");
           return;
         }
 
-        // Decode token to restore employee info
+        // Valid token -- restore session and go to dashboard
         const payload = decodeTokenPayload(token);
         if (payload) {
           store.setEmployee({
@@ -54,28 +118,54 @@ export default function EntryScreen() {
         return;
       }
 
-      setReady(true);
+      // No valid token -- check if hotel is already onboarded (skip slug step)
+      if (cancelled) return;
+      const onboarded = await isHotelOnboarded();
+      if (cancelled) return;
+
+      if (onboarded && slug && hotelId) {
+        store.setHotel({ slug, id: hotelId, name: slug });
+        store.setHotelOnboarded(true);
+        router.replace("/(auth)/login");
+        return;
+      }
+
+      setState("ready");
     })();
+
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (ready) {
+    if (state === "ready") {
       router.replace("/(auth)/welcome");
     }
-  }, [ready]);
+  }, [state]);
 
   return (
-    <View style={styles.loading}>
+    <View style={styles.container} accessibilityRole="none">
       <ActivityIndicator color={emp.accent} size="large" />
+      {state === "verifying" && (
+        <Text style={styles.verifyingText}>
+          {t(lang, "auth.verifying")}
+        </Text>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  loading: {
+  container: {
     flex: 1,
     backgroundColor: emp.bg,
     justifyContent: "center",
     alignItems: "center",
+    gap: spacing.lg,
+  },
+  verifyingText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_500Medium",
+    color: emp.textSecondary,
+    textAlign: "center",
   },
 });

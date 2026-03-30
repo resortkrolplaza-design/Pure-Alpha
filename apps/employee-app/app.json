@@ -16,7 +16,9 @@
       "bundleIdentifier": "com.purealpha.employee",
       "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "Skanuj kod QR hotelu",
+        "NSFaceIDUsageDescription": "Logowanie i potwierdzanie obecnosci w pracy"
       }
     },
     "android": {
@@ -26,7 +28,9 @@
       "expo-router",
       "expo-secure-store",
       "expo-font",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      ["expo-camera", { "cameraPermission": "Zezwol Pure Alpha Employee na dostep do kamery w celu skanowania kodow QR." }],
+      "expo-local-authentication"
     ]
   }
 }

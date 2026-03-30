@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, Alert, Animated } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert, Animated, Switch } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,7 +14,13 @@ import { Icon } from "@/lib/icons";
 import { useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { logout, getEmployeeToken, decodeBase64, setPersistedLang } from "@/lib/auth";
+import {
+  logout, getEmployeeToken, decodeBase64, setPersistedLang,
+  isBiometricEnrolled, setBiometricCredentials, clearBiometricCredentials,
+  getCachedCredentials,
+} from "@/lib/auth";
+import { checkBiometricAvailability, authenticateWithBiometric } from "@/lib/biometric";
+import type { BiometricType } from "@/lib/biometric";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 interface EmployeeProfile {
@@ -37,9 +43,29 @@ function ProfileScreenInner() {
       ? { name: storeName, department: storeDept ?? "", position: storePos ?? "" }
       : null,
   );
+  const biometricEnrolled = useAppStore((s) => s.isBiometricEnrolled);
+  const setBioEnrolled = useAppStore((s) => s.setBiometricEnrolled);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricType, setBiometricType] = useState<BiometricType>("none");
+  const [bioToggleLoading, setBioToggleLoading] = useState(false);
+
   const logoutPress = useScalePress();
   const pinPress = useScalePress();
   const langPress = useScalePress();
+
+  // Check biometric hardware availability + enrollment on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const bio = await checkBiometricAvailability();
+      if (cancelled) return;
+      setBiometricAvailable(bio.available);
+      setBiometricType(bio.type);
+      const enrolled = await isBiometricEnrolled();
+      if (!cancelled) setBioEnrolled(enrolled);
+    })();
+    return () => { cancelled = true; };
+  }, [setBioEnrolled]);
 
   useEffect(() => {
     // If Zustand already has data, skip JWT decode
@@ -94,12 +120,51 @@ function ProfileScreenInner() {
 
   const handlePinReset = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    // TODO: Phase 2 -- navigate to PIN reset screen
     Alert.alert(
       t(lang, "profile.resetPin"),
-      t(lang, "profile.pinResetInfo"),
+      biometricEnrolled ? t(lang, "profile.pinResetBiometric") : t(lang, "profile.pinResetInfo"),
       [{ text: "OK" }],
     );
+  };
+
+  const handleBiometricToggle = async (newValue: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setBioToggleLoading(true);
+
+    try {
+      if (newValue) {
+        // Turning ON -- verify identity first
+        const success = await authenticateWithBiometric(t(lang, "profile.biometricConfirm"));
+        if (!success) {
+          setBioToggleLoading(false);
+          return;
+        }
+
+        // Need cached credentials from last login
+        const creds = await getCachedCredentials();
+        if (!creds) {
+          Alert.alert(
+            t(lang, "profile.biometric"),
+            t(lang, "profile.biometricReloginNeeded"),
+          );
+          setBioToggleLoading(false);
+          return;
+        }
+
+        await setBiometricCredentials(creds.login, creds.pin);
+        setBioEnrolled(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        // Turning OFF
+        await clearBiometricCredentials();
+        setBioEnrolled(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setBioToggleLoading(false);
+    }
   };
 
   const handleToggleLang = async () => {
@@ -187,6 +252,46 @@ function ProfileScreenInner() {
             </Pressable>
           </Animated.View>
         </View>
+
+        {/* Biometric Section -- shown only if device has biometric hardware */}
+        {biometricAvailable && (
+          <View style={styles.actionsCard}>
+            <View style={styles.actionRow}>
+              <View style={styles.actionIcon}>
+                <Icon
+                  name={biometricType === "face" ? "scan-outline" : "finger-print-outline"}
+                  size={20}
+                  color={emp.primary}
+                />
+              </View>
+              <View style={styles.bioTextCol}>
+                <Text style={styles.actionText}>{t(lang, "profile.biometric")}</Text>
+                <Text style={[styles.bioStatus, !biometricEnrolled && styles.bioStatusOff]}>
+                  {biometricEnrolled
+                    ? biometricType === "face"
+                      ? t(lang, "profile.biometricFace")
+                      : biometricType === "fingerprint"
+                        ? t(lang, "profile.biometricFingerprint")
+                        : biometricType === "iris"
+                          ? t(lang, "profile.biometricIris")
+                          : t(lang, "profile.biometricOff")
+                    : t(lang, "profile.biometricOff")}
+                </Text>
+              </View>
+              <Switch
+                value={biometricEnrolled}
+                onValueChange={handleBiometricToggle}
+                disabled={bioToggleLoading}
+                trackColor={{ false: emp.inputBorder, true: emp.success }}
+                thumbColor={emp.white}
+                accessibilityRole="switch"
+                accessibilityLabel={t(lang, "profile.biometric")}
+                accessibilityState={{ checked: biometricEnrolled }}
+                style={styles.bioSwitch}
+              />
+            </View>
+          </View>
+        )}
 
         <View style={styles.spacer} />
 
@@ -320,6 +425,22 @@ const styles = StyleSheet.create({
     color: emp.primary,
   },
 
+  bioTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  bioStatus: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: emp.success,
+    lineHeight: 15,
+  },
+  bioStatusOff: {
+    color: emp.textMuted,
+  },
+  bioSwitch: {
+    minHeight: TOUCH_TARGET,
+  },
   spacer: {
     flex: 1,
   },

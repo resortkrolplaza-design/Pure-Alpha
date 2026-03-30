@@ -1,9 +1,9 @@
 // =============================================================================
 // Employee App -- Login Screen (warm cream + card layout + PIN dots)
-// Matches Group Portal pin.tsx pattern with employee identity (blue-800)
+// Supports QR pre-fill (hotel already onboarded) + biometric enrollment modal
 // =============================================================================
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   LayoutAnimation,
+  Modal,
   Platform,
   UIManager,
 } from "react-native";
@@ -25,8 +26,19 @@ import { emp, fontSize, radius, spacing, shadow, TOUCH_TARGET } from "@/lib/toke
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { setEmployeeToken, setHotelSlug, setHotelId } from "@/lib/auth";
+import {
+  setEmployeeToken,
+  setHotelSlug,
+  setHotelId,
+  setHotelOnboarded,
+  isHotelOnboarded,
+  getHotelSlug,
+  getHotelId,
+  isBiometricEnrolled,
+  setBiometricCredentials,
+} from "@/lib/auth";
 import { resolveHotel, loginWithPin, loginWithCredentials } from "@/lib/employee-api";
+import { checkBiometricAvailability, authenticateWithBiometric } from "@/lib/biometric";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 // Enable LayoutAnimation on Android
@@ -69,6 +81,41 @@ function LoginScreenInner() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Biometric enrollment modal
+  const [showBiometricModal, setShowBiometricModal] = useState(false);
+  const [biometricType, setBiometricType] = useState<string>("none");
+  const pendingLoginDataRef = useRef<{
+    login: string;
+    pin: string;
+    token: string;
+    employee: { id: string; name: string; department: string; position: string };
+  } | null>(null);
+
+  // -- Check if hotel already onboarded on mount ------------------------------
+  useEffect(() => {
+    (async () => {
+      const onboarded = await isHotelOnboarded();
+      if (!onboarded) return;
+
+      const [savedSlug, savedHotelId] = await Promise.all([
+        getHotelSlug(),
+        getHotelId(),
+      ]);
+
+      if (!savedSlug || !savedHotelId) return;
+
+      // Resolve hotel name from API to confirm it still exists
+      const res = await resolveHotel(savedSlug);
+      if (res.status === "success" && res.data) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setHotelSlugInput(savedSlug);
+        setResolvedHotelId(res.data.hotelId);
+        setResolvedHotelName(res.data.hotelName);
+        setHotelResolved(true);
+      }
+    })();
+  }, []);
+
   // -- Resolve hotel slug -----------------------------------------------------
   const handleResolveHotel = useCallback(async () => {
     const slug = hotelSlugInput.trim().toLowerCase();
@@ -83,6 +130,12 @@ function LoginScreenInner() {
       setResolvedHotelId(res.data.hotelId);
       setResolvedHotelName(res.data.hotelName);
       setHotelResolved(true);
+      // Persist for future sessions
+      await Promise.all([
+        setHotelSlug(slug),
+        setHotelId(res.data.hotelId),
+        setHotelOnboarded(),
+      ]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } else {
       setHotelError(t(lang, "welcome.hotelNotFound"));
@@ -95,7 +148,12 @@ function LoginScreenInner() {
     setResolvingHotel(false);
   }, [hotelSlugInput, lang]);
 
-  // -- Shared login success handler (defined first -- used by PIN + credentials)
+  // -- Navigate to dashboard after biometric enrollment decision ----------------
+  const navigateToDashboard = useCallback(() => {
+    router.replace("/(employee)/dashboard");
+  }, []);
+
+  // -- Shared login success handler -------------------------------------------
   const handleLoginSuccess = useCallback(
     async (data: {
       token: string;
@@ -106,6 +164,7 @@ function LoginScreenInner() {
         setEmployeeToken(data.token),
         setHotelSlug(slug),
         setHotelId(resolvedHotelId!),
+        setHotelOnboarded(),
       ]);
 
       setEmployee({
@@ -122,10 +181,61 @@ function LoginScreenInner() {
       setAuthenticated(true);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.replace("/(employee)/dashboard");
+
+      // Check biometric availability for enrollment (only for PIN login -- credentials login has no PIN to cache)
+      if (tab === "pin" && pin) {
+        const alreadyEnrolled = await isBiometricEnrolled();
+        if (!alreadyEnrolled) {
+          const bio = await checkBiometricAvailability();
+          if (bio.available) {
+            pendingLoginDataRef.current = {
+              login: loginInput.trim(),
+              pin,
+              token: data.token,
+              employee: data.employee,
+            };
+            setBiometricType(bio.type);
+            setShowBiometricModal(true);
+            return; // Don't navigate yet -- modal will handle it
+          }
+        }
+      }
+
+      navigateToDashboard();
     },
-    [hotelSlugInput, resolvedHotelId, resolvedHotelName, setEmployee, setHotel, setAuthenticated],
+    [
+      hotelSlugInput, resolvedHotelId, resolvedHotelName,
+      setEmployee, setHotel, setAuthenticated,
+      tab, loginInput, pin, username, navigateToDashboard,
+    ],
   );
+
+  // -- Biometric enrollment handlers ------------------------------------------
+  const handleBiometricAccept = useCallback(async () => {
+    const data = pendingLoginDataRef.current;
+    if (!data) {
+      setShowBiometricModal(false);
+      navigateToDashboard();
+      return;
+    }
+
+    const success = await authenticateWithBiometric(t(lang, "auth.biometricPrompt"));
+    if (success && data.login && data.pin) {
+      await setBiometricCredentials(data.login, data.pin);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+
+    pendingLoginDataRef.current = null;
+    setShowBiometricModal(false);
+    navigateToDashboard();
+  }, [lang, navigateToDashboard]);
+
+  const handleBiometricDecline = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    pendingLoginDataRef.current = null;
+    setShowBiometricModal(false);
+    navigateToDashboard();
+  }, [navigateToDashboard]);
 
   // -- PIN login --------------------------------------------------------------
   const handlePinLogin = useCallback(
@@ -210,6 +320,7 @@ function LoginScreenInner() {
     setHotelResolved(false);
     setResolvedHotelId(null);
     setResolvedHotelName(null);
+    setHotelSlugInput("");
     setError(null);
     setPin("");
   };
@@ -298,22 +409,24 @@ function LoginScreenInner() {
               </View>
             ) : (
               <>
-                {/* Hotel Badge (resolved) */}
+                {/* Hotel Badge (resolved) with "Change hotel" */}
                 <Pressable
                   style={styles.hotelBadge}
                   onPress={handleChangeHotel}
                   accessibilityRole="button"
-                  accessibilityLabel={resolvedHotelName ?? ""}
+                  accessibilityLabel={t(lang, "auth.changeHotel")}
                 >
                   <Icon name="business" size={18} color={emp.success} />
                   <Text style={styles.hotelBadgeText} numberOfLines={1}>
                     {resolvedHotelName}
                   </Text>
-                  <Icon name="chevron-down" size={16} color={emp.textMuted} />
+                  <Text style={styles.changeHotelLink}>
+                    {t(lang, "auth.changeHotel")}
+                  </Text>
                 </Pressable>
 
                 {/* Tab Switcher */}
-                <View style={styles.tabRow}>
+                <View style={styles.tabRow} accessibilityRole="tablist">
                   <Pressable
                     style={[styles.tabBtn, tab === "pin" && styles.tabBtnActive]}
                     onPress={() => {
@@ -382,6 +495,7 @@ function LoginScreenInner() {
                     <Pressable
                       style={styles.pinDotsRow}
                       onPress={() => pinInputRef.current?.focus()}
+                      accessibilityRole="button"
                       accessibilityLabel={t(lang, "auth.enterPin")}
                     >
                       {Array.from({ length: PIN_LENGTH }).map((_, i) => (
@@ -493,6 +607,49 @@ function LoginScreenInner() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Biometric Enrollment Modal */}
+      <Modal
+        visible={showBiometricModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleBiometricDecline}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard} accessibilityViewIsModal={true}>
+            <View style={styles.modalIconCircle}>
+              <Icon name="shield-checkmark-outline" size={40} color={emp.primary} />
+            </View>
+            <Text style={styles.modalTitle}>
+              {t(lang, "auth.biometricEnroll")}
+            </Text>
+            <Text style={styles.modalDesc}>
+              {t(lang, "auth.biometricEnrollDesc")}
+            </Text>
+            <Pressable
+              style={styles.modalPrimaryBtn}
+              onPress={handleBiometricAccept}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "auth.biometricAccept")}
+            >
+              <Icon name="finger-print-outline" size={22} color={emp.white} />
+              <Text style={styles.modalPrimaryBtnText}>
+                {t(lang, "auth.biometricAccept")}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.modalSecondaryBtn}
+              onPress={handleBiometricDecline}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "auth.biometricDecline")}
+            >
+              <Text style={styles.modalSecondaryBtnText}>
+                {t(lang, "auth.biometricDecline")}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -581,6 +738,11 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: emp.success,
     lineHeight: 21,
+  },
+  changeHotelLink: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: emp.textMuted,
   },
 
   // -- Tab Switcher -------------------------------------------------------------
@@ -705,6 +867,85 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: emp.textMuted,
     lineHeight: 18,
+  },
+
+  // -- Biometric Enrollment Modal -----------------------------------------------
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: emp.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing["2xl"],
+  },
+  modalCard: {
+    backgroundColor: emp.card,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: emp.cardBorder,
+    padding: spacing["2xl"],
+    alignItems: "center",
+    gap: spacing.lg,
+    width: "100%",
+    maxWidth: 360,
+    ...shadow.lg,
+  },
+  modalIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: emp.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    fontFamily: "Inter_700Bold",
+    color: emp.text,
+    textAlign: "center",
+  },
+  modalDesc: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: emp.textSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  modalPrimaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: emp.primary,
+    borderRadius: radius["2xl"],
+    paddingVertical: spacing.lg,
+    width: "100%",
+    minHeight: TOUCH_TARGET + 8,
+    marginTop: spacing.sm,
+    ...Platform.select({
+      ios: {
+        shadowColor: emp.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+      },
+      android: { elevation: 6 },
+    }),
+  },
+  modalPrimaryBtnText: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_700Bold",
+    color: emp.white,
+  },
+  modalSecondaryBtn: {
+    paddingVertical: spacing.md,
+    minHeight: TOUCH_TARGET,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalSecondaryBtnText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_500Medium",
+    color: emp.textMuted,
   },
 });
 
