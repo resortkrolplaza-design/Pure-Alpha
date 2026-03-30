@@ -3,7 +3,7 @@
 // Matches Group Portal pin.tsx pattern with employee identity (blue-800)
 // =============================================================================
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -18,7 +18,7 @@ import {
   UIManager,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { router } from "expo-router";
+import { router, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { emp, fontSize, radius, spacing, shadow, TOUCH_TARGET } from "@/lib/tokens";
@@ -195,8 +195,14 @@ function LoginScreenInner() {
     setLoading(false);
   }, [resolvedHotelId, username, password, lang, handleLoginSuccess]);
 
+  const navigation = useNavigation();
+  const canGoBack = navigation.canGoBack();
   const handleBack = () => {
-    router.back();
+    if (canGoBack) {
+      router.back();
+    } else {
+      router.replace("/(auth)/welcome");
+    }
   };
 
   const handleChangeHotel = () => {
