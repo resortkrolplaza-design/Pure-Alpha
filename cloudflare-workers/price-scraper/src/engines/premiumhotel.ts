@@ -382,10 +382,10 @@ export async function scrapePremiumHotelPrices(
   let tenant = premiumHotelTenant || "";
   let context = premiumHotelContext || null;
 
-  if (!tenant) {
+  if (!tenant || !context) {
     const parsed = parsePremiumHotelId(params.hotelUrl);
     if (parsed) {
-      tenant = parsed.tenant;
+      tenant = tenant || parsed.tenant;
       context = context || parsed.context;
     }
   }
@@ -491,10 +491,10 @@ export async function scrapePremiumHotelFull(
   let tenant = premiumHotelTenant || "";
   let context = premiumHotelContext || null;
 
-  if (!tenant) {
+  if (!tenant || !context) {
     const parsed = parsePremiumHotelId(params.hotelUrl);
     if (parsed) {
-      tenant = parsed.tenant;
+      tenant = tenant || parsed.tenant;
       context = context || parsed.context;
     }
   }
@@ -692,10 +692,10 @@ export async function scrapePremiumHotelCalendar(
   let tenant = premiumHotelTenant || "";
   let context = premiumHotelContext || null;
 
-  if (!tenant) {
+  if (!tenant || !context) {
     const parsed = parsePremiumHotelId(params.hotelUrl);
     if (parsed) {
-      tenant = parsed.tenant;
+      tenant = tenant || parsed.tenant;
       context = context || parsed.context;
     }
   }
