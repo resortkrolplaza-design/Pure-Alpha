@@ -198,7 +198,7 @@ export function isTokenExpired(token: string): boolean {
     const parts = token.split(".");
     if (parts.length < 2) return true;
     const payload = JSON.parse(decodeBase64(parts[1]));
-    if (typeof payload.exp !== "number") return false; // no exp claim, treat as valid
+    if (typeof payload.exp !== "number") return true; // no exp claim, treat as expired (server should always include exp)
     return payload.exp * 1000 < Date.now();
   } catch {
     return true;

@@ -222,6 +222,7 @@ function LoginScreenInner() {
     const success = await authenticateWithBiometric(t(lang, "auth.biometricPrompt"));
     if (success && data.login && data.pin) {
       await setBiometricCredentials(data.login, data.pin);
+      useAppStore.getState().setBiometricEnrolled(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
 
