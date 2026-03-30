@@ -17,6 +17,7 @@ import {
   ScrollView,
   Platform,
   Alert,
+  ActionSheetIOS,
   ActivityIndicator,
   Switch,
   Share,
@@ -98,11 +99,28 @@ const EMPTY_FORM: GuestFormState = {
   marketingConsent: false,
 };
 
+// Default room types (fallback when API returns empty)
+const DEFAULT_ROOM_TYPES_PL = [
+  { id: "single", name: "Jednoosobowy" },
+  { id: "double", name: "Dwuosobowy" },
+  { id: "twin", name: "Twin" },
+  { id: "suite", name: "Suite" },
+  { id: "other", name: "Inny" },
+];
+const DEFAULT_ROOM_TYPES_EN = [
+  { id: "single", name: "Single" },
+  { id: "double", name: "Double" },
+  { id: "twin", name: "Twin" },
+  { id: "suite", name: "Suite" },
+  { id: "other", name: "Other" },
+];
+
 function GuestFormModal({
   visible,
   lang,
   editingGuest,
   isSaving,
+  roomTypes,
   onSubmit,
   onClose,
 }: {
@@ -110,6 +128,7 @@ function GuestFormModal({
   lang: "pl" | "en";
   editingGuest: GroupGuestData | null;
   isSaving: boolean;
+  roomTypes: { id: string; name: string }[];
   onSubmit: (form: GuestFormState) => void;
   onClose: () => void;
 }) {
@@ -121,7 +140,6 @@ function GuestFormModal({
   const phoneRef = useRef<TextInput>(null);
   const dietaryRef = useRef<TextInput>(null);
   const allergiesRef = useRef<TextInput>(null);
-  const roomPrefRef = useRef<TextInput>(null);
   const specialReqRef = useRef<TextInput>(null);
 
   // Reset form when modal opens/closes or editing guest changes
@@ -334,25 +352,56 @@ function GuestFormModal({
               placeholder={t(lang, "guests.allergies")}
               placeholderTextColor={group.textMuted}
               returnKeyType="next"
-              onSubmitEditing={() => roomPrefRef.current?.focus()}
+              onSubmitEditing={() => specialReqRef.current?.focus()}
               accessibilityLabel={t(lang, "guests.allergies")}
             />
           </View>
 
-          {/* Room preference (optional) */}
+          {/* Room preference (optional) -- picker from DB room types */}
           <View style={modalStyles.fieldGroup}>
             <Text style={modalStyles.fieldLabel}>{t(lang, "guests.roomPreference")}</Text>
-            <TextInput
-              ref={roomPrefRef}
-              style={modalStyles.input}
-              value={form.roomPreference}
-              onChangeText={(v) => setForm((f) => ({ ...f, roomPreference: v }))}
-              placeholder={t(lang, "guests.roomPreference")}
-              placeholderTextColor={group.textMuted}
-              returnKeyType="next"
-              onSubmitEditing={() => specialReqRef.current?.focus()}
+            <Pressable
+              style={modalStyles.pickerBtn}
+              onPress={() => {
+                const options = roomTypes.map((rt) => rt.name);
+                options.push(t(lang, "common.cancel"));
+                if (Platform.OS === "ios") {
+                  ActionSheetIOS.showActionSheetWithOptions(
+                    {
+                      options,
+                      cancelButtonIndex: options.length - 1,
+                      title: t(lang, "guests.roomPreference"),
+                    },
+                    (idx) => {
+                      if (idx < roomTypes.length) {
+                        setForm((f) => ({ ...f, roomPreference: roomTypes[idx].id }));
+                      }
+                    },
+                  );
+                } else {
+                  Alert.alert(
+                    t(lang, "guests.roomPreference"),
+                    undefined,
+                    [
+                      ...roomTypes.map((rt) => ({
+                        text: rt.name,
+                        onPress: () => setForm((f) => ({ ...f, roomPreference: rt.id })),
+                      })),
+                      { text: t(lang, "common.cancel"), style: "cancel" as const },
+                    ],
+                  );
+                }
+              }}
+              accessibilityRole="button"
               accessibilityLabel={t(lang, "guests.roomPreference")}
-            />
+            >
+              <Text style={[modalStyles.pickerText, !form.roomPreference && { color: group.textMuted }]}>
+                {form.roomPreference
+                  ? roomTypes.find((rt) => rt.id === form.roomPreference)?.name ?? form.roomPreference
+                  : t(lang, "guests.roomSelect")}
+              </Text>
+              <Icon name="chevron-down" size={18} color={group.textMuted} />
+            </Pressable>
           </View>
 
           {/* Special requests (optional, multiline) */}
@@ -461,6 +510,24 @@ const modalStyles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: group.text,
     minHeight: TOUCH_TARGET,
+  },
+  pickerBtn: {
+    backgroundColor: group.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    minHeight: TOUCH_TARGET,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  pickerText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: group.text,
+    flex: 1,
   },
   inputError: {
     borderColor: semantic.danger,
@@ -970,6 +1037,19 @@ export function GuestsContent({ embedded }: { embedded?: boolean } = {}) {
     enabled: !!trackingId,
   });
 
+  // Room types from DB (SSOT -- same as web portal)
+  const { data: roomTypes } = useQuery({
+    queryKey: ["room-types", trackingId, lang],
+    queryFn: async () => {
+      if (!trackingId) return lang === "en" ? DEFAULT_ROOM_TYPES_EN : DEFAULT_ROOM_TYPES_PL;
+      const res = await groupFetch<{ id: string; name: string }[]>(trackingId, `/room-types?lang=${lang}`);
+      if (res.status === "success" && res.data && res.data.length > 0) return res.data;
+      return lang === "en" ? DEFAULT_ROOM_TYPES_EN : DEFAULT_ROOM_TYPES_PL;
+    },
+    enabled: !!trackingId,
+    staleTime: 300_000,
+  });
+
   const [refreshing, setRefreshing] = useState(false);
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -1452,6 +1532,7 @@ export function GuestsContent({ embedded }: { embedded?: boolean } = {}) {
         lang={lang}
         editingGuest={editingGuest}
         isSaving={isSaving}
+        roomTypes={roomTypes ?? (lang === "en" ? DEFAULT_ROOM_TYPES_EN : DEFAULT_ROOM_TYPES_PL)}
         onSubmit={handleFormSubmit}
         onClose={handleCloseModal}
       />

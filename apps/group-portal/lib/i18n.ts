@@ -334,6 +334,7 @@ const pl: Record<string, string> = {
 
   // ── Guest Form (extended fields) ----
   "guests.roomPreference": "Preferencje pokoju",
+  "guests.roomSelect": "Wybierz typ pokoju",
   "guests.specialRequests": "Specjalne zyczenia",
   "guests.marketingConsent": "Zgoda na komunikacje marketingowa",
 
@@ -731,6 +732,7 @@ const en: Record<string, string> = {
 
   // ── Guest Form (extended fields) ----
   "guests.roomPreference": "Room preference",
+  "guests.roomSelect": "Select room type",
   "guests.specialRequests": "Special requests",
   "guests.marketingConsent": "Marketing consent",
 
