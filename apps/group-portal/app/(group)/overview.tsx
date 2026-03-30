@@ -989,9 +989,9 @@ function OverviewScreenInner() {
         )}
 
         {/* ================================================================= */}
-        {/* E. QUICK ACTIONS (colored grid)                                   */}
+        {/* E. QUICK ACTIONS (colored grid, gated by timelineEnabled)        */}
         {/* ================================================================= */}
-        {!isLoading && !isError && initData && (
+        {!isLoading && !isError && initData && portal?.timelineEnabled !== false && (
           <Animated.View style={quickActionsSlide}>
             <View style={styles.quickActionsGrid}>
               {QUICK_ACTIONS.filter((action) => {
