@@ -314,8 +314,8 @@ function mapOffers(
         name: li.name,
         description: desc ? stripHtml(desc) : undefined,
         imageUrl: imgs?.[0]?.url || undefined,
-        validFrom: li.availabilityFrom || undefined,
-        validTo: li.availabilityTo || undefined,
+        validFrom: li.availabilityFrom?.split("T")[0] || undefined,
+        validTo: li.availabilityTo?.split("T")[0] || undefined,
         minNights: li.minNights ?? undefined,
         minPrice: li.priceFrom ?? undefined,
       };
