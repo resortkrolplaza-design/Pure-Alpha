@@ -1,15 +1,11 @@
 // =============================================================================
-// Group Portal -- Tab 2: "Wydarzenie" (Event) Composite Screen
-// Combines 5 content sections into a single scrollable view:
-//   1. Agenda (program timeline)
-//   2. Gallery (horizontal strip + fullscreen viewer)
-//   3. Services (extra hotel services with prices)
-//   4. Attractions (nearby places with map links)
-//   5. FAQ (accordion)
+// Group Portal -- Tab 2: "Odkryj" (Discover) -- Segment Control Screen
+// 4 segments via SegmentControl: Gallery, Services, Attractions, FAQ
+// (Agenda moved to preview in overview + dedicated /agenda screen)
 //
 // Data from shared react-query cache ["portal-init", trackingId].
-// Feature flags gate each section independently.
-// Accepts `scrollTo` route param to auto-scroll to a section on mount.
+// Feature flags gate each segment independently.
+// Accepts `scrollTo` route param to auto-select a segment on mount.
 // =============================================================================
 
 import { useState, useMemo, useCallback, useRef, useEffect } from "react";
@@ -31,6 +27,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, router } from "expo-router";
+import * as Haptics from "expo-haptics";
 import {
   group,
   fontSize,
@@ -68,15 +65,8 @@ async function safeOpenURL(url: string) {
   } catch { /* Expo Go dev mode */ }
 }
 
+// SectionId kept for backward-compat with scrollTo route param (e.g. from overview quick links)
 type SectionId = "agenda" | "gallery" | "services" | "attractions" | "faq";
-
-const SECTION_IDS: SectionId[] = [
-  "agenda",
-  "gallery",
-  "services",
-  "attractions",
-  "faq",
-];
 
 // =============================================================================
 // Gallery types + layout
@@ -945,6 +935,70 @@ function FaqSection({
 }
 
 // =============================================================================
+// Segment Control (4 tabs: Gallery, Services, Attractions, FAQ)
+// Pattern matches rsvp.tsx SegmentControl
+// =============================================================================
+
+type SegmentId = "gallery" | "services" | "attractions" | "faq";
+
+const SEGMENT_KEYS: readonly SegmentId[] = [
+  "gallery",
+  "services",
+  "attractions",
+  "faq",
+] as const;
+
+const SEGMENT_I18N: Record<SegmentId, string> = {
+  gallery: "event.segment.gallery",
+  services: "event.segment.services",
+  attractions: "event.segment.attractions",
+  faq: "event.segment.faq",
+};
+
+function SegmentControl({
+  segments,
+  activeIndex,
+  onSelect,
+}: {
+  segments: readonly string[];
+  activeIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  return (
+    <View style={styles.segmentRow} accessibilityRole="tablist">
+      {segments.map((label, i) => {
+        const isActive = i === activeIndex;
+        return (
+          <Pressable
+            key={label}
+            style={[styles.segmentItem, isActive && styles.segmentItemActive]}
+            onPress={() => {
+              if (!isActive) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onSelect(i);
+              }
+            }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={label}
+          >
+            <Text
+              style={[
+                styles.segmentText,
+                isActive && styles.segmentTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              {label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// =============================================================================
 // Main Screen Content
 // =============================================================================
 
@@ -953,17 +1007,6 @@ function EventScreenContent() {
   const lang = useAppStore((s) => s.lang);
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
   const { scrollTo } = useLocalSearchParams<{ scrollTo?: SectionId }>();
-
-  const scrollRef = useRef<ScrollView>(null);
-
-  // Track Y offsets for each section via onLayout
-  const sectionOffsets = useRef<Record<SectionId, number>>({
-    agenda: 0,
-    gallery: 0,
-    services: 0,
-    attractions: 0,
-    faq: 0,
-  });
 
   // Read from shared portal-init cache
   const { data: initData } = useQuery({
@@ -979,67 +1022,60 @@ function EventScreenContent() {
 
   const portal = initData?.portal ?? null;
 
-  // Feature flags
-  const agendaEnabled = portal?.agendaEnabled ?? false;
+  // Feature flags (only for the 4 segment sections)
   const galleryEnabled = portal?.galleryEnabled ?? false;
   const servicesEnabled = portal?.servicesEnabled ?? false;
   const attractionsEnabled = portal?.attractionsEnabled ?? false;
   const faqEnabled = portal?.faqEnabled ?? false;
 
   // Data
-  const agendaItems = initData?.agendaItems ?? [];
   const gallery = (initData?.gallery ?? []) as GalleryItem[];
   const services = initData?.services ?? [];
   const attractions = initData?.attractions ?? [];
   const faq = initData?.faq ?? [];
   const hotelAddress = initData?.hotel?.address ?? null;
 
-  // Determine which sections are visible (ordered)
-  const visibleSections = useMemo(() => {
-    const sections: SectionId[] = [];
-    if (agendaEnabled) sections.push("agenda");
-    if (galleryEnabled) sections.push("gallery");
-    if (servicesEnabled) sections.push("services");
-    if (attractionsEnabled) sections.push("attractions");
-    if (faqEnabled) sections.push("faq");
-    return sections;
-  }, [agendaEnabled, galleryEnabled, servicesEnabled, attractionsEnabled, faqEnabled]);
+  // Build visible segments from feature flags
+  const visibleSegments = useMemo(() => {
+    const segs: SegmentId[] = [];
+    if (galleryEnabled) segs.push("gallery");
+    if (servicesEnabled) segs.push("services");
+    if (attractionsEnabled) segs.push("attractions");
+    if (faqEnabled) segs.push("faq");
+    return segs;
+  }, [galleryEnabled, servicesEnabled, attractionsEnabled, faqEnabled]);
 
-  // Auto-scroll to section on mount via route param
-  const hasScrolled = useRef(false);
-  useEffect(() => {
-    if (
-      scrollTo &&
-      SECTION_IDS.includes(scrollTo) &&
-      visibleSections.includes(scrollTo) &&
-      !hasScrolled.current
-    ) {
-      // Delay to allow layout to complete
-      const timer = setTimeout(() => {
-        const offset = sectionOffsets.current[scrollTo];
-        if (offset > 0) {
-          hasScrolled.current = true; // Only mark after confirmed valid offset
-          scrollRef.current?.scrollTo({ y: offset, animated: true });
-        }
-      }, 600);
-      return () => clearTimeout(timer);
-    }
-  }, [scrollTo, visibleSections]);
-
-  // Track section layout positions
-  const handleSectionLayout = useCallback(
-    (sectionId: SectionId, y: number) => {
-      sectionOffsets.current[sectionId] = y;
-    },
-    [],
+  const segmentLabels = useMemo(
+    () => visibleSegments.map((id) => t(lang, SEGMENT_I18N[id])),
+    [visibleSegments, lang],
   );
 
-  // If no sections are enabled, show nothing
-  if (visibleSections.length === 0) {
+  // Resolve initial segment from scrollTo route param
+  const initialIndex = useMemo(() => {
+    if (scrollTo && SEGMENT_KEYS.includes(scrollTo as SegmentId)) {
+      const idx = visibleSegments.indexOf(scrollTo as SegmentId);
+      if (idx >= 0) return idx;
+    }
+    return 0;
+  }, [scrollTo, visibleSegments]);
+
+  const [activeSegmentIndex, setActiveSegmentIndex] = useState(initialIndex);
+
+  // Ensure activeSegmentIndex stays in bounds when visibleSegments changes
+  useEffect(() => {
+    if (activeSegmentIndex >= visibleSegments.length && visibleSegments.length > 0) {
+      setActiveSegmentIndex(0);
+    }
+  }, [activeSegmentIndex, visibleSegments.length]);
+
+  const activeSegmentId = visibleSegments[activeSegmentIndex] ?? null;
+
+  // If no segments are enabled, show empty state
+  if (visibleSegments.length === 0) {
     return (
       <View style={[styles.container, { paddingTop: insets.top }]}>
         <View style={styles.emptyStateFullScreen}>
-          <Icon name="calendar-outline" size={48} color={group.textMuted} />
+          <Icon name="compass-outline" size={48} color={group.textMuted} />
           <Text style={styles.emptyText}>{t(lang, "common.noData")}</Text>
         </View>
       </View>
@@ -1048,116 +1084,58 @@ function EventScreenContent() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* Segment Control (fixed at top) */}
+      <View style={styles.segmentWrapper}>
+        <SegmentControl
+          segments={segmentLabels}
+          activeIndex={activeSegmentIndex}
+          onSelect={setActiveSegmentIndex}
+        />
+      </View>
+
+      {/* Scrollable content for the active segment */}
       <ScrollView
-        ref={scrollRef}
         contentContainerStyle={[
           styles.scroll,
           { paddingBottom: insets.bottom + 100 },
         ]}
         showsVerticalScrollIndicator={false}
+        key={activeSegmentId}
       >
-        {/* ---- Agenda ---- */}
-        {agendaEnabled && (
-          <View
-            onLayout={(e) =>
-              handleSectionLayout("agenda", e.nativeEvent.layout.y)
-            }
-          >
-            <ErrorBoundary lang={lang}>
-              <SectionHeader
-                icon="calendar-outline"
-                title={t(lang, "group.agenda.title")}
-                isFirst={visibleSections[0] === "agenda"}
-              />
-              <View style={styles.sectionContent}>
-                <AgendaSection agendaItems={agendaItems} lang={lang} />
-              </View>
-            </ErrorBoundary>
-          </View>
+        {activeSegmentId === "gallery" && (
+          <ErrorBoundary lang={lang}>
+            <View style={styles.sectionContentNoHPad}>
+              <GallerySection gallery={gallery} lang={lang} />
+            </View>
+          </ErrorBoundary>
         )}
 
-        {/* ---- Gallery ---- */}
-        {galleryEnabled && (
-          <View
-            onLayout={(e) =>
-              handleSectionLayout("gallery", e.nativeEvent.layout.y)
-            }
-          >
-            <ErrorBoundary lang={lang}>
-              <SectionHeader
-                icon="images-outline"
-                title={t(lang, "gallery.hotelTitle")}
-                isFirst={visibleSections[0] === "gallery"}
-              />
-              <View style={styles.sectionContentNoHPad}>
-                <GallerySection gallery={gallery} lang={lang} />
-              </View>
-            </ErrorBoundary>
-          </View>
+        {activeSegmentId === "services" && (
+          <ErrorBoundary lang={lang}>
+            <View style={styles.sectionContent}>
+              <ServicesSection services={services} lang={lang} />
+            </View>
+          </ErrorBoundary>
         )}
 
-        {/* ---- Services ---- */}
-        {servicesEnabled && (
-          <View
-            onLayout={(e) =>
-              handleSectionLayout("services", e.nativeEvent.layout.y)
-            }
-          >
-            <ErrorBoundary lang={lang}>
-              <SectionHeader
-                icon="pricetag-outline"
-                title={t(lang, "overview.services")}
-                isFirst={visibleSections[0] === "services"}
+        {activeSegmentId === "attractions" && (
+          <ErrorBoundary lang={lang}>
+            <View style={styles.sectionContent}>
+              <AttractionsSection
+                attractions={attractions}
+                hotelAddress={hotelAddress}
+                lang={lang}
               />
-              <View style={styles.sectionContent}>
-                <ServicesSection services={services} lang={lang} />
-              </View>
-            </ErrorBoundary>
-          </View>
+            </View>
+          </ErrorBoundary>
         )}
 
-        {/* ---- Attractions ---- */}
-        {attractionsEnabled && (
-          <View
-            onLayout={(e) =>
-              handleSectionLayout("attractions", e.nativeEvent.layout.y)
-            }
-          >
-            <ErrorBoundary lang={lang}>
-              <SectionHeader
-                icon="compass-outline"
-                title={t(lang, "overview.attractions")}
-                isFirst={visibleSections[0] === "attractions"}
-              />
-              <View style={styles.sectionContent}>
-                <AttractionsSection
-                  attractions={attractions}
-                  hotelAddress={hotelAddress}
-                  lang={lang}
-                />
-              </View>
-            </ErrorBoundary>
-          </View>
-        )}
-
-        {/* ---- FAQ ---- */}
-        {faqEnabled && (
-          <View
-            onLayout={(e) =>
-              handleSectionLayout("faq", e.nativeEvent.layout.y)
-            }
-          >
-            <ErrorBoundary lang={lang}>
-              <SectionHeader
-                icon="help-circle-outline"
-                title={t(lang, "overview.faq.title")}
-                isFirst={visibleSections[0] === "faq"}
-              />
-              <View style={styles.sectionContent}>
-                <FaqSection faq={faq} lang={lang} />
-              </View>
-            </ErrorBoundary>
-          </View>
+        {activeSegmentId === "faq" && (
+          <ErrorBoundary lang={lang}>
+            <View style={styles.sectionContent}>
+              <FaqSection faq={faq} lang={lang} />
+            </View>
+          </ErrorBoundary>
         )}
       </ScrollView>
     </View>
@@ -1188,6 +1166,41 @@ const styles = StyleSheet.create({
   },
   scroll: {
     paddingTop: spacing.md,
+  },
+
+  // ── Segment Control ──
+  segmentWrapper: {
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+  },
+  segmentRow: {
+    flexDirection: "row",
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+    backgroundColor: group.inputBg,
+    borderRadius: radius.xl,
+    padding: 3,
+  },
+  segmentItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing.sm,
+    borderRadius: radius.lg,
+    minHeight: TOUCH_TARGET,
+  },
+  segmentItemActive: {
+    backgroundColor: group.white,
+    ...shadow.sm,
+  },
+  segmentText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.textMuted,
+  },
+  segmentTextActive: {
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
   },
 
   // ── Section Header ──

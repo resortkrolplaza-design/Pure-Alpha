@@ -28,8 +28,6 @@ import * as Haptics from "expo-haptics";
 import { getDeviceId } from "@/lib/device-id";
 import {
   group,
-  quickActionColors,
-  timeline,
   semantic,
   fontSize,
   radius,
@@ -49,7 +47,7 @@ import { fetchPortalInit, fetchPolls, votePoll, groupFetch, submitRsvp } from "@
 import type { RsvpPayload } from "@/lib/types";
 import { usePushNotifications } from "@/lib/usePushNotifications";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
-import type { GroupAnnouncementData, PortalInitData, PollData } from "@/lib/types";
+import type { GroupAnnouncementData, PortalInitData, PollData, AgendaItemData } from "@/lib/types";
 
 // DeviceId: imported from @/lib/device-id (persisted, prevents vote stuffing)
 
@@ -152,73 +150,8 @@ function socialIcon(platform: string): IconName {
 }
 
 // =============================================================================
-// QUICK ACTIONS config
-// =============================================================================
-
-const QUICK_ACTIONS: Array<{
-  labelKey: string;
-  icon: IconName;
-  tab: string;
-  params?: Record<string, string>;
-  bg: string;
-  color: string;
-  flag?: string;
-  organizerOnly?: boolean;
-}> = [
-  { labelKey: "quickAction.rsvp", icon: "checkmark-circle", tab: "rsvp", bg: quickActionColors.rsvp.bg, color: quickActionColors.rsvp.icon },
-  { labelKey: "group.quickGuests", icon: "people", tab: "rsvp", params: { section: "guests" }, bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon, flag: "guestListEnabled", organizerOnly: true },
-  { labelKey: "quickAction.agenda", icon: "calendar", tab: "event", params: { scrollTo: "agenda" }, bg: quickActionColors.agenda.bg, color: quickActionColors.agenda.icon, flag: "agendaEnabled" },
-  { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: quickActionColors.messages.bg, color: quickActionColors.messages.icon, flag: "messagingEnabled" },
-  { labelKey: "group.quickDocuments", icon: "document-text", tab: "rsvp", params: { section: "documents" }, bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon, flag: "documentsEnabled", organizerOnly: true },
-  { labelKey: "group.quickPhotos", icon: "camera", tab: "photos", bg: quickActionColors.photos.bg, color: quickActionColors.photos.icon, flag: "photoWallEnabled" },
-  { labelKey: "quickAction.gallery", icon: "images", tab: "event", params: { scrollTo: "gallery" }, bg: quickActionColors.gallery.bg, color: quickActionColors.gallery.icon, flag: "galleryEnabled" },
-  { labelKey: "quickAction.services", icon: "pricetag", tab: "event", params: { scrollTo: "services" }, bg: quickActionColors.services.bg, color: quickActionColors.services.icon, flag: "servicesEnabled" },
-  { labelKey: "quickAction.attractions", icon: "compass", tab: "event", params: { scrollTo: "attractions" }, bg: quickActionColors.attractions.bg, color: quickActionColors.attractions.icon, flag: "attractionsEnabled" },
-  { labelKey: "quickAction.faq", icon: "help-circle", tab: "event", params: { scrollTo: "faq" }, bg: quickActionColors.faq.bg, color: quickActionColors.faq.icon, flag: "faqEnabled" },
-  { labelKey: "quickAction.polls", icon: "bar-chart", tab: "messages", params: { tab: "polls" }, bg: quickActionColors.polls.bg, color: quickActionColors.polls.icon, flag: "pollsEnabled" },
-];
-
-// =============================================================================
 // Sub-components
 // =============================================================================
-
-// -- Quick Action Circle (colored icon in grid) --------------------------------
-
-function QuickActionCircle({
-  label,
-  iconName,
-  bg,
-  color,
-  onPress,
-}: {
-  label: string;
-  iconName: IconName;
-  bg: string;
-  color: string;
-  onPress: () => void;
-}) {
-  const { scaleStyle, onPressIn, onPressOut } = useScalePress(0.92);
-
-  return (
-    <Pressable
-      onPress={onPress}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={styles.quickActionItem}
-    >
-      <Animated.View style={scaleStyle}>
-        <View style={[styles.quickActionCircle, { backgroundColor: bg }]}>
-          <Icon name={iconName} size={24} color={color} />
-        </View>
-        <Text style={styles.quickActionLabel} numberOfLines={1}>
-          {label}
-        </Text>
-      </Animated.View>
-    </Pressable>
-  );
-}
 
 // -- Announcement Card --------------------------------------------------------
 
@@ -257,91 +190,6 @@ function AnnouncementCard({
         </View>
       </View>
     </Animated.View>
-  );
-}
-
-// -- Timeline Stepper (horizontal) --------------------------------------------
-
-function TimelineStepper({
-  checkpoints,
-  lang,
-}: {
-  checkpoints: PortalInitData["portal"]["timelineCheckpoints"];
-  lang: "pl" | "en";
-}) {
-  if (!checkpoints.length) return null;
-
-  // Find the last completed step index
-  const lastCompleteIdx = checkpoints.reduce(
-    (acc, cp, idx) => (cp.isComplete ? idx : acc),
-    -1,
-  );
-  // Current step is the first incomplete one (or last if all complete)
-  const currentIdx = lastCompleteIdx + 1 < checkpoints.length ? lastCompleteIdx + 1 : lastCompleteIdx;
-
-  return (
-    <View style={styles.stepperContainer}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.stepperScroll}
-      >
-        {checkpoints.map((cp, idx) => {
-          const isComplete = cp.isComplete === true;
-          const isCurrent = idx === currentIdx && !isComplete;
-          const isFuture = !isComplete && !isCurrent;
-          const label = lang === "en" && cp.labelEn ? cp.labelEn : cp.label;
-
-          return (
-            <View
-              key={idx}
-              style={styles.stepperStep}
-              accessibilityLabel={`${label}${cp.date ? `, ${formatDate(cp.date, lang)}` : ""}${isComplete ? ` (${t(lang, "overview.timeline.complete")})` : isCurrent ? ` (${t(lang, "overview.timeline.current")})` : ""}`}
-            >
-              {/* Connecting line (before dot, except for first) */}
-              {idx > 0 && (
-                <View
-                  style={[
-                    styles.stepperLine,
-                    { backgroundColor: isComplete || isCurrent ? group.primary : timeline.inactive },
-                  ]}
-                />
-              )}
-              {/* Dot */}
-              <View
-                style={[
-                  styles.stepperDot,
-                  isComplete && styles.stepperDotComplete,
-                  isCurrent && styles.stepperDotCurrent,
-                  isFuture && styles.stepperDotFuture,
-                ]}
-              >
-                {isComplete ? (
-                  <Icon name="checkmark" size={12} color={group.white} />
-                ) : isCurrent ? (
-                  <View style={styles.stepperPulseInner} />
-                ) : null}
-              </View>
-              {/* Label + date */}
-              <Text
-                style={[
-                  styles.stepperLabel,
-                  (isComplete || isCurrent) && styles.stepperLabelActive,
-                ]}
-                numberOfLines={2}
-              >
-                {label}
-              </Text>
-              {cp.date && (
-                <Text style={styles.stepperDate}>
-                  {formatDate(cp.date, lang).replace(/\s\d{4}$/, "")}
-                </Text>
-              )}
-            </View>
-          );
-        })}
-      </ScrollView>
-    </View>
   );
 }
 
@@ -519,7 +367,6 @@ function OverviewScreenInner() {
   // Register push notifications on first load
   usePushNotifications();
 
-  const [ctaDismissed, setCtaDismissed] = useState(false);
   const [coverError, setCoverError] = useState(false);
   const announcementsRef = useRef<View>(null);
   const announcementsY = useRef(0);
@@ -546,7 +393,6 @@ function OverviewScreenInner() {
   // -- Entrance animations --
   const headerSlide = useSlideUp(0, 12);
   const heroSlide = useSlideUp(80, 16);
-  const quickActionsSlide = useSlideUp(160, 12);
 
   // -- Data fetching via /init --
   const {
@@ -607,28 +453,8 @@ function OverviewScreenInner() {
     setRefreshing(false);
   }, [refetch]);
 
-  const handleQuickAction = useCallback((tab: string, params?: Record<string, string>) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (params && Object.keys(params).length > 0) {
-      router.navigate({
-        pathname: `/(group)/${tab}` as any,
-        params,
-      });
-      return;
-    }
-    router.navigate(`/(group)/${tab}` as any);
-  }, []);
-
   // -- Cover image source --
   const hasCover = !!hotel?.coverImageUrl && !coverError;
-
-  // -- Show CTA? --
-  const showCta =
-    !isParticipant &&
-    !ctaDismissed &&
-    totalGuestCount === 0 &&
-    diffDays !== null &&
-    diffDays > 0;
 
   // -- TASK 1: Poll Popup (auto-show first active unvoted poll) --
   const [pollPopupVisible, setPollPopupVisible] = useState(false);
@@ -723,14 +549,6 @@ function OverviewScreenInner() {
       Alert.alert(t(lang, "common.error"), t(lang, "common.error"));
     },
   });
-
-  // -- Reminder banner (organizer only, event upcoming) --
-  const [reminderDismissed, setReminderDismissed] = useState(false);
-  const confirmedCount = useMemo(() => {
-    if (!initData) return 0;
-    return initData.totalGuestCount;
-  }, [initData]);
-  const showReminder = !isParticipant && !reminderDismissed && diffDays !== null && diffDays > 0 && diffDays <= 30;
 
   // -- Welcome popup (pinned announcement, once per portal) --
   const [welcomeVisible, setWelcomeVisible] = useState(false);
@@ -997,80 +815,9 @@ function OverviewScreenInner() {
           </View>
         )}
 
-        {/* ================================================================= */}
-        {/* C. TIMELINE STEPPER                                               */}
-        {/* ================================================================= */}
-        {!isLoading && portal?.timelineEnabled !== false && portal?.timelineCheckpoints && portal.timelineCheckpoints.length > 0 && (
-          <TimelineStepper checkpoints={portal.timelineCheckpoints} lang={lang} />
-        )}
+        {/* C/C2/C3 removed -- timeline, notes, reminder moved to dedicated screens */}
 
-        {/* ================================================================= */}
-        {/* C2. ORGANIZER NOTES                                               */}
-        {/* ================================================================= */}
-        {!isLoading && portal?.notes ? (
-          <View style={styles.notesCard}>
-            <View style={styles.notesHeader}>
-              <Icon name="document-text-outline" size={20} color={group.primary} />
-              <Text style={styles.notesTitle}>{t(lang, "notes.title")}</Text>
-            </View>
-            <Text style={styles.notesBody}>{portal.notes}</Text>
-          </View>
-        ) : null}
-
-        {/* ================================================================= */}
-        {/* C3. REMINDER BANNER (organizer, event upcoming)                   */}
-        {/* ================================================================= */}
-        {showReminder && (
-          <View style={styles.reminderBanner}>
-            <View style={styles.reminderContent}>
-              <Icon name="time-outline" size={18} color="#92400e" />
-              <Text style={styles.reminderText}>
-                {t(lang, "overview.reminder.prefix")} {diffDays} {t(lang, diffDays === 1 ? "overview.reminder.day" : "overview.reminder.days")} | {confirmedCount} {t(lang, "overview.guestsLabel")}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => setReminderDismissed(true)}
-              style={styles.reminderClose}
-              accessibilityRole="button"
-              accessibilityLabel={t(lang, "common.close")}
-            >
-              <Icon name="close" size={14} color="#92400e" />
-            </Pressable>
-          </View>
-        )}
-
-        {/* ================================================================= */}
-        {/* D. CTA ALERT                                                      */}
-        {/* ================================================================= */}
-        {showCta && (
-          <View style={styles.ctaContainer}>
-            <View style={styles.ctaContent}>
-              <Icon name="people-outline" size={20} color={group.white} />
-              <Text style={styles.ctaText}>
-                {t(lang, "overview.cta.addGuests")}
-              </Text>
-            </View>
-            <Pressable
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.navigate("/(group)/guests" as any);
-              }}
-              style={styles.ctaBtn}
-              accessibilityRole="button"
-              accessibilityLabel={t(lang, "overview.cta.addGuests")}
-            >
-              <Icon name="arrow-forward" size={18} color={group.primary} />
-            </Pressable>
-            <Pressable
-              onPress={() => setCtaDismissed(true)}
-              style={styles.ctaDismiss}
-              accessibilityRole="button"
-              accessibilityLabel={t(lang, "common.close")}
-            >
-              <Icon name="close" size={16} color="rgba(255,255,255,0.7)" />
-            </Pressable>
-          </View>
-        )}
+        {/* D removed -- CTA alert cut from overview */}
 
         {/* ================================================================= */}
         {/* D2. RSVP + SELF-REGISTER ACTION CARDS                            */}
@@ -1110,85 +857,9 @@ function OverviewScreenInner() {
           </View>
         )}
 
-        {/* ================================================================= */}
-        {/* D3. UPSELL BANNER                                                 */}
-        {/* ================================================================= */}
-        {!isLoading && portal?.upsellEnabled && portal?.servicesEnabled && services && services.length > 0 && (
-          <View style={styles.upsellSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t(lang, "upsell.title")}</Text>
-              {services.length > 2 && (
-                <Pressable
-                  style={styles.seeAllBtn}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    router.navigate("/(group)/services" as any);
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(lang, "upsell.seeAll")}
-                >
-                  <Text style={styles.seeAllText}>{t(lang, "upsell.seeAll")}</Text>
-                  <Icon name="chevron-forward" size={16} color={group.primary} />
-                </Pressable>
-              )}
-            </View>
-            {services.slice(0, 2).map((svc) => (
-              <View key={svc.id} style={styles.upsellCard}>
-                <View style={styles.upsellCardBody}>
-                  <Text style={styles.upsellCardName} numberOfLines={1}>{svc.name}</Text>
-                  {svc.description ? (
-                    <Text style={styles.upsellCardDesc} numberOfLines={2}>{svc.description}</Text>
-                  ) : null}
-                  {svc.price != null ? (
-                    <Text style={styles.upsellCardPrice}>
-                      {svc.price} {svc.currency ?? "PLN"}{svc.unit ? ` / ${svc.unit}` : ""}
-                    </Text>
-                  ) : null}
-                </View>
-                <Pressable
-                  style={styles.upsellAskBtn}
-                  onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    const prefill = t(lang, "upsell.askAbout").replace("{name}", svc.name);
-                    router.navigate({
-                      pathname: "/(group)/messages" as any,
-                      params: { prefill },
-                    });
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(lang, "upsell.askAbout").replace("{name}", svc.name)}
-                >
-                  <Icon name="chatbubble-outline" size={16} color={group.white} />
-                  <Text style={styles.upsellAskText}>{t(lang, "upsell.ask")}</Text>
-                </Pressable>
-              </View>
-            ))}
-          </View>
-        )}
+        {/* D3 removed -- upsell moved to event tab services */}
 
-        {/* ================================================================= */}
-        {/* E. QUICK ACTIONS (colored grid)                                   */}
-        {/* ================================================================= */}
-        {!isLoading && !isError && initData && (
-          <Animated.View style={quickActionsSlide}>
-            <View style={styles.quickActionsGrid}>
-              {QUICK_ACTIONS.filter((action) => {
-                if (action.organizerOnly && isParticipant) return false;
-                if (action.flag && portal && !(portal as Record<string, unknown>)[action.flag]) return false;
-                return true;
-              }).map((action) => (
-                <QuickActionCircle
-                  key={action.labelKey}
-                  label={t(lang, action.labelKey)}
-                  iconName={action.icon}
-                  bg={action.bg}
-                  color={action.color}
-                  onPress={() => handleQuickAction(action.tab, action.params)}
-                />
-              ))}
-            </View>
-          </Animated.View>
-        )}
+        {/* E removed -- quick actions cut (tabs provide navigation now) */}
 
         {/* ================================================================= */}
         {/* F. ANNOUNCEMENTS SECTION                                          */}
@@ -1237,8 +908,61 @@ function OverviewScreenInner() {
           </View>
         )}
 
-        {/* Sections G-K moved to dedicated screens (agenda, faq, gallery, services, attractions) */}
-        {/* Access via quick action grid above */}
+        {/* ================================================================= */}
+        {/* G. AGENDA PREVIEW (first 3 items + "Zobacz wszystkie" link)       */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && portal?.agendaEnabled && agenda && agenda.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                {t(lang, "overview.agendaPreview")}
+              </Text>
+              {agenda.length > 3 && (
+                <Pressable
+                  style={styles.seeAllBtn}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.navigate("/(group)/agenda" as any);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(lang, "group.seeAllAgenda")}
+                >
+                  <Text style={styles.seeAllText}>{t(lang, "group.seeAllAgenda")}</Text>
+                  <Icon name="chevron-forward" size={16} color={group.primary} />
+                </Pressable>
+              )}
+            </View>
+            <View style={styles.agendaPreviewList}>
+              {(agenda as AgendaItemData[]).slice(0, 3).map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={styles.agendaPreviewCard}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    router.navigate("/(group)/agenda" as any);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${item.title}, ${item.startTime ?? ""}`}
+                >
+                  <View style={styles.agendaPreviewTime}>
+                    <Icon name="time-outline" size={14} color={group.primary} />
+                    <Text style={styles.agendaPreviewTimeText}>
+                      {item.startTime ?? "\u2014"}
+                    </Text>
+                  </View>
+                  <Text style={styles.agendaPreviewTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  {item.location ? (
+                    <Text style={styles.agendaPreviewLocation} numberOfLines={1}>
+                      {item.location}
+                    </Text>
+                  ) : null}
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* ================================================================= */}
         {/* L. HOTEL CONTACT FOOTER                                           */}
@@ -1801,194 +1525,6 @@ const styles = StyleSheet.create({
     color: group.textSecondary,
   },
 
-  // ── Timeline Stepper ──
-  stepperContainer: {
-    paddingLeft: spacing["2xl"],
-  },
-  stepperScroll: {
-    flexDirection: "row",
-    gap: 0,
-    paddingRight: spacing["2xl"],
-  },
-  stepperStep: {
-    alignItems: "center",
-    width: 80,
-    position: "relative",
-  },
-  stepperLine: {
-    position: "absolute",
-    top: 11,
-    right: 40,
-    left: -40,
-    height: 2,
-    zIndex: -1,
-  },
-  stepperDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.xs,
-  },
-  stepperDotComplete: {
-    backgroundColor: group.primary,
-  },
-  stepperDotCurrent: {
-    backgroundColor: group.white,
-    borderWidth: 3,
-    borderColor: group.primary,
-  },
-  stepperDotFuture: {
-    backgroundColor: group.white,
-    borderWidth: 2,
-    borderColor: timeline.inactive,
-  },
-  stepperPulseInner: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: group.primary,
-  },
-  stepperLabel: {
-    fontSize: fontSize.xs,
-    fontFamily: "Inter_400Regular",
-    color: group.textMuted,
-    textAlign: "center",
-    lineHeight: 14,
-  },
-  stepperLabelActive: {
-    fontFamily: "Inter_600SemiBold",
-    color: group.text,
-  },
-  stepperDate: {
-    fontSize: fontSize.xs,
-    fontFamily: "Inter_400Regular",
-    color: group.textMuted,
-    textAlign: "center",
-    marginTop: spacing.xxs,
-  },
-
-  // ── CTA Alert ──
-  ctaContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: group.primary,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    marginHorizontal: spacing["2xl"],
-    ...shadow.md,
-  },
-  ctaContent: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  ctaText: {
-    fontSize: fontSize.sm,
-    fontFamily: "Inter_600SemiBold",
-    color: group.white,
-    flex: 1,
-  },
-  ctaBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: group.white,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: spacing.sm,
-  },
-  ctaDismiss: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: spacing.xs,
-  },
-
-  // ── Notes Card ──
-  notesCard: {
-    backgroundColor: group.card,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: group.cardBorder,
-    padding: spacing.lg,
-    marginHorizontal: spacing["2xl"],
-    gap: spacing.md,
-    ...shadow.sm,
-  },
-  notesHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  notesTitle: {
-    fontSize: fontSize.base,
-    fontFamily: "Inter_600SemiBold",
-    color: group.text,
-  },
-  notesBody: {
-    fontSize: fontSize.sm,
-    fontFamily: "Inter_400Regular",
-    color: group.textSecondary,
-    lineHeight: 20,
-  },
-
-  // ── Upsell Section ──
-  upsellSection: {
-    gap: spacing.md,
-    paddingHorizontal: spacing["2xl"],
-  },
-  upsellCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: group.card,
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: group.cardBorder,
-    padding: spacing.lg,
-    gap: spacing.md,
-    ...shadow.sm,
-  },
-  upsellCardBody: {
-    flex: 1,
-    gap: spacing.xxs,
-  },
-  upsellCardName: {
-    fontSize: fontSize.base,
-    fontFamily: "Inter_600SemiBold",
-    color: group.text,
-  },
-  upsellCardDesc: {
-    fontSize: fontSize.sm,
-    fontFamily: "Inter_400Regular",
-    color: group.textMuted,
-    lineHeight: 18,
-  },
-  upsellCardPrice: {
-    fontSize: fontSize.sm,
-    fontFamily: "Inter_700Bold",
-    color: group.primary,
-    marginTop: spacing.xxs,
-  },
-  upsellAskBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.xs,
-    backgroundColor: group.primary,
-    borderRadius: radius.full,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    minHeight: 44,
-  },
-  upsellAskText: {
-    fontSize: fontSize.sm,
-    fontFamily: "Inter_600SemiBold",
-    color: group.white,
-  },
-
   // ── Welcome Back Card ──
   welcomeBackCard: {
     flexDirection: "row",
@@ -2012,35 +1548,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: group.textMuted,
-  },
-
-  // ── Quick Actions Grid ──
-  quickActionsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-around",
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  quickActionItem: {
-    alignItems: "center",
-    width: 64,
-  },
-  quickActionCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: spacing.xs,
-    ...shadow.sm,
-  },
-  quickActionLabel: {
-    fontSize: fontSize.xs,
-    fontFamily: "Inter_500Medium",
-    color: group.textSecondary,
-    textAlign: "center",
-    lineHeight: 14,
   },
 
   // ── Section ──
@@ -2124,6 +1631,41 @@ const styles = StyleSheet.create({
     paddingRight: spacing["2xl"],
   },
   announcementDate: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: group.textMuted,
+  },
+
+  // ── Agenda Preview ──
+  agendaPreviewList: {
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
+  agendaPreviewCard: {
+    backgroundColor: group.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    padding: spacing.md,
+    gap: spacing.xs,
+    ...shadow.sm,
+  },
+  agendaPreviewTime: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.xs,
+  },
+  agendaPreviewTimeText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_600SemiBold",
+    color: group.primary,
+  },
+  agendaPreviewTitle: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  agendaPreviewLocation: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: group.textMuted,
@@ -2251,36 +1793,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: group.text,
     textAlign: "center",
-  },
-
-  // ── Reminder Banner ──
-  reminderBanner: {
-    flexDirection: "row" as const,
-    backgroundColor: "#fef3c7",
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginHorizontal: spacing.xl,
-    marginBottom: spacing.md,
-    alignItems: "center" as const,
-  },
-  reminderContent: {
-    flex: 1,
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: spacing.sm,
-  },
-  reminderText: {
-    fontSize: fontSize.sm,
-    fontFamily: "Inter_500Medium",
-    color: "#92400e",
-    flex: 1,
-  },
-  reminderClose: {
-    padding: spacing.xs,
-    minWidth: 44,
-    minHeight: 44,
-    justifyContent: "center" as const,
-    alignItems: "center" as const,
   },
 
   // ── Modal Overlay (shared) ──

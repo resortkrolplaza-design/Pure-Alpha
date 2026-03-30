@@ -174,13 +174,13 @@ export default function GroupLayout() {
         options={{
           tabBarItemStyle: hideEvent ? { display: "none" } : undefined,
           tabBarLabel: ({ focused }) => (
-            <TabLabel focused={focused} label={t(lang, "group.tab.event")} />
+            <TabLabel focused={focused} label={t(lang, "group.tab.discover")} />
           ),
           tabBarIcon: ({ focused }) => (
             <AnimatedTabIcon
               focused={focused}
-              activeName="calendar"
-              inactiveName="calendar-outline"
+              activeName="compass"
+              inactiveName="compass-outline"
             />
           ),
         }}
@@ -192,7 +192,7 @@ export default function GroupLayout() {
           tabBarLabel: ({ focused }) => (
             <TabLabel
               focused={focused}
-              label={t(lang, isParticipant ? "group.tab.rsvp" : "group.tab.manage")}
+              label={t(lang, isParticipant ? "group.tab.attendance" : "group.tab.manage")}
             />
           ),
           tabBarIcon: ({ focused }) => (

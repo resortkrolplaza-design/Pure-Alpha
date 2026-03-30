@@ -436,7 +436,7 @@ function RsvpHubInner() {
 
   const title = isOrganizer
     ? t(lang, "group.tab.manage")
-    : t(lang, "group.tab.rsvp");
+    : t(lang, "group.tab.attendance");
 
   return (
     <View style={[hubStyles.container, { paddingTop: insets.top + 8 }]}>
