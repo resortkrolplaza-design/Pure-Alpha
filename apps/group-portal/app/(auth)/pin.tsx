@@ -229,7 +229,9 @@ function PinScreenInner() {
                     editable={!loading}
                     accessibilityLabel={t(lang, "pin.yourEmail")}
                   />
-                  <Text style={styles.inputHint}>{t(lang, "pin.emailHint")}</Text>
+                  {t(lang, "pin.emailHint") ? (
+                    <Text style={styles.inputHint}>{t(lang, "pin.emailHint")}</Text>
+                  ) : null}
                 </View>
 
                 {/* PIN dots (only if pinRequired) */}
