@@ -157,7 +157,7 @@ function parsePremiumHotelId(hotelUrl: string): {
   try {
     const url = new URL(hotelUrl);
     if (url.hostname.endsWith(".premiumhotel.pl")) {
-      const tenant = url.hostname.replace(".premiumhotel.pl", "");
+      const tenant = url.hostname.replace(/\.premiumhotel\.pl$/, "");
       const context = url.searchParams.get("context") || null;
       return { tenant, context };
     }
@@ -260,13 +260,17 @@ async function fetchProposals(
       `No reservationId: ${details.message || "unknown error"}`,
     );
   }
+  // Validate reservationId format (prevent query injection from API response)
+  if (!/^[a-zA-Z0-9_-]{1,100}$/.test(details.reservationId)) {
+    throw new Error("Invalid reservationId format");
+  }
 
   const proposalsUrl =
     `${API_BASE}/dynamic-rest/book-stay/pre-booking-proposals` +
     `?checkIn=${checkIn}&checkOut=${checkOut}` +
     `&searchMode=strict&adults=${adults}` +
     `&rooms=${roomsParam}` +
-    `&reservationId=${details.reservationId}` +
+    `&reservationId=${encodeURIComponent(details.reservationId)}` +
     `&lang=pl${contextParam}`;
 
   const data = await fetchJson<PHProposalsResponse>(proposalsUrl, tenant);
@@ -482,7 +486,7 @@ export async function scrapePremiumHotelFull(
     }
   }
 
-  if (!tenant) {
+  if (!tenant || !isValidTenantOrContext(tenant)) {
     return {
       success: false,
       error: "Cannot resolve PremiumHotel tenant from URL",
@@ -490,9 +494,12 @@ export async function scrapePremiumHotelFull(
       engine: "PREMIUMHOTEL",
     };
   }
+  if (context && !isValidTenantOrContext(context)) {
+    context = null;
+  }
 
   try {
-    const contextParam = context ? `&context=${context}` : "";
+    const contextParam = context ? `&context=${encodeURIComponent(context)}` : "";
 
     // Fire all 3 requests in parallel:
     // 1. proposals (2-step: details then proposals)
@@ -655,7 +662,7 @@ export async function scrapePremiumHotelCalendar(
     }
   }
 
-  if (!tenant) {
+  if (!tenant || !isValidTenantOrContext(tenant)) {
     return {
       success: false,
       error: "Cannot resolve PremiumHotel tenant from URL",
@@ -663,9 +670,12 @@ export async function scrapePremiumHotelCalendar(
       engine: "PREMIUMHOTEL",
     };
   }
+  if (context && !isValidTenantOrContext(context)) {
+    context = null;
+  }
 
   try {
-    const contextParam = context ? `&context=${context}` : "";
+    const contextParam = context ? `&context=${encodeURIComponent(context)}` : "";
     const calendarDays = params.calendarDays || 90;
 
     // Step 1: Get availability calendar (which dates are bookable)
@@ -702,7 +712,7 @@ export async function scrapePremiumHotelCalendar(
 
     // Step 2: Get prices for available dates (batched parallel, time-budgeted)
     // Each date = 2 API calls (details + proposals). Run 3 concurrent batches.
-    const TIME_BUDGET_MS = 25000;
+    const TIME_BUDGET_MS = 20000;
     const BATCH_SIZE = 3;
     const MAX_DATES = 30;
     const datesToFetch = availableDates.slice(0, MAX_DATES);
