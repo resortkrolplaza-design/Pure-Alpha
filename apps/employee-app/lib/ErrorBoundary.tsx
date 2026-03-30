@@ -8,6 +8,7 @@ import { emp, fontSize, radius, spacing } from "./tokens";
 import { Icon } from "./icons";
 import { t } from "./i18n";
 import type { Lang } from "./i18n";
+import { useAppStore } from "./store";
 
 interface Props {
   children: ReactNode;
@@ -21,6 +22,10 @@ interface State {
 
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
+
+  get lang(): Lang {
+    return this.props.lang ?? useAppStore.getState().lang ?? "pl";
+  }
 
   static getDerivedStateFromError(): State {
     return { hasError: true };
@@ -36,15 +41,15 @@ export class ErrorBoundary extends Component<Props, State> {
         <View style={styles.container}>
           <Icon name="alert-circle-outline" size={40} color={emp.textMuted} />
           <Text style={styles.title}>
-            {this.props.fallbackMessage ?? t(this.props.lang ?? "pl", "error.fallback")}
+            {this.props.fallbackMessage ?? t(this.lang, "error.fallback")}
           </Text>
           <Pressable
             style={styles.retryBtn}
             onPress={this.handleRetry}
             accessibilityRole="button"
-            accessibilityLabel={t(this.props.lang ?? "pl", "error.retry")}
+            accessibilityLabel={t(this.lang, "error.retry")}
           >
-            <Text style={styles.retryText}>{t(this.props.lang ?? "pl", "error.retry")}</Text>
+            <Text style={styles.retryText}>{t(this.lang, "error.retry")}</Text>
           </Pressable>
         </View>
       );
