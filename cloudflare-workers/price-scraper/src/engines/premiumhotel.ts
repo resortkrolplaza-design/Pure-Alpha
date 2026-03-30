@@ -196,9 +196,13 @@ async function fetchJson<T>(url: string, tenant: string): Promise<T> {
 
 function stripHtml(html: string): string {
   return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
+    .replace(/&#39;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -289,22 +293,38 @@ function mapOffers(
   packages: PHPackage[],
   packageListItems?: PHPackageListItem[],
 ): ProfitroomOffer[] {
-  const listMap = new Map(
-    (packageListItems || []).map((p) => [p.id, p]),
+  // PRIMARY source: packages-list (ALL offers, not date-filtered)
+  // ENRICHMENT: packages from proposals (description, images, attributes)
+  const proposalPkgMap = new Map(
+    (packages || []).map((p) => [p.id, p]),
   );
-  return packages.map((pkg) => {
-    const listItem = listMap.get(pkg.id);
-    return {
-      offerId: pkg.id,
-      name: pkg.name,
-      description: pkg.description ? stripHtml(pkg.description) : undefined,
-      imageUrl: pkg.images?.[0]?.url || undefined,
-      validFrom: listItem?.availabilityFrom || undefined,
-      validTo: listItem?.availabilityTo || undefined,
-      minNights: listItem?.minNights || undefined,
-      minPrice: listItem?.priceFrom || undefined,
-    };
-  });
+
+  if (packageListItems && packageListItems.length > 0) {
+    return packageListItems.map((li) => {
+      const proposalPkg = proposalPkgMap.get(li.id);
+      // Prefer proposal package for description/images (richer data)
+      const desc = proposalPkg?.description || li.description;
+      const imgs = proposalPkg?.images || li.images;
+      return {
+        offerId: li.id,
+        name: li.name,
+        description: desc ? stripHtml(desc) : undefined,
+        imageUrl: imgs?.[0]?.url || undefined,
+        validFrom: li.availabilityFrom || undefined,
+        validTo: li.availabilityTo || undefined,
+        minNights: li.minNights ?? undefined,
+        minPrice: li.priceFrom ?? undefined,
+      };
+    });
+  }
+
+  // Fallback: use packages from proposals (date-filtered, fewer results)
+  return packages.map((pkg) => ({
+    offerId: pkg.id,
+    name: pkg.name,
+    description: pkg.description ? stripHtml(pkg.description) : undefined,
+    imageUrl: pkg.images?.[0]?.url || undefined,
+  }));
 }
 
 function mapHotelDetails(
@@ -318,14 +338,14 @@ function mapHotelDetails(
     : config.contexts
       ? Object.values(config.contexts)[0]
       : null;
+  const name = ctx?.name || config.name || tenant;
+  const city = ctx?.address?.city || undefined;
+  // Build description from name + city (not raw address)
+  const description = city ? `${name}, ${city}` : name;
   return {
-    name: ctx?.name || config.name || tenant,
-    city: ctx?.address?.city || undefined,
-    description: ctx?.address
-      ? [ctx.address.street, ctx.address.zip, ctx.address.city]
-          .filter(Boolean)
-          .join(", ")
-      : undefined,
+    name,
+    city,
+    description,
     policies: {
       childrenFreeAge: config.bookStaySettings?.maxChildAge,
     },
@@ -597,7 +617,7 @@ export async function scrapePremiumHotelFull(
       durationMs: Date.now() - startTime,
       engine: "PREMIUMHOTEL",
       hotelMeta: {
-        description: hotelDetails?.description || `${tenant} (${context || "default"})`,
+        description: hotelDetails?.name || `${tenant} (${context || "default"})`,
       },
       roomDetails,
       offers,
