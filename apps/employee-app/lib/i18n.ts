@@ -1,0 +1,276 @@
+// =============================================================================
+// Employee App -- i18n (PL + EN)
+// Employee-specific keys for Dashboard, Grafik, Urlopy, Chat, Profil
+// =============================================================================
+
+export type Lang = "pl" | "en";
+
+const pl: Record<string, string> = {
+  // -- Auth -------------------------------------------------------------------
+  "auth.login": "Zaloguj si\u0119",
+  "auth.logout": "Wyloguj si\u0119",
+  "auth.logging": "Logowanie...",
+  "auth.enterPin": "Wprowad\u017A PIN",
+  "auth.invalidCredentials": "Nieprawid\u0142owe dane logowania",
+  "auth.username": "Nazwa u\u017Cytkownika",
+  "auth.password": "Has\u0142o",
+  "auth.pinTab": "PIN",
+  "auth.credentialsTab": "Dane logowania",
+
+  // -- Welcome ----------------------------------------------------------------
+  "welcome.title": "Pure Alpha Employee",
+  "welcome.subtitle": "Aplikacja dla pracownik\u00F3w hotelu",
+  "welcome.continue": "Rozpocznij",
+  "welcome.poweredBy": "Pure Alpha Hotel Intelligence",
+  "welcome.hotelSlug": "Identyfikator hotelu",
+  "welcome.hotelSlugPlaceholder": "np. krol-plaza",
+  "welcome.hotelNotFound": "Nie znaleziono hotelu",
+  "welcome.enterHotelFirst": "Najpierw wprowad\u017A identyfikator hotelu",
+
+  // -- Tabs -------------------------------------------------------------------
+  "tab.dashboard": "Pulpit",
+  "tab.schedule": "Grafik",
+  "tab.leave": "Urlopy",
+  "tab.chat": "Chat",
+  "tab.profile": "Profil",
+
+  // -- Dashboard --------------------------------------------------------------
+  "dash.greeting.morning": "Dzie\u0144 dobry",
+  "dash.greeting.afternoon": "Dzie\u0144 dobry",
+  "dash.greeting.evening": "Dobry wiecz\u00F3r",
+  "dash.greeting.night": "Dobrej nocy",
+  "dash.todayShift": "Dzisiejsza zmiana",
+  "dash.noShift": "Brak zaplanowanej zmiany",
+  "dash.clockIn": "Rozpocznij zmian\u0119",
+  "dash.clockOut": "Zako\u0144cz zmian\u0119",
+  "dash.weekStats": "Statystyki tygodnia",
+  "dash.hours": "Godziny",
+  "dash.shifts": "Zmiany",
+  "dash.upcoming": "Najbli\u017Csze zmiany",
+
+  // -- Schedule ---------------------------------------------------------------
+  "sched.title": "Grafik",
+  "sched.prevWeek": "Poprzedni tydzie\u0144",
+  "sched.nextWeek": "Nast\u0119pny tydzie\u0144",
+  "sched.noShiftsThisWeek": "Brak zmian w tym tygodniu",
+  "sched.day.mon": "Pon",
+  "sched.day.tue": "Wt",
+  "sched.day.wed": "\u015Ar",
+  "sched.day.thu": "Czw",
+  "sched.day.fri": "Pt",
+  "sched.day.sat": "Sob",
+  "sched.day.sun": "Ndz",
+
+  // -- Shift types ------------------------------------------------------------
+  "shift.MORNING": "Rano",
+  "shift.AFTERNOON": "Popo\u0142udnie",
+  "shift.NIGHT": "Noc",
+  "shift.DAY": "Dzie\u0144",
+  "shift.SPLIT": "Podzielona",
+  "shift.REST_DAY": "Dzie\u0144 wolny",
+  "shift.CUSTOM": "Niestandardowa",
+
+  // -- Leave ------------------------------------------------------------------
+  "leave.title": "Urlopy",
+  "leave.balance": "Bilans urlopowy",
+  "leave.used": "Wykorzystane",
+  "leave.remaining": "Pozosta\u0142e",
+  "leave.total": "\u0141\u0105cznie",
+  "leave.days": "dni",
+  "leave.requests": "Wnioski urlopowe",
+  "leave.noRequests": "Brak wniosk\u00F3w urlopowych",
+  "leave.newRequest": "Nowy wniosek",
+  "leave.type": "Typ urlopu",
+  "leave.dateFrom": "Data od",
+  "leave.dateTo": "Data do",
+  "leave.reason": "Pow\u00F3d",
+  "leave.submit": "Z\u0142\u00F3\u017C wniosek",
+  "leave.cancel": "Anuluj",
+  "leave.status.pending": "Oczekuje",
+  "leave.status.approved": "Zatwierdzony",
+  "leave.status.rejected": "Odrzucony",
+  "leave.status.cancelled": "Anulowany",
+  "leave.type.vacation": "Wypoczynkowy",
+  "leave.type.sick": "Chorobowy",
+  "leave.type.personal": "Okoliczno\u015Bciowy",
+  "leave.type.unpaid": "Bezp\u0142atny",
+  "leave.type.parental": "Rodzicielski",
+  "leave.type.other": "Inny",
+  "leave.reasonPlaceholder": "Opcjonalny pow\u00F3d wniosku...",
+  "leave.pending": "Oczekuj\u0105ce",
+  "leave.datePlaceholder": "RRRR-MM-DD",
+  "leave.dateInvalid": "Nieprawid\u0142owy format daty (RRRR-MM-DD)",
+  "leave.dateFromAfterTo": "Data pocz\u0105tkowa musi by\u0107 przed ko\u0144cow\u0105",
+  "leave.datePast": "Daty musz\u0105 by\u0107 dzisiejsze lub przysz\u0142e",
+
+  // -- Chat -------------------------------------------------------------------
+  "chat.title": "Chat",
+  "chat.comingSoon": "Wkr\u00F3tce dost\u0119pny",
+  "chat.desc": "Chat z zespo\u0142em -- kana\u0142y, wiadomo\u015Bci bezpo\u015Brednie, AI asystent.",
+
+  // -- Profile ----------------------------------------------------------------
+  "profile.title": "Profil",
+  "profile.placeholder": "Dane profilu za\u0142aduj\u0105 si\u0119 po zalogowaniu",
+  "profile.resetPin": "Zmie\u0144 PIN",
+  "profile.logoutConfirm": "Czy na pewno chcesz si\u0119 wylogowa\u0107?",
+  "profile.language": "J\u0119zyk",
+  "profile.pinResetInfo": "Skontaktuj si\u0119 z managerem w celu zmiany PIN-u.",
+
+  // -- App -------------------------------------------------------------------
+  "app.subtitle": "Pure Alpha Employee",
+
+  // -- Common -----------------------------------------------------------------
+  "common.loading": "\u0141adowanie...",
+  "common.error": "Wyst\u0105pi\u0142 b\u0142\u0105d",
+  "common.retry": "Spr\u00F3buj ponownie",
+  "common.cancel": "Anuluj",
+  "common.confirm": "Potwierd\u017A",
+  "common.save": "Zapisz",
+  "common.close": "Zamknij",
+  "common.back": "Wr\u00F3\u0107",
+  "common.noData": "Brak danych",
+  "common.sessionExpired": "Sesja wygas\u0142a. Zaloguj si\u0119 ponownie.",
+  "common.networkError": "Brak po\u0142\u0105czenia z sieci\u0105",
+
+  // -- Error Boundary ---------------------------------------------------------
+  "error.fallback": "Co\u015B posz\u0142o nie tak",
+  "error.retry": "Spr\u00F3buj ponownie",
+};
+
+const en: Record<string, string> = {
+  // -- Auth -------------------------------------------------------------------
+  "auth.login": "Log in",
+  "auth.logout": "Log out",
+  "auth.logging": "Logging in...",
+  "auth.enterPin": "Enter PIN",
+  "auth.invalidCredentials": "Invalid credentials",
+  "auth.username": "Username",
+  "auth.password": "Password",
+  "auth.pinTab": "PIN",
+  "auth.credentialsTab": "Credentials",
+
+  // -- Welcome ----------------------------------------------------------------
+  "welcome.title": "Pure Alpha Employee",
+  "welcome.subtitle": "Hotel employee app",
+  "welcome.continue": "Get started",
+  "welcome.poweredBy": "Pure Alpha Hotel Intelligence",
+  "welcome.hotelSlug": "Hotel identifier",
+  "welcome.hotelSlugPlaceholder": "e.g. krol-plaza",
+  "welcome.hotelNotFound": "Hotel not found",
+  "welcome.enterHotelFirst": "Enter hotel identifier first",
+
+  // -- Tabs -------------------------------------------------------------------
+  "tab.dashboard": "Dashboard",
+  "tab.schedule": "Schedule",
+  "tab.leave": "Leave",
+  "tab.chat": "Chat",
+  "tab.profile": "Profile",
+
+  // -- Dashboard --------------------------------------------------------------
+  "dash.greeting.morning": "Good morning",
+  "dash.greeting.afternoon": "Good afternoon",
+  "dash.greeting.evening": "Good evening",
+  "dash.greeting.night": "Good night",
+  "dash.todayShift": "Today's shift",
+  "dash.noShift": "No scheduled shift",
+  "dash.clockIn": "Clock in",
+  "dash.clockOut": "Clock out",
+  "dash.weekStats": "Week stats",
+  "dash.hours": "Hours",
+  "dash.shifts": "Shifts",
+  "dash.upcoming": "Upcoming shifts",
+
+  // -- Schedule ---------------------------------------------------------------
+  "sched.title": "Schedule",
+  "sched.prevWeek": "Previous week",
+  "sched.nextWeek": "Next week",
+  "sched.noShiftsThisWeek": "No shifts this week",
+  "sched.day.mon": "Mon",
+  "sched.day.tue": "Tue",
+  "sched.day.wed": "Wed",
+  "sched.day.thu": "Thu",
+  "sched.day.fri": "Fri",
+  "sched.day.sat": "Sat",
+  "sched.day.sun": "Sun",
+
+  // -- Shift types ------------------------------------------------------------
+  "shift.MORNING": "Morning",
+  "shift.AFTERNOON": "Afternoon",
+  "shift.NIGHT": "Night",
+  "shift.DAY": "Day",
+  "shift.SPLIT": "Split",
+  "shift.REST_DAY": "Day off",
+  "shift.CUSTOM": "Custom",
+
+  // -- Leave ------------------------------------------------------------------
+  "leave.title": "Leave",
+  "leave.balance": "Leave balance",
+  "leave.used": "Used",
+  "leave.remaining": "Remaining",
+  "leave.total": "Total",
+  "leave.days": "days",
+  "leave.requests": "Leave requests",
+  "leave.noRequests": "No leave requests",
+  "leave.newRequest": "New request",
+  "leave.type": "Leave type",
+  "leave.dateFrom": "From date",
+  "leave.dateTo": "To date",
+  "leave.reason": "Reason",
+  "leave.submit": "Submit request",
+  "leave.cancel": "Cancel",
+  "leave.status.pending": "Pending",
+  "leave.status.approved": "Approved",
+  "leave.status.rejected": "Rejected",
+  "leave.status.cancelled": "Cancelled",
+  "leave.type.vacation": "Vacation",
+  "leave.type.sick": "Sick",
+  "leave.type.personal": "Personal",
+  "leave.type.unpaid": "Unpaid",
+  "leave.type.parental": "Parental",
+  "leave.type.other": "Other",
+  "leave.reasonPlaceholder": "Optional reason for the request...",
+  "leave.pending": "Pending",
+  "leave.datePlaceholder": "YYYY-MM-DD",
+  "leave.dateInvalid": "Invalid date format (YYYY-MM-DD)",
+  "leave.dateFromAfterTo": "Start date must be before end date",
+  "leave.datePast": "Dates must be today or in the future",
+
+  // -- Chat -------------------------------------------------------------------
+  "chat.title": "Chat",
+  "chat.comingSoon": "Coming soon",
+  "chat.desc": "Team chat -- channels, direct messages, AI assistant.",
+
+  // -- Profile ----------------------------------------------------------------
+  "profile.title": "Profile",
+  "profile.placeholder": "Profile data will load after login",
+  "profile.resetPin": "Change PIN",
+  "profile.logoutConfirm": "Are you sure you want to log out?",
+  "profile.language": "Language",
+  "profile.pinResetInfo": "Contact your manager to change your PIN.",
+
+  // -- App -------------------------------------------------------------------
+  "app.subtitle": "Pure Alpha Employee",
+
+  // -- Common -----------------------------------------------------------------
+  "common.loading": "Loading...",
+  "common.error": "An error occurred",
+  "common.retry": "Try again",
+  "common.cancel": "Cancel",
+  "common.confirm": "Confirm",
+  "common.save": "Save",
+  "common.close": "Close",
+  "common.back": "Back",
+  "common.noData": "No data",
+  "common.sessionExpired": "Session expired. Please log in again.",
+  "common.networkError": "No network connection",
+
+  // -- Error Boundary ---------------------------------------------------------
+  "error.fallback": "Something went wrong",
+  "error.retry": "Try again",
+};
+
+const dicts: Record<Lang, Record<string, string>> = { pl, en };
+
+export function t(lang: Lang, key: string): string {
+  return dicts[lang]?.[key] ?? dicts.pl[key] ?? key;
+}

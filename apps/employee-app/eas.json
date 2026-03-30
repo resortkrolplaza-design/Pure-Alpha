@@ -1,0 +1,39 @@
+{
+  "cli": {
+    "version": ">= 15.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "appleTeamId": "PENDING_ID"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "ios": {
+        "appleTeamId": "PENDING_ID"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "arek@krolplaza.pl",
+        "ascAppId": "",
+        "appleTeamId": "PENDING_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": ""
+      }
+    }
+  }
+}
