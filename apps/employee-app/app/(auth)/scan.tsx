@@ -183,39 +183,42 @@ function ScanScreenInner() {
       processingRef.current = true;
       setScanError(null);
 
-      const slug = extractSlugFromQr(result.data);
-      if (!slug) {
+      try {
+        const slug = extractSlugFromQr(result.data);
+        if (!slug) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          setScanError(t(lang, "scan.invalidQr"));
+          return;
+        }
+
+        // Validate with API
+        const res = await resolveHotel(slug);
+        if (res.status === "success" && res.data) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          await Promise.all([
+            setHotelSlug(slug),
+            setHotelId(res.data.hotelId),
+            setHotelOnboarded(),
+          ]);
+
+          const store = useAppStore.getState();
+          store.setHotel({
+            slug,
+            id: res.data.hotelId,
+            name: res.data.hotelName,
+          });
+
+          router.replace("/(auth)/login");
+        } else {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          setScanError(t(lang, "scan.invalidQr"));
+        }
+      } catch {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setScanError(t(lang, "scan.invalidQr"));
+        setScanError(t(lang, "common.networkError"));
+      } finally {
         processingRef.current = false;
-        return;
       }
-
-      // Validate with API
-      const res = await resolveHotel(slug);
-      if (res.status === "success" && res.data) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await Promise.all([
-          setHotelSlug(slug),
-          setHotelId(res.data.hotelId),
-          setHotelOnboarded(),
-        ]);
-
-        // Update store
-        const store = useAppStore.getState();
-        store.setHotel({
-          slug,
-          id: res.data.hotelId,
-          name: res.data.hotelName,
-        });
-
-        router.replace("/(auth)/login");
-      } else {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-        setScanError(t(lang, "scan.invalidQr"));
-      }
-
-      processingRef.current = false;
     },
     [lang],
   );
@@ -455,6 +458,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing.xl,
     paddingTop: spacing["3xl"],
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   scanningText: {
     fontSize: fontSize.base,

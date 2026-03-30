@@ -50,43 +50,47 @@ export default function EntryScreen() {
           if (cancelled) return;
 
           if (bioEnrolled && onboarded) {
-            const bio = await checkBiometricAvailability();
-            if (cancelled) return;
-
-            if (bio.available) {
-              setState("verifying");
-
-              const currentLang = savedLang ?? "pl";
-              const prompt = t(currentLang, "auth.biometricPrompt");
-              const success = await authenticateWithBiometric(prompt);
+            try {
+              const bio = await checkBiometricAvailability();
               if (cancelled) return;
 
-              if (success) {
-                const creds = await getCachedCredentials();
+              if (bio.available) {
+                setState("verifying");
+
+                const currentLang = savedLang ?? "pl";
+                const prompt = t(currentLang, "auth.biometricPrompt");
+                const success = await authenticateWithBiometric(prompt);
                 if (cancelled) return;
 
-                if (creds) {
-                  const res = await loginWithPin(creds.login, creds.pin, hotelId);
+                if (success) {
+                  const creds = await getCachedCredentials();
                   if (cancelled) return;
 
-                  if (res.status === "success" && res.data) {
-                    await setEmployeeToken(res.data.token);
+                  if (creds) {
+                    const res = await loginWithPin(creds.login, creds.pin, hotelId);
+                    if (cancelled) return;
 
-                    store.setEmployee({
-                      id: res.data.employee.id,
-                      name: res.data.employee.name,
-                      department: res.data.employee.department,
-                      position: res.data.employee.position,
-                    });
-                    store.setHotel({ slug, id: hotelId, name: slug });
-                    store.setAuthenticated(true);
-                    store.setBiometricEnrolled(true);
-                    store.setHotelOnboarded(true);
-                    router.replace("/(employee)/dashboard");
-                    return;
+                    if (res.status === "success" && res.data) {
+                      await setEmployeeToken(res.data.token);
+
+                      store.setEmployee({
+                        id: res.data.employee.id,
+                        name: res.data.employee.name,
+                        department: res.data.employee.department,
+                        position: res.data.employee.position,
+                      });
+                      store.setHotel({ slug, id: hotelId, name: slug });
+                      store.setAuthenticated(true);
+                      store.setBiometricEnrolled(true);
+                      store.setHotelOnboarded(true);
+                      router.replace("/(employee)/dashboard");
+                      return;
+                    }
                   }
                 }
               }
+            } catch {
+              // Biometric auto-login error -- fall through to logout
             }
           }
 

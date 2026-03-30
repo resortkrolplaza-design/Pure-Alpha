@@ -35,9 +35,9 @@ export const emp = {
   warning: "#f59e0b",
   accent: "#1e40af",
   // Hero / gradient overlay helpers
-  heroLabel: "rgba(255,255,255,0.8)",
-  heroDept: "rgba(255,255,255,0.7)",
-  heroBadgeBg: "rgba(255,255,255,0.25)",
+  heroLabel: "#ffffff",
+  heroDept: "rgba(255,255,255,0.85)",
+  heroBadgeBg: "rgba(0,0,0,0.2)",
   shadowDark: "#0f172a",
   shadowBlack: "#000000",
   // Wave / decorative backgrounds (primary @ low alpha)
