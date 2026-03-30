@@ -4,8 +4,8 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import {
-  View, Text, ScrollView, Pressable, RefreshControl,
-  StyleSheet, Animated, ActivityIndicator, Platform, Alert,
+  View, Text, ScrollView, Pressable, RefreshControl, TextInput,
+  StyleSheet, Animated, ActivityIndicator, Platform, Alert, Modal,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -44,6 +44,9 @@ function DashboardScreenInner() {
   const [refreshing, setRefreshing] = useState(false);
   const [biometricShield, setBiometricShield] = useState(false);
   const clockingRef = useRef(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const pinModalRef = useRef<TextInput>(null);
 
   // Check if biometric is enrolled to show shield badge
   useEffect(() => {
@@ -169,28 +172,31 @@ function DashboardScreenInner() {
         "number-pad",
       );
     } else {
-      // Android: Alert.prompt not available -- offer retry
-      Alert.alert(
-        t(lang, "clock.pinFallback"),
-        t(lang, "clock.biometricFailed"),
-        [
-          {
-            text: t(lang, "common.cancel"),
-            style: "cancel",
-            onPress: () => { clockingRef.current = false; },
-          },
-          {
-            text: t(lang, "common.retry"),
-            onPress: () => {
-              clockingRef.current = false;
-              handleClock();
-            },
-          },
-        ],
-        { cancelable: false },
-      );
+      // Android: show custom PIN modal (Alert.prompt is iOS-only)
+      setPinInput("");
+      setShowPinModal(true);
+      setTimeout(() => pinModalRef.current?.focus(), 300);
     }
   }, [lang, doClock]);
+
+  const handlePinModalSubmit = useCallback(async () => {
+    setShowPinModal(false);
+    clockingRef.current = false;
+    const creds = await getCachedCredentials();
+    if (creds && pinInput === creds.pin) {
+      doClock();
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(t(lang, "common.error"), t(lang, "clock.pinWrong"));
+    }
+    setPinInput("");
+  }, [pinInput, lang, doClock]);
+
+  const handlePinModalCancel = useCallback(() => {
+    setShowPinModal(false);
+    clockingRef.current = false;
+    setPinInput("");
+  }, []);
 
   const shiftColor = data?.todayShift
     ? shiftColors[data.todayShift.shiftType] ?? emp.primary
@@ -346,6 +352,56 @@ function DashboardScreenInner() {
           )}
         </View>
       </ScrollView>
+      {/* Android PIN Fallback Modal */}
+      <Modal
+        visible={showPinModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handlePinModalCancel}
+      >
+        <View style={styles.pinModalOverlay}>
+          <View style={styles.pinModalCard} accessibilityViewIsModal={true}>
+            <Text style={styles.pinModalTitle}>{t(lang, "clock.pinFallback")}</Text>
+            <View style={styles.pinDotsRow}>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.pinDot,
+                    i < pinInput.length && styles.pinDotFilled,
+                  ]}
+                />
+              ))}
+            </View>
+            <TextInput
+              ref={pinModalRef}
+              style={styles.hiddenInput}
+              value={pinInput}
+              onChangeText={(v) => {
+                const cleaned = v.replace(/\D/g, "").slice(0, 4);
+                setPinInput(cleaned);
+                if (cleaned.length === 4) {
+                  setTimeout(() => handlePinModalSubmit(), 100);
+                }
+              }}
+              keyboardType="number-pad"
+              maxLength={4}
+              secureTextEntry
+              accessibilityLabel={t(lang, "clock.pinFallback")}
+            />
+            <View style={styles.pinModalBtns}>
+              <Pressable
+                style={styles.pinModalCancelBtn}
+                onPress={handlePinModalCancel}
+                accessibilityRole="button"
+                accessibilityLabel={t(lang, "common.cancel")}
+              >
+                <Text style={styles.pinModalCancelText}>{t(lang, "common.cancel")}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -634,6 +690,71 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     alignItems: "center",
+  },
+
+  // -- Android PIN Modal --------------------------------------------------------
+  pinModalOverlay: {
+    flex: 1,
+    backgroundColor: emp.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing["2xl"],
+  },
+  pinModalCard: {
+    backgroundColor: emp.card,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: emp.cardBorder,
+    padding: spacing["2xl"],
+    alignItems: "center",
+    gap: spacing.lg,
+    width: "100%",
+    maxWidth: 320,
+    ...shadow.lg,
+  },
+  pinModalTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_700Bold",
+    color: emp.text,
+  },
+  pinDotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  pinDot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: emp.inputBorder,
+    backgroundColor: emp.inputBg,
+  },
+  pinDotFilled: {
+    backgroundColor: emp.primary,
+    borderColor: emp.primary,
+  },
+  hiddenInput: {
+    position: "absolute",
+    width: 1,
+    height: 1,
+    opacity: 0,
+  },
+  pinModalBtns: {
+    flexDirection: "row",
+    gap: spacing.md,
+  },
+  pinModalCancelBtn: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: TOUCH_TARGET,
+    justifyContent: "center",
+  },
+  pinModalCancelText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_500Medium",
+    color: emp.textMuted,
   },
 });
 

@@ -3,7 +3,9 @@
 // =============================================================================
 
 import { Platform } from "react-native";
-import { getEmployeeToken } from "./auth";
+import { getEmployeeToken, setEmployeeToken, isBiometricEnrolled, getCachedCredentials, getHotelId } from "./auth";
+import { t, type Lang } from "./i18n";
+import { useAppStore } from "./store";
 import type { ApiResponse } from "./types";
 
 const API_BASE = "https://purealphahotel.pl";
@@ -12,9 +14,49 @@ const REQUEST_TIMEOUT_MS = 15_000;
 
 // Session expiry callback -- configured from _layout.tsx
 let onEmployeeSessionExpired: (() => void) | null = null;
+let sessionRefreshInProgress = false;
 
 export function configureEmployeeApi(cb: { onSessionExpired: () => void }) {
   onEmployeeSessionExpired = cb.onSessionExpired;
+}
+
+function getLang(): Lang {
+  return useAppStore.getState().lang ?? "pl";
+}
+
+/**
+ * Try silent re-auth using cached biometric credentials.
+ * Returns true if new token obtained, false if should proceed to logout.
+ */
+async function trySessionRefresh(): Promise<boolean> {
+  if (sessionRefreshInProgress) return false;
+  sessionRefreshInProgress = true;
+  try {
+    const [enrolled, creds, hotelId] = await Promise.all([
+      isBiometricEnrolled(),
+      getCachedCredentials(),
+      getHotelId(),
+    ]);
+    if (!enrolled || !creds || !hotelId) return false;
+
+    const res = await fetch(`${API_BASE}/api/employee-app/auth/pin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ login: creds.login, pin: creds.pin, hotelId }),
+    });
+    if (!res.ok) return false;
+
+    const json = await res.json();
+    if (json.status === "success" && json.data?.token) {
+      await setEmployeeToken(json.data.token);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  } finally {
+    sessionRefreshInProgress = false;
+  }
 }
 
 export async function employeeFetch<T>(
@@ -24,6 +66,7 @@ export async function employeeFetch<T>(
 ): Promise<ApiResponse<T>> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const lang = getLang();
 
   try {
     const token = authenticated ? await getEmployeeToken() : null;
@@ -40,19 +83,41 @@ export async function employeeFetch<T>(
     });
 
     if (res.status === 401) {
+      // Try silent re-auth before giving up
+      const refreshed = await trySessionRefresh();
+      if (refreshed) {
+        // Retry the original request with new token
+        const newToken = await getEmployeeToken();
+        const retryRes = await fetch(url, {
+          ...options,
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            ...(newToken ? { Authorization: `Bearer ${newToken}` } : {}),
+            ...((options.headers as Record<string, string>) ?? {}),
+          },
+          signal: controller.signal,
+        });
+        if (retryRes.status === 401) {
+          onEmployeeSessionExpired?.();
+          return { status: "error", errorMessage: t(lang, "common.sessionExpired") };
+        }
+        const json = (await retryRes.json()) as ApiResponse<T>;
+        return json;
+      }
       onEmployeeSessionExpired?.();
-      return { status: "error", errorMessage: "Sesja wygas\u0142a. Zaloguj si\u0119 ponownie." };
+      return { status: "error", errorMessage: t(lang, "common.sessionExpired") };
     }
 
     const json = (await res.json()) as ApiResponse<T>;
     return json;
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
-      return { status: "error", errorMessage: "Przekroczono limit czasu \u017c\u0105dania." };
+      return { status: "error", errorMessage: t(lang, "common.error") };
     }
     return {
       status: "error",
-      errorMessage: "B\u0142\u0105d sieci. Sprawdz po\u0142\u0105czenie z internetem.",
+      errorMessage: t(lang, "common.networkError"),
     };
   } finally {
     clearTimeout(timeout);

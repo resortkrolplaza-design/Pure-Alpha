@@ -3,6 +3,8 @@
 // Supports biometric auto-login when token expired but credentials cached
 // =============================================================================
 
+// NOTE: ErrorBoundary wraps the default export at the bottom of this file
+
 import { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { router } from "expo-router";
@@ -15,11 +17,12 @@ import {
   isBiometricEnrolled, getCachedCredentials, isHotelOnboarded,
 } from "@/lib/auth";
 import { authenticateWithBiometric, checkBiometricAvailability } from "@/lib/biometric";
+import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import { loginWithPin } from "@/lib/employee-api";
 
 type ScreenState = "loading" | "verifying" | "ready";
 
-export default function EntryScreen() {
+function EntryScreenInner() {
   const [state, setState] = useState<ScreenState>("loading");
   const lang = useAppStore((s) => s.lang);
 
@@ -173,3 +176,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+export default function EntryScreen() {
+  return (
+    <ErrorBoundary>
+      <EntryScreenInner />
+    </ErrorBoundary>
+  );
+}
