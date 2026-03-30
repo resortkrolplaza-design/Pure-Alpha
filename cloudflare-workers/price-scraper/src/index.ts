@@ -13,7 +13,7 @@
 
 import { scrapeProfitroomPrices, scrapeProfitroomFull, scrapeProfitroomOffers, scrapeProfitroomCalendarFallback } from "./engines/profitroom";
 import { scrapeGenericPrices } from "./engines/generic";
-import { scrapePremiumHotelPrices } from "./engines/premiumhotel";
+import { scrapePremiumHotelPrices, scrapePremiumHotelFull, scrapePremiumHotelCalendar } from "./engines/premiumhotel";
 import type { ScrapeParams } from "./engines/types";
 
 interface Env {
@@ -289,10 +289,14 @@ export default {
         }
         case "PREMIUMHOTEL": {
           // PremiumHotel engine uses direct REST API — no browser needed
-          // premiumHotelTenant and premiumHotelContext passed via body
           const tenant = (body as Record<string, unknown>).premiumHotelTenant as string | undefined;
           const context = (body as Record<string, unknown>).premiumHotelContext as string | undefined;
-          const result = await scrapePremiumHotelPrices(env.BROWSER, params, tenant, context);
+          const scrapeFn = params.mode === "full"
+            ? scrapePremiumHotelFull
+            : params.mode === "calendar-fallback"
+              ? scrapePremiumHotelCalendar
+              : scrapePremiumHotelPrices;
+          const result = await scrapeFn(env.BROWSER, params, tenant, context);
           return Response.json(result);
         }
         default:
