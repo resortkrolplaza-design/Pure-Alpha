@@ -6,8 +6,7 @@ import { Platform } from "react-native";
 import { getEmployeeToken } from "./auth";
 import type { ApiResponse } from "./types";
 
-// Web uses relative URLs (same origin), native needs full URL
-const API_BASE = Platform.OS === "web" ? "" : "https://app.purealpha.pl";
+const API_BASE = "https://purealphahotel.pl";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
