@@ -417,7 +417,7 @@ function LoginScreenInner() {
                   </Pressable>
                 </View>
                 {hotelError && (
-                  <Text style={styles.errorText}>{hotelError}</Text>
+                  <Text style={styles.errorText} accessibilityLiveRegion="assertive">{hotelError}</Text>
                 )}
               </View>
             ) : (
@@ -600,7 +600,7 @@ function LoginScreenInner() {
 
                 {/* Error */}
                 {error && (
-                  <View style={styles.errorCard}>
+                  <View style={styles.errorCard} accessibilityLiveRegion="assertive">
                     <Icon name="alert-circle" size={18} color={emp.danger} />
                     <Text style={styles.errorCardText}>{error}</Text>
                   </View>

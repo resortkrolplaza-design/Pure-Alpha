@@ -160,7 +160,7 @@ function ScheduleScreenInner() {
 
         {/* Error State */}
         {isError && (
-          <View style={styles.errorCard}>
+          <View style={styles.errorCard} accessibilityLiveRegion="polite">
             <Text style={styles.errorText}>{t(lang, "common.error")}</Text>
             <Pressable
               onPress={() => refetch()}

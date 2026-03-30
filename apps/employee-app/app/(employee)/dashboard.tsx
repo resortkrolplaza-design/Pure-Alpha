@@ -219,7 +219,7 @@ function DashboardScreenInner() {
 
         {/* Error State */}
         {isError && (
-          <View style={styles.card}>
+          <View style={styles.card} accessibilityLiveRegion="polite">
             <Text style={styles.placeholder}>{t(lang, "common.error")}</Text>
             <Pressable
               onPress={() => refetch()}
