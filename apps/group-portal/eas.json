@@ -12,18 +12,24 @@
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "appleTeamId": "PENDING_ID"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "appleTeamId": "PENDING_ID"
+      }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "appleId": "",
+        "appleId": "arek@krolplaza.pl",
         "ascAppId": "",
-        "appleTeamId": ""
+        "appleTeamId": "PENDING_ID"
       },
       "android": {
         "serviceAccountKeyPath": ""
