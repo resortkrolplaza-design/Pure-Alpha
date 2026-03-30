@@ -85,7 +85,8 @@ function ScheduleScreenInner() {
 
   const shiftsByDate = useMemo(() => {
     const map = new Map<string, ShiftData[]>();
-    for (const s of shifts ?? []) {
+    const safeShifts = Array.isArray(shifts) ? shifts : [];
+    for (const s of safeShifts) {
       const existing = map.get(s.shiftDate) ?? [];
       existing.push(s);
       map.set(s.shiftDate, existing);

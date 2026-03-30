@@ -161,7 +161,7 @@ function LeaveScreenInner() {
       }
     : null;
 
-  const requests = requestsQuery.data ?? [];
+  const requests = Array.isArray(requestsQuery.data) ? requestsQuery.data : [];
 
   return (
     <View style={styles.container}>
