@@ -22,7 +22,12 @@
       }
     },
     "android": {
-      "package": "com.purealpha.employee"
+      "package": "com.purealpha.employee",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f172a"
+      }
     },
     "plugins": [
       "expo-router",
