@@ -116,6 +116,8 @@ export interface ScrapeResult {
   // Engine detection: GENERIC discovered a known engine → caller should re-dispatch
   detectedEngine?: string;
   profitroomSiteKey?: string;
+  premiumHotelTenant?: string;
+  premiumHotelContext?: string;
   // Hotel metadata extracted from the same page load
   hotelMeta?: HotelMeta;
   // Profitroom full-mode data

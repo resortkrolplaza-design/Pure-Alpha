@@ -24,6 +24,7 @@ import type {
   ProfitroomRoomDetail,
   ProfitroomHotelDetails,
   CalendarPrice,
+  MealPlanPrice,
 } from "./types";
 
 const API_BASE = "https://api.premiumhotel.pl/apiV2";
@@ -275,6 +276,18 @@ async function fetchProposals(
 
   const data = await fetchJson<PHProposalsResponse>(proposalsUrl, tenant);
   return { reservationId: details.reservationId, data };
+}
+
+// ── Meal plan detection from package name ────────────────────────────────────
+// PremiumHotel has no structured mealPlanType -- derive from Polish package names
+// 18=room-only, 19=breakfast (BB), 20=half-board (HB), 21=full-board (FB)
+function detectMealPlanType(packageName: string): number {
+  const lower = packageName.toLowerCase();
+  if (/pe[łl]ne\s*wy[żz]ywienie|full\s*board/i.test(lower)) return 21; // FB
+  if (/[śs]niadanie?\s*(i|oraz)\s*(obiad|kolacj)|p[oó][łl]pensj|half\s*board/i.test(lower)) return 20; // HB
+  if (/[śs]niadani|breakfast|ze?\s*[śs]niad/i.test(lower)) return 19; // BB
+  if (/bez\s*wy[żz]ywienia|room\s*only|nocleg\s*bez/i.test(lower)) return 18; // RO
+  return 19; // Default: most PremiumHotel packages include breakfast
 }
 
 // ── Mappers: PremiumHotel -> shared types ────────────────────────────────────
@@ -618,6 +631,30 @@ export async function scrapePremiumHotelFull(
     const roomDetails = mapRoomDetails(data.roomStandards || []);
     const hotelDetails = mapHotelDetails(appConfig, tenant, context);
 
+    // Meal plan pricing: cheapest per-night price per mealPlanType
+    let pricesByMealPlan: Record<string, MealPlanPrice> | undefined;
+    if (rooms.length > 0) {
+      const mealPlanBest = new Map<number, MealPlanPrice>();
+      for (const room of rooms) {
+        const mealType = detectMealPlanType(room.mealPlan || "");
+        const existing = mealPlanBest.get(mealType);
+        if (!existing || room.price < existing.price) {
+          mealPlanBest.set(mealType, {
+            price: room.price,
+            currency: room.currency,
+            roomName: room.roomName,
+            offerName: room.mealPlan,
+          });
+        }
+      }
+      if (mealPlanBest.size > 0) {
+        pricesByMealPlan = {};
+        for (const [mealType, data] of mealPlanBest) {
+          pricesByMealPlan[String(mealType)] = data;
+        }
+      }
+    }
+
     return {
       success: true,
       rooms,
@@ -629,6 +666,7 @@ export async function scrapePremiumHotelFull(
       roomDetails,
       offers,
       hotelDetails,
+      pricesByMealPlan,
     };
   } catch (err) {
     return {

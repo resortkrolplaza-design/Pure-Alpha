@@ -196,9 +196,11 @@ async function scrollPage(page: puppeteer.Page): Promise<void> {
 // HTML fallback exists for engines that don't make API calls during page load.
 
 interface EngineDiscovery {
-  engine: "PROFITROOM" | "HOTRES" | "OTHER";
+  engine: "PROFITROOM" | "PREMIUMHOTEL" | "HOTRES" | "OTHER";
   siteKey?: string;
   url?: string;
+  tenant?: string;
+  context?: string;
 }
 
 // Profitroom siteKey extraction from any URL containing profitroom/upperbooking
@@ -245,6 +247,7 @@ function setupNetworkDiscovery(page: puppeteer.Page): { getResult: () => EngineD
   let apiSiteKey: string | null = null;   // from booking.profitroom.com/api/
   let otherSiteKey: string | null = null; // from CDN or other profitroom URLs
   let hotresResult: EngineDiscovery | null = null;
+  let premiumHotelResult: EngineDiscovery | null = null;
 
   page.on("request", (req) => {
     const url = req.url();
@@ -264,6 +267,27 @@ function setupNetworkDiscovery(page: puppeteer.Page): { getResult: () => EngineD
       return;
     }
 
+    // PremiumHotel / Betasi
+    if (url.includes("premiumhotel.pl") && !premiumHotelResult) {
+      // Extract tenant from API URL: api.premiumhotel.pl/apiV2/{tenant}/...
+      const phMatch = url.match(/api\.premiumhotel\.pl\/apiV2\/([a-zA-Z0-9._-]+)/);
+      if (phMatch?.[1]) {
+        // Extract context from query param (?context=bialystok) — NOT from URL path
+        let phContext: string | undefined;
+        try {
+          const phUrl = new URL(url);
+          const ctx = phUrl.searchParams.get("context");
+          if (ctx && /^[a-zA-Z0-9._-]+$/.test(ctx)) phContext = ctx;
+        } catch { /* ignore invalid URLs */ }
+        premiumHotelResult = {
+          engine: "PREMIUMHOTEL",
+          tenant: phMatch[1],
+          context: phContext,
+        };
+        console.log(`[NetworkDiscovery] PremiumHotel: tenant=${phMatch[1]} context=${phContext}`);
+      }
+    }
+
     // HOTRES
     if (url.includes("hotres.pl") && !hotresResult) {
       hotresResult = { engine: "HOTRES", url };
@@ -274,6 +298,7 @@ function setupNetworkDiscovery(page: puppeteer.Page): { getResult: () => EngineD
     getResult: () => {
       const bestSiteKey = apiSiteKey || otherSiteKey;
       if (bestSiteKey) return { engine: "PROFITROOM", siteKey: bestSiteKey };
+      if (premiumHotelResult) return premiumHotelResult;
       return hotresResult;
     },
   };
@@ -306,6 +331,12 @@ async function discoverBookingEngineFromHTML(page: puppeteer.Page): Promise<Engi
       const match = html.match(p);
       if (match?.[1] && !skipKeys.has(match[1])) return { engine: "PROFITROOM" as const, siteKey: match[1] };
     }
+
+    // PremiumHotel / Betasi — data-zuu-be-id attribute or premiumhotel.pl references
+    const zuuMatch = html.match(/data-zuu-be-id=["']([a-zA-Z0-9._-]+)\.premiumhotel\.pl["']/);
+    if (zuuMatch?.[1]) return { engine: "PREMIUMHOTEL" as const, tenant: zuuMatch[1] };
+    const phApiMatch = html.match(/api\.premiumhotel\.pl\/apiV2\/([a-zA-Z0-9._-]+)/);
+    if (phApiMatch?.[1]) return { engine: "PREMIUMHOTEL" as const, tenant: phApiMatch[1] };
 
     // Hotres in iframes or links
     const iframes = document.querySelectorAll("iframe");
@@ -826,6 +857,20 @@ export async function scrapeGenericPrices(
         detectedEngine: "PROFITROOM",
         profitroomSiteKey: discovery.siteKey,
         error: "Detected Profitroom engine — re-dispatch to PROFITROOM API",
+        durationMs: Date.now() - start,
+        engine: "GENERIC",
+        hotelMeta,
+      };
+    }
+
+    if (discovery?.engine === "PREMIUMHOTEL" && discovery.tenant) {
+      const hotelMeta = await extractHotelMeta(page);
+      return {
+        success: false,
+        detectedEngine: "PREMIUMHOTEL",
+        premiumHotelTenant: discovery.tenant,
+        premiumHotelContext: discovery.context,
+        error: "Detected PremiumHotel engine — re-dispatch to PREMIUMHOTEL API",
         durationMs: Date.now() - start,
         engine: "GENERIC",
         hotelMeta,

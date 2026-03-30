@@ -285,6 +285,25 @@ export default {
             });
           }
 
+          // Re-dispatch: GENERIC detected PremiumHotel → use direct API
+          if (!result.success && result.detectedEngine === "PREMIUMHOTEL" && result.premiumHotelTenant) {
+            const phScrapeFn = params.mode === "full"
+              ? scrapePremiumHotelFull
+              : params.mode === "calendar-fallback"
+                ? scrapePremiumHotelCalendar
+                : scrapePremiumHotelPrices;
+            const phResult = await phScrapeFn(
+              env.BROWSER, params, result.premiumHotelTenant, result.premiumHotelContext,
+            );
+            return Response.json({
+              ...phResult,
+              hotelMeta: phResult.hotelMeta || result.hotelMeta,
+              premiumHotelTenant: result.premiumHotelTenant,
+              premiumHotelContext: result.premiumHotelContext,
+              detectedEngine: "PREMIUMHOTEL",
+            });
+          }
+
           return Response.json(result);
         }
         case "PREMIUMHOTEL": {
