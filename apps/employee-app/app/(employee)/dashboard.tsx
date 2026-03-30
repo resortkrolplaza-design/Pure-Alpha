@@ -47,6 +47,7 @@ function DashboardScreenInner() {
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const pinModalRef = useRef<TextInput>(null);
+  const pinValueRef = useRef("");
 
   // Check if biometric is enrolled to show shield badge
   useEffect(() => {
@@ -179,18 +180,19 @@ function DashboardScreenInner() {
     }
   }, [lang, doClock]);
 
-  const handlePinModalSubmit = useCallback(async () => {
+  const handlePinModalSubmit = useCallback(async (submittedPin: string) => {
     setShowPinModal(false);
     clockingRef.current = false;
     const creds = await getCachedCredentials();
-    if (creds && pinInput === creds.pin) {
+    if (creds && submittedPin === creds.pin) {
       doClock();
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t(lang, "common.error"), t(lang, "clock.pinWrong"));
     }
     setPinInput("");
-  }, [pinInput, lang, doClock]);
+    pinValueRef.current = "";
+  }, [lang, doClock]);
 
   const handlePinModalCancel = useCallback(() => {
     setShowPinModal(false);
@@ -380,8 +382,9 @@ function DashboardScreenInner() {
               onChangeText={(v) => {
                 const cleaned = v.replace(/\D/g, "").slice(0, 4);
                 setPinInput(cleaned);
+                pinValueRef.current = cleaned;
                 if (cleaned.length === 4) {
-                  setTimeout(() => handlePinModalSubmit(), 100);
+                  setTimeout(() => handlePinModalSubmit(cleaned), 100);
                 }
               }}
               keyboardType="number-pad"

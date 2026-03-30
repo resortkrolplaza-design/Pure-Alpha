@@ -14,7 +14,7 @@ const REQUEST_TIMEOUT_MS = 15_000;
 
 // Session expiry callback -- configured from _layout.tsx
 let onEmployeeSessionExpired: (() => void) | null = null;
-let sessionRefreshInProgress = false;
+let sessionRefreshPromise: Promise<boolean> | null = null;
 
 export function configureEmployeeApi(cb: { onSessionExpired: () => void }) {
   onEmployeeSessionExpired = cb.onSessionExpired;
@@ -28,9 +28,7 @@ function getLang(): Lang {
  * Try silent re-auth using cached biometric credentials.
  * Returns true if new token obtained, false if should proceed to logout.
  */
-async function trySessionRefresh(): Promise<boolean> {
-  if (sessionRefreshInProgress) return false;
-  sessionRefreshInProgress = true;
+async function doSessionRefresh(): Promise<boolean> {
   try {
     const [enrolled, creds, hotelId] = await Promise.all([
       isBiometricEnrolled(),
@@ -54,9 +52,16 @@ async function trySessionRefresh(): Promise<boolean> {
     return false;
   } catch {
     return false;
-  } finally {
-    sessionRefreshInProgress = false;
   }
+}
+
+// Shared promise: all concurrent 401s wait for the same refresh attempt
+function trySessionRefresh(): Promise<boolean> {
+  if (sessionRefreshPromise) return sessionRefreshPromise;
+  sessionRefreshPromise = doSessionRefresh().finally(() => {
+    sessionRefreshPromise = null;
+  });
+  return sessionRefreshPromise;
 }
 
 export async function employeeFetch<T>(
