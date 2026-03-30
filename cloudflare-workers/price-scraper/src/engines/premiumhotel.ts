@@ -283,7 +283,7 @@ async function fetchProposals(
 // 18=room-only, 19=breakfast (BB), 20=half-board (HB), 21=full-board (FB)
 function detectMealPlanType(packageName: string): number {
   const lower = packageName.toLowerCase();
-  if (/pe[łl]ne\s*wy[żz]ywienie|full\s*board/i.test(lower)) return 21; // FB
+  if (/pe[łl]ne\s*wy[żz]ywienie|full\s*board|all\s*inclusive/i.test(lower)) return 21; // FB / AI
   if (/[śs]niadanie?\s*(i|oraz)\s*(obiad|kolacj)|p[oó][łl]pensj|half\s*board/i.test(lower)) return 20; // HB
   if (/[śs]niadani|breakfast|ze?\s*[śs]niad/i.test(lower)) return 19; // BB
   if (/bez\s*wy[żz]ywienia|room\s*only|nocleg\s*bez/i.test(lower)) return 18; // RO
