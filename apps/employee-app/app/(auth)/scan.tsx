@@ -46,8 +46,8 @@ function extractSlugFromQr(raw: string): string | null {
       const slug = url.searchParams.get("slug");
       if (slug) return slug.toLowerCase();
     }
-    // Also handle HTTPS onboarding URLs
-    if (url.hostname && url.searchParams.has("slug")) {
+    // HTTPS onboarding URLs -- only from trusted hostname
+    if (url.hostname === "purealphahotel.pl" && url.searchParams.has("slug")) {
       const slug = url.searchParams.get("slug");
       if (slug) return slug.toLowerCase();
     }

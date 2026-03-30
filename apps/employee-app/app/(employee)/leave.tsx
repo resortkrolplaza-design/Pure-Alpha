@@ -5,7 +5,7 @@
 import { useState, useCallback } from "react";
 import {
   View, Text, ScrollView, Pressable, RefreshControl, TextInput,
-  StyleSheet, ActivityIndicator, Modal, Platform, Alert,
+  StyleSheet, ActivityIndicator, Modal, Platform, Alert, KeyboardAvoidingView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -283,12 +283,16 @@ function LeaveScreenInner() {
         transparent={true}
         onRequestClose={resetForm}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           <View
             style={[
               styles.modalContent,
               { paddingBottom: insets.bottom + spacing.xl },
             ]}
+            accessibilityViewIsModal={true}
           >
             {/* Modal Header */}
             <View style={styles.modalHeader}>
@@ -416,7 +420,7 @@ function LeaveScreenInner() {
               </Pressable>
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

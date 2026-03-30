@@ -120,13 +120,12 @@ function DashboardScreenInner() {
     if (clockingRef.current) return;
     clockingRef.current = true;
 
-    try {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
     // Check if biometric is enrolled for this user
     const enrolled = await isBiometricEnrolled();
     if (!enrolled) {
-      // No biometric enrolled -- proceed directly (no gate)
+      clockingRef.current = false;
       doClock();
       return;
     }
@@ -134,7 +133,7 @@ function DashboardScreenInner() {
     // Check device capability
     const bio = await checkBiometricAvailability();
     if (!bio.available) {
-      // Device lost biometric capability -- proceed directly
+      clockingRef.current = false;
       doClock();
       return;
     }
@@ -143,16 +142,20 @@ function DashboardScreenInner() {
     const success = await authenticateWithBiometric(t(lang, "clock.biometricPrompt"));
     if (success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      clockingRef.current = false;
       doClock();
       return;
     }
 
     // Biometric failed -- offer PIN fallback
+    // NOTE: Alert.prompt/Alert.alert are non-blocking. clockingRef stays true
+    // until user completes or cancels the alert (prevents double-tap during alert).
     if (Platform.OS === "ios") {
       Alert.prompt(
         t(lang, "clock.pinFallback"),
         undefined,
         async (enteredPin: string) => {
+          clockingRef.current = false;
           const creds = await getCachedCredentials();
           if (creds && enteredPin === creds.pin) {
             doClock();
@@ -171,13 +174,21 @@ function DashboardScreenInner() {
         t(lang, "clock.pinFallback"),
         t(lang, "clock.biometricFailed"),
         [
-          { text: t(lang, "common.cancel"), style: "cancel" },
-          { text: t(lang, "common.retry"), onPress: () => handleClock() },
+          {
+            text: t(lang, "common.cancel"),
+            style: "cancel",
+            onPress: () => { clockingRef.current = false; },
+          },
+          {
+            text: t(lang, "common.retry"),
+            onPress: () => {
+              clockingRef.current = false;
+              handleClock();
+            },
+          },
         ],
+        { cancelable: false },
       );
-    }
-    } finally {
-      clockingRef.current = false;
     }
   }, [lang, doClock]);
 

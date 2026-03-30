@@ -291,6 +291,7 @@ function LoginScreenInner() {
 
   // -- Credentials login ------------------------------------------------------
   const handleCredentialsLogin = useCallback(async () => {
+    if (loginInProgressRef.current) return;
     if (!resolvedHotelId) {
       setError(t(lang, "welcome.enterHotelFirst"));
       return;
@@ -299,18 +300,22 @@ function LoginScreenInner() {
     const p = password;
     if (!u || !p) return;
 
+    loginInProgressRef.current = true;
     setLoading(true);
     setError(null);
 
-    const res = await loginWithCredentials(u, p, resolvedHotelId);
-    if (res.status === "success" && res.data) {
-      await handleLoginSuccess(res.data);
-    } else {
-      setError(res.errorMessage ?? t(lang, "auth.invalidCredentials"));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    try {
+      const res = await loginWithCredentials(u, p, resolvedHotelId);
+      if (res.status === "success" && res.data) {
+        await handleLoginSuccess(res.data);
+      } else {
+        setError(res.errorMessage ?? t(lang, "auth.invalidCredentials"));
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } finally {
+      setLoading(false);
+      loginInProgressRef.current = false;
     }
-
-    setLoading(false);
   }, [resolvedHotelId, username, password, lang, handleLoginSuccess]);
 
   const navigation = useNavigation();
