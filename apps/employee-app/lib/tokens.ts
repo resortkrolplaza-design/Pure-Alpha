@@ -73,6 +73,10 @@ export const leaveStatusColors: Record<string, { bg: string; text: string }> = {
   approved: { bg: "rgba(16,185,129,0.1)", text: "#10b981" },
   rejected: { bg: "rgba(239,68,68,0.1)", text: "#ef4444" },
   cancelled: { bg: "rgba(100,116,139,0.1)", text: "#64748b" },
+  PENDING: { bg: "rgba(245,158,11,0.1)", text: "#f59e0b" },
+  APPROVED: { bg: "rgba(16,185,129,0.1)", text: "#10b981" },
+  REJECTED: { bg: "rgba(239,68,68,0.1)", text: "#ef4444" },
+  CANCELLED: { bg: "rgba(100,116,139,0.1)", text: "#64748b" },
 };
 
 // -- Spacing (px values, NOT rem) ---------------------------------------------

@@ -22,9 +22,9 @@ export interface ShiftData {
   endTime: string;
   shiftType: string;
   status: string;
-  department: string;
+  department: string | null;
   position: string | null;
-  isOwnShift: boolean;
+  isOwnShift?: boolean;
 }
 
 // -- Dashboard Data -----------------------------------------------------------
@@ -58,26 +58,41 @@ export interface DashboardData {
 
 // -- Leave Request ------------------------------------------------------------
 
-export type LeaveStatus = "pending" | "approved" | "rejected" | "cancelled";
-export type LeaveType = "vacation" | "sick" | "personal" | "unpaid" | "parental" | "other";
+// Backend returns UPPERCASE enums, frontend form uses lowercase -- accept both
+export type LeaveStatus =
+  | "pending" | "approved" | "rejected" | "cancelled"
+  | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+export type LeaveType =
+  | "vacation" | "sick" | "personal" | "unpaid" | "parental" | "other"
+  | "VACATION" | "SICK" | "ON_DEMAND" | "UNPAID" | "OTHER" | "COMPASSIONATE" | "TRAINING";
 
 export interface LeaveRequest {
   id: string;
-  leaveType: LeaveType;
+  leaveType: string;
   startDate: string;
   endDate: string;
+  workDays?: number;
   reason: string | null;
-  status: LeaveStatus;
-  reviewedBy: string | null;
-  reviewedAt: string | null;
+  status: string;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  rejectedBy?: string | null;
+  rejectedAt?: string | null;
+  rejectionReason?: string | null;
+  requestedAt?: string;
   createdAt: string;
 }
 
 export interface LeaveBalance {
+  year?: number;
   totalDays: number;
   usedDays: number;
+  plannedDays?: number;
   remainingDays: number;
-  pendingDays: number;
+  pendingRequests?: number;
+  onDemandEntitlement?: number;
+  onDemandUsed?: number;
+  sickDaysUsed?: number;
 }
 
 export interface LeaveData {

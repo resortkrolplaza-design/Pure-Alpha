@@ -31,17 +31,18 @@ const LEAVE_TYPES: LeaveType[] = [
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
-// Map frontend leave types to backend enum values
-function mapLeaveTypeToBackend(type: LeaveType): string {
-  const map: Record<LeaveType, string> = {
-    vacation: "VACATION",
-    sick: "SICK",
-    personal: "ON_DEMAND",
-    unpaid: "UNPAID",
-    parental: "PARENTAL",
-    other: "OTHER",
-  };
-  return map[type] ?? "OTHER";
+// Map frontend form leave types to backend UPPERCASE enum values
+const LEAVE_TYPE_MAP: Record<string, string> = {
+  vacation: "VACATION",
+  sick: "SICK",
+  personal: "ON_DEMAND",
+  unpaid: "UNPAID",
+  parental: "PARENTAL",
+  other: "OTHER",
+};
+
+function mapLeaveTypeToBackend(type: string): string {
+  return LEAVE_TYPE_MAP[type] ?? "OTHER";
 }
 
 function LeaveScreenInner() {
@@ -151,15 +152,8 @@ function LeaveScreenInner() {
     DATE_REGEX.test(formDateFrom) &&
     DATE_REGEX.test(formDateTo);
 
-  // Build balance object for display
-  const balance: LeaveBalance | null = balanceQuery.data
-    ? {
-        totalDays: balanceQuery.data.totalDays,
-        usedDays: balanceQuery.data.usedDays,
-        remainingDays: balanceQuery.data.remainingDays,
-        pendingDays: balanceQuery.data.pendingRequests,
-      }
-    : null;
+  // Build balance object for display (backend returns full shape, use directly)
+  const balance: LeaveBalance | null = balanceQuery.data ?? null;
 
   const requests = Array.isArray(requestsQuery.data) ? requestsQuery.data : [];
 
@@ -239,9 +233,9 @@ function LeaveScreenInner() {
                 <Text style={styles.statLabel}>{t(lang, "leave.remaining")}</Text>
               </View>
             </View>
-            {balance.pendingDays > 0 && (
+            {(balance.pendingRequests ?? 0) > 0 && (
               <Text style={styles.pendingNote}>
-                {t(lang, "leave.pending")}: {balance.pendingDays} {t(lang, "leave.days")}
+                {t(lang, "leave.pending")}: {balance.pendingRequests} {t(lang, "leave.days")}
               </Text>
             )}
           </View>
