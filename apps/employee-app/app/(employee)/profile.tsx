@@ -68,7 +68,7 @@ function ProfileScreenInner() {
   }, [setBioEnrolled]);
 
   useEffect(() => {
-    // If Zustand already has data, skip JWT decode
+    // If Zustand already has data, skip JWT decode (runs once on mount)
     if (profile) return;
     (async () => {
       const token = await getEmployeeToken();
@@ -86,7 +86,8 @@ function ProfileScreenInner() {
         // Token decode failed -- keep placeholder
       }
     })();
-  }, [profile]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const initials = profile?.name
     ? profile.name

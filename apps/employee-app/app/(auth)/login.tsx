@@ -73,6 +73,7 @@ function LoginScreenInner() {
   const [loginInput, setLoginInput] = useState("");
   const [pin, setPin] = useState("");
   const pinInputRef = useRef<TextInput>(null);
+  const loginInProgressRef = useRef(false);
 
   // Credentials fields
   const [username, setUsername] = useState("");
@@ -93,19 +94,19 @@ function LoginScreenInner() {
 
   // -- Check if hotel already onboarded on mount ------------------------------
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       const onboarded = await isHotelOnboarded();
-      if (!onboarded) return;
+      if (!onboarded || cancelled) return;
 
       const [savedSlug, savedHotelId] = await Promise.all([
         getHotelSlug(),
         getHotelId(),
       ]);
+      if (!savedSlug || !savedHotelId || cancelled) return;
 
-      if (!savedSlug || !savedHotelId) return;
-
-      // Resolve hotel name from API to confirm it still exists
       const res = await resolveHotel(savedSlug);
+      if (cancelled) return;
       if (res.status === "success" && res.data) {
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         setHotelSlugInput(savedSlug);
@@ -114,6 +115,7 @@ function LoginScreenInner() {
         setHotelResolved(true);
       }
     })();
+    return () => { cancelled = true; };
   }, []);
 
   // -- Resolve hotel slug -----------------------------------------------------
@@ -241,6 +243,7 @@ function LoginScreenInner() {
   // -- PIN login --------------------------------------------------------------
   const handlePinLogin = useCallback(
     async (pinVal?: string) => {
+      if (loginInProgressRef.current) return;
       if (!resolvedHotelId) {
         setError(t(lang, "welcome.enterHotelFirst"));
         return;
@@ -250,20 +253,24 @@ function LoginScreenInner() {
       const finalPin = pinVal ?? pin;
       if (finalPin.length !== PIN_LENGTH) return;
 
+      loginInProgressRef.current = true;
       setLoading(true);
       setError(null);
 
-      const res = await loginWithPin(loginVal, finalPin, resolvedHotelId);
-      if (res.status === "success" && res.data) {
-        await handleLoginSuccess(res.data);
-      } else {
-        setError(res.errorMessage ?? t(lang, "auth.invalidCredentials"));
-        setPin("");
-        pinInputRef.current?.focus();
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      try {
+        const res = await loginWithPin(loginVal, finalPin, resolvedHotelId);
+        if (res.status === "success" && res.data) {
+          await handleLoginSuccess(res.data);
+        } else {
+          setError(res.errorMessage ?? t(lang, "auth.invalidCredentials"));
+          setPin("");
+          pinInputRef.current?.focus();
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+      } finally {
+        setLoading(false);
+        loginInProgressRef.current = false;
       }
-
-      setLoading(false);
     },
     [resolvedHotelId, loginInput, pin, lang, handleLoginSuccess],
   );
