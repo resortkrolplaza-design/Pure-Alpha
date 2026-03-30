@@ -16,7 +16,7 @@ export const emp = {
   tabBarBg: "rgba(255,255,255,0.95)",
   text: "#0f172a",
   textSecondary: "#475569",
-  textMuted: "#64748b",
+  textMuted: "#556578",
   card: "rgba(255,255,255,0.9)",
   cardBorder: "rgba(0,0,0,0.06)",
   surface: "rgba(255,255,255,0.7)",

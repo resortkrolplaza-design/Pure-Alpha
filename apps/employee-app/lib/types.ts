@@ -29,6 +29,15 @@ export interface ShiftData {
 
 // -- Dashboard Data -----------------------------------------------------------
 
+export interface ActiveShift {
+  id: string;
+  clockInTime: string;
+  startTime: string;
+  endTime: string;
+  department: string;
+  shiftType: string;
+}
+
 export interface DashboardData {
   todayShift: ShiftData | null;
   upcomingShifts: ShiftData[];
@@ -38,6 +47,13 @@ export interface DashboardData {
     totalShifts: number;
   };
   isClockedIn: boolean;
+  activeShift: ActiveShift | null;
+  leaveBalance: LeaveBalance | null;
+  stats: {
+    monthlyHours: number;
+    pendingLeaveRequests: number;
+  };
+  serverTime: string;
 }
 
 // -- Leave Request ------------------------------------------------------------
