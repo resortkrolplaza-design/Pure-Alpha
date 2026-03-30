@@ -905,7 +905,7 @@ export async function scrapeProfitroomFull(
 
       if (gapDates.length > 0) {
         console.log(`[PriceScraper] gap-fill: ${gapDates.length} min-stay gaps for ${siteKey}, trying 2-night availability`);
-        const GAP_STAY_LADDER = [2, 3, 5]; // 2→3→5 covers min-stay 2/3/4/5 (5-night query satisfies min-stay=4 too)
+        const GAP_STAY_LADDER = [2, 3, 5, 7]; // 2→3→5→7 covers min-stay 2/3/4/5/6/7 (peak season weekly stays)
         const GAP_BATCH = 5; // Process 5 dates at a time
 
         for (let b = 0; b < gapDates.length; b += GAP_BATCH) {
@@ -1245,9 +1245,10 @@ export async function scrapeProfitroomCalendarFallback(
       ...allDays.filter(d => unavailableSet.has(d)).slice(0, MAX_UNAVAILABLE_RETRY),
     ];
 
-    // Hotels have variable min-stay: off-season 1n, shoulder 2n, summer 3n, peak 5n
+    // Hotels have variable min-stay: off-season 1n, shoulder 2n, summer 3n, peak 5-7n
     // Start with 1-night to get accurate per-night price (2+ night stays have lower per-night rates)
-    const STAY_LADDER = [1, 2, 3, 4, 5];
+    // 7-night: peak season beach resorts (Dune, Saltic) often require weekly stays Jul-Aug
+    const STAY_LADDER = [1, 2, 3, 4, 5, 7];
     let stayIdx = 0;
     let stayNights = STAY_LADDER[0];
     const calendarPrices: CalendarPrice[] = [];
@@ -1311,10 +1312,10 @@ export async function scrapeProfitroomCalendarFallback(
         console.log(`[PriceScraper] calendar-fallback escalating to ${stayNights}-night for ${siteKey}`);
       }
       // Per-date retry: if SOME dates missed (mixed min-stay), escalate through STAY_LADDER
-      // Hotels have variable min-stay: off-season 1n, shoulder 2n, Easter 3n, peak 5n
+      // Hotels have variable min-stay: off-season 1n, shoulder 2n, Easter 3n, peak 5-7n
       else if (missedDates.length > 0 && stayNights === 1 && Date.now() - start < TIME_BUDGET_MS) {
         let remaining = [...missedDates];
-        for (const retryNights of [2, 3, 5]) {
+        for (const retryNights of [2, 3, 5, 7]) {
           if (remaining.length === 0 || Date.now() - start > TIME_BUDGET_MS) break;
           const retryResults = await Promise.allSettled(
             remaining.map((checkIn) => {
