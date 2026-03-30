@@ -28,6 +28,7 @@ import * as Haptics from "expo-haptics";
 import { getDeviceId } from "@/lib/device-id";
 import {
   group,
+  quickActionColors,
   semantic,
   fontSize,
   radius,
@@ -150,8 +151,73 @@ function socialIcon(platform: string): IconName {
 }
 
 // =============================================================================
+// QUICK ACTIONS config
+// =============================================================================
+
+const QUICK_ACTIONS: Array<{
+  labelKey: string;
+  icon: IconName;
+  tab: string;
+  params?: Record<string, string>;
+  bg: string;
+  color: string;
+  flag?: string;
+  organizerOnly?: boolean;
+}> = [
+  { labelKey: "quickAction.rsvp", icon: "checkmark-circle", tab: "rsvp", bg: quickActionColors.rsvp.bg, color: quickActionColors.rsvp.icon },
+  { labelKey: "group.quickGuests", icon: "people", tab: "rsvp", params: { section: "guests" }, bg: quickActionColors.guests.bg, color: quickActionColors.guests.icon, flag: "guestListEnabled", organizerOnly: true },
+  { labelKey: "quickAction.agenda", icon: "calendar", tab: "agenda", bg: quickActionColors.agenda.bg, color: quickActionColors.agenda.icon, flag: "agendaEnabled" },
+  { labelKey: "group.quickMessages", icon: "chatbubbles", tab: "messages", bg: quickActionColors.messages.bg, color: quickActionColors.messages.icon, flag: "messagingEnabled" },
+  { labelKey: "group.quickDocuments", icon: "document-text", tab: "rsvp", params: { section: "documents" }, bg: quickActionColors.documents.bg, color: quickActionColors.documents.icon, flag: "documentsEnabled", organizerOnly: true },
+  { labelKey: "group.quickPhotos", icon: "camera", tab: "photos", bg: quickActionColors.photos.bg, color: quickActionColors.photos.icon, flag: "photoWallEnabled" },
+  { labelKey: "quickAction.gallery", icon: "images", tab: "event", params: { scrollTo: "gallery" }, bg: quickActionColors.gallery.bg, color: quickActionColors.gallery.icon, flag: "galleryEnabled" },
+  { labelKey: "quickAction.services", icon: "pricetag", tab: "event", params: { scrollTo: "services" }, bg: quickActionColors.services.bg, color: quickActionColors.services.icon, flag: "servicesEnabled" },
+  { labelKey: "quickAction.attractions", icon: "compass", tab: "event", params: { scrollTo: "attractions" }, bg: quickActionColors.attractions.bg, color: quickActionColors.attractions.icon, flag: "attractionsEnabled" },
+  { labelKey: "quickAction.faq", icon: "help-circle", tab: "event", params: { scrollTo: "faq" }, bg: quickActionColors.faq.bg, color: quickActionColors.faq.icon, flag: "faqEnabled" },
+  { labelKey: "quickAction.polls", icon: "bar-chart", tab: "messages", params: { tab: "polls" }, bg: quickActionColors.polls.bg, color: quickActionColors.polls.icon, flag: "pollsEnabled" },
+];
+
+// =============================================================================
 // Sub-components
 // =============================================================================
+
+// -- Quick Action Circle (colored icon in grid) --------------------------------
+
+function QuickActionCircle({
+  label,
+  iconName,
+  bg,
+  color,
+  onPress,
+}: {
+  label: string;
+  iconName: IconName;
+  bg: string;
+  color: string;
+  onPress: () => void;
+}) {
+  const { scaleStyle, onPressIn, onPressOut } = useScalePress(0.92);
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      style={styles.quickActionItem}
+    >
+      <Animated.View style={scaleStyle}>
+        <View style={[styles.quickActionCircle, { backgroundColor: bg }]}>
+          <Icon name={iconName} size={24} color={color} />
+        </View>
+        <Text style={styles.quickActionLabel} numberOfLines={1}>
+          {label}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 // -- Announcement Card --------------------------------------------------------
 
@@ -393,6 +459,7 @@ function OverviewScreenInner() {
   // -- Entrance animations --
   const headerSlide = useSlideUp(0, 12);
   const heroSlide = useSlideUp(80, 16);
+  const quickActionsSlide = useSlideUp(160, 12);
 
   // -- Data fetching via /init --
   const {
@@ -455,6 +522,28 @@ function OverviewScreenInner() {
 
   // -- Cover image source --
   const hasCover = !!hotel?.coverImageUrl && !coverError;
+
+  // -- Quick action handler --
+  const handleQuickAction = useCallback((tab: string, params?: Record<string, string>) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (params && Object.keys(params).length > 0) {
+      router.navigate({
+        pathname: `/(group)/${tab}` as any,
+        params,
+      });
+      return;
+    }
+    router.navigate(`/(group)/${tab}` as any);
+  }, []);
+
+  // -- CTA "Add guests" (organizer only, no guests yet) --
+  const [ctaDismissed, setCtaDismissed] = useState(false);
+  const showCta =
+    !isParticipant &&
+    !ctaDismissed &&
+    totalGuestCount === 0 &&
+    diffDays !== null &&
+    diffDays > 0;
 
   // -- TASK 1: Poll Popup (auto-show first active unvoted poll) --
   const [pollPopupVisible, setPollPopupVisible] = useState(false);
@@ -815,9 +904,51 @@ function OverviewScreenInner() {
           </View>
         )}
 
-        {/* C/C2/C3 removed -- timeline, notes, reminder moved to dedicated screens */}
+        {/* ================================================================= */}
+        {/* C2. ORGANIZER NOTES (info from hotel for all participants)      */}
+        {/* ================================================================= */}
+        {!isLoading && portal?.notes ? (
+          <View style={styles.notesCard}>
+            <View style={styles.notesHeader}>
+              <Icon name="document-text-outline" size={20} color={group.primary} />
+              <Text style={styles.notesTitle}>{t(lang, "notes.title")}</Text>
+            </View>
+            <Text style={styles.notesBody}>{portal.notes}</Text>
+          </View>
+        ) : null}
 
-        {/* D removed -- CTA alert cut from overview */}
+        {/* ================================================================= */}
+        {/* D. CTA ALERT (organizer only, no guests yet)                    */}
+        {/* ================================================================= */}
+        {showCta && (
+          <View style={styles.ctaContainer}>
+            <View style={styles.ctaContent}>
+              <Icon name="people-outline" size={20} color={group.white} />
+              <Text style={styles.ctaText}>
+                {t(lang, "overview.cta.addGuests")}
+              </Text>
+            </View>
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.navigate("/(group)/guests" as any);
+              }}
+              style={styles.ctaBtn}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "overview.cta.addGuests")}
+            >
+              <Icon name="arrow-forward" size={18} color={group.primary} />
+            </Pressable>
+            <Pressable
+              onPress={() => setCtaDismissed(true)}
+              style={styles.ctaDismiss}
+              accessibilityRole="button"
+              accessibilityLabel={t(lang, "common.close")}
+            >
+              <Icon name="close" size={16} color="rgba(255,255,255,0.7)" />
+            </Pressable>
+          </View>
+        )}
 
         {/* ================================================================= */}
         {/* D2. RSVP + SELF-REGISTER ACTION CARDS                            */}
@@ -857,9 +988,29 @@ function OverviewScreenInner() {
           </View>
         )}
 
-        {/* D3 removed -- upsell moved to event tab services */}
-
-        {/* E removed -- quick actions cut (tabs provide navigation now) */}
+        {/* ================================================================= */}
+        {/* E. QUICK ACTIONS (colored grid)                                   */}
+        {/* ================================================================= */}
+        {!isLoading && !isError && initData && (
+          <Animated.View style={quickActionsSlide}>
+            <View style={styles.quickActionsGrid}>
+              {QUICK_ACTIONS.filter((action) => {
+                if (action.organizerOnly && isParticipant) return false;
+                if (action.flag && portal && !(portal as Record<string, unknown>)[action.flag]) return false;
+                return true;
+              }).map((action) => (
+                <QuickActionCircle
+                  key={action.labelKey}
+                  label={t(lang, action.labelKey)}
+                  iconName={action.icon}
+                  bg={action.bg}
+                  color={action.color}
+                  onPress={() => handleQuickAction(action.tab, action.params)}
+                />
+              ))}
+            </View>
+          </Animated.View>
+        )}
 
         {/* ================================================================= */}
         {/* F. ANNOUNCEMENTS SECTION                                          */}
@@ -1577,6 +1728,102 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: "Inter_600SemiBold",
     color: group.primary,
+  },
+
+  // ── Quick Actions Grid ──
+  quickActionsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-around",
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  quickActionItem: {
+    alignItems: "center",
+    width: 64,
+  },
+  quickActionCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.xs,
+    ...shadow.sm,
+  },
+  quickActionLabel: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_500Medium",
+    color: group.textSecondary,
+    textAlign: "center",
+    lineHeight: 14,
+  },
+
+  // ── CTA Alert ──
+  ctaContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: group.primary,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    marginHorizontal: spacing["2xl"],
+    ...shadow.md,
+  },
+  ctaContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  ctaText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: group.white,
+    flex: 1,
+  },
+  ctaBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: group.white,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: spacing.sm,
+  },
+  ctaDismiss: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: spacing.xs,
+  },
+
+  // ── Notes Card ──
+  notesCard: {
+    backgroundColor: group.card,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    padding: spacing.lg,
+    marginHorizontal: spacing["2xl"],
+    gap: spacing.md,
+    ...shadow.sm,
+  },
+  notesHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  notesTitle: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: group.text,
+  },
+  notesBody: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: group.textSecondary,
+    lineHeight: 20,
   },
 
   // ── Empty State ──
