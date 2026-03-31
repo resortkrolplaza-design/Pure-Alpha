@@ -127,28 +127,33 @@ function LoginScreenInner() {
     setResolvingHotel(true);
     setHotelError(null);
 
-    const res = await resolveHotel(slug);
-    if (res.status === "success" && res.data) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      setResolvedHotelId(res.data.hotelId);
-      setResolvedHotelName(res.data.hotelName);
-      setHotelResolved(true);
-      // Persist for future sessions
-      await Promise.all([
-        setHotelSlug(slug),
-        setHotelId(res.data.hotelId),
-        setHotelOnboarded(),
-      ]);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } else {
-      setHotelError(t(lang, "welcome.hotelNotFound"));
-      setResolvedHotelId(null);
-      setResolvedHotelName(null);
-      setHotelResolved(false);
+    try {
+      const res = await resolveHotel(slug);
+      if (res.status === "success" && res.data) {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setResolvedHotelId(res.data.hotelId);
+        setResolvedHotelName(res.data.hotelName);
+        setHotelResolved(true);
+        // Persist for future sessions
+        await Promise.all([
+          setHotelSlug(slug),
+          setHotelId(res.data.hotelId),
+          setHotelOnboarded(),
+        ]);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        setHotelError(res.errorMessage ?? t(lang, "welcome.hotelNotFound"));
+        setResolvedHotelId(null);
+        setResolvedHotelName(null);
+        setHotelResolved(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    } catch {
+      setHotelError(t(lang, "common.networkError"));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setResolvingHotel(false);
     }
-
-    setResolvingHotel(false);
   }, [hotelSlugInput, lang]);
 
   // -- Navigate to dashboard after biometric enrollment decision ----------------

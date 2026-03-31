@@ -50,8 +50,9 @@ export interface DashboardData {
   activeShift: ActiveShift | null;
   leaveBalance: LeaveBalance | null;
   stats: {
-    monthlyHours: number;
+    hoursThisMonth: number;
     pendingLeaveRequests: number;
+    vacationRemaining: number;
   };
   serverTime: string;
 }
@@ -64,7 +65,8 @@ export type LeaveStatus =
   | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 export type LeaveType =
   | "vacation" | "sick" | "personal" | "unpaid" | "parental" | "other"
-  | "VACATION" | "SICK" | "ON_DEMAND" | "UNPAID" | "OTHER" | "COMPASSIONATE" | "TRAINING";
+  | "VACATION" | "SICK" | "ON_DEMAND" | "UNPAID" | "OTHER" | "COMPASSIONATE" | "TRAINING"
+  | "PARENTAL" | "CHILDCARE_LEAVE" | "MATERNITY" | "PATERNITY" | "SICK_CHILDCARE" | "BLOOD_DONATION";
 
 export interface LeaveRequest {
   id: string;

@@ -168,6 +168,7 @@ export async function logout(): Promise<void> {
     clearEmployeeToken(),
     deleteItem(HOTEL_SLUG_KEY),
     deleteItem(HOTEL_ID_KEY),
+    deleteItem(HOTEL_ONBOARDED_KEY),
     clearBiometricCredentials(),
   ]);
 }

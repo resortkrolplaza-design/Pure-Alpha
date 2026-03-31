@@ -6,7 +6,7 @@
 
 import { useRef, useEffect } from "react";
 import { Animated, Platform, StyleSheet, Text } from "react-native";
-import { Tabs } from "expo-router";
+import { Tabs, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { emp, fontSize, spacing } from "@/lib/tokens";
@@ -72,6 +72,14 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
 
 export default function EmployeeLayout() {
   const lang = useAppStore((s) => s.lang);
+  const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+
+  // Auth guard -- redirect unauthenticated users to entry screen
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.replace("/");
+    }
+  }, [isAuthenticated]);
 
   return (
     <Tabs

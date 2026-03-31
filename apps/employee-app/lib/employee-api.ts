@@ -4,6 +4,7 @@
 
 import { Platform } from "react-native";
 import { getEmployeeToken, setEmployeeToken, isBiometricEnrolled, getCachedCredentials, getHotelId } from "./auth";
+import { authenticateWithBiometric, checkBiometricAvailability } from "./biometric";
 import { t, type Lang } from "./i18n";
 import { useAppStore } from "./store";
 import type { ApiResponse } from "./types";
@@ -15,9 +16,18 @@ const REQUEST_TIMEOUT_MS = 15_000;
 // Session expiry callback -- configured from _layout.tsx
 let onEmployeeSessionExpired: (() => void) | null = null;
 let sessionRefreshPromise: Promise<boolean> | null = null;
+let sessionExpiredFired = false;
 
 export function configureEmployeeApi(cb: { onSessionExpired: () => void }) {
   onEmployeeSessionExpired = cb.onSessionExpired;
+  sessionExpiredFired = false;
+}
+
+/** Fire session expired callback at most once (until configureEmployeeApi resets). */
+function fireSessionExpired(): void {
+  if (sessionExpiredFired) return;
+  sessionExpiredFired = true;
+  onEmployeeSessionExpired?.();
 }
 
 function getLang(): Lang {
@@ -36,6 +46,17 @@ async function doSessionRefresh(): Promise<boolean> {
       getHotelId(),
     ]);
     if (!enrolled || !creds || !hotelId) return false;
+
+    // Require biometric verification before using cached credentials for re-auth.
+    // This shows a brief Face ID / Touch ID prompt -- acceptable UX tradeoff vs
+    // silently re-authenticating without user knowledge.
+    const bio = await checkBiometricAvailability();
+    if (bio.available) {
+      const success = await authenticateWithBiometric("Verify identity to refresh session", {
+        allowDeviceFallback: true,
+      });
+      if (!success) return false;
+    }
 
     const res = await fetch(`${API_BASE}/api/employee-app/auth/pin`, {
       method: "POST",
@@ -91,26 +112,34 @@ export async function employeeFetch<T>(
       // Try silent re-auth before giving up
       const refreshed = await trySessionRefresh();
       if (refreshed) {
-        // Retry the original request with new token
-        const newToken = await getEmployeeToken();
-        const retryRes = await fetch(url, {
-          ...options,
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            ...(newToken ? { Authorization: `Bearer ${newToken}` } : {}),
-            ...((options.headers as Record<string, string>) ?? {}),
-          },
-          signal: controller.signal,
-        });
-        if (retryRes.status === 401) {
-          onEmployeeSessionExpired?.();
-          return { status: "error", errorMessage: t(lang, "common.sessionExpired") };
+        // Clear original timeout -- create fresh AbortController for retry
+        // (original controller may already be aborted if request timed out)
+        clearTimeout(timeout);
+        const retryController = new AbortController();
+        const retryTimeout = setTimeout(() => retryController.abort(), REQUEST_TIMEOUT_MS);
+        try {
+          const newToken = await getEmployeeToken();
+          const retryRes = await fetch(url, {
+            ...options,
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              ...(newToken ? { Authorization: `Bearer ${newToken}` } : {}),
+              ...((options.headers as Record<string, string>) ?? {}),
+            },
+            signal: retryController.signal,
+          });
+          if (retryRes.status === 401) {
+            fireSessionExpired();
+            return { status: "error", errorMessage: t(lang, "common.sessionExpired") };
+          }
+          const json = (await retryRes.json()) as ApiResponse<T>;
+          return json;
+        } finally {
+          clearTimeout(retryTimeout);
         }
-        const json = (await retryRes.json()) as ApiResponse<T>;
-        return json;
       }
-      onEmployeeSessionExpired?.();
+      fireSessionExpired();
       return { status: "error", errorMessage: t(lang, "common.sessionExpired") };
     }
 

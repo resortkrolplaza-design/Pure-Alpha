@@ -106,19 +106,25 @@ function EntryScreenInner() {
 
         // Valid token -- restore session and go to dashboard
         const payload = decodeTokenPayload(token);
-        if (payload) {
-          store.setEmployee({
-            id: String(payload.employeeId ?? payload.sub ?? ""),
-            name: String(payload.employeeName ?? payload.name ?? ""),
-            department: payload.department ? String(payload.department) : undefined,
-            position: payload.position ? String(payload.position) : undefined,
-          });
+        if (!payload) {
+          // Token is malformed -- treat as invalid, logout and fall to welcome screen
+          await logout();
+          if (cancelled) return;
+          setState("ready");
+          return;
         }
+
+        store.setEmployee({
+          id: String(payload.employeeId ?? payload.sub ?? ""),
+          name: String(payload.employeeName ?? payload.name ?? ""),
+          department: payload.department ? String(payload.department) : undefined,
+          position: payload.position ? String(payload.position) : undefined,
+        });
 
         store.setHotel({
           slug,
           id: hotelId,
-          name: String(payload?.hotelName ?? slug),
+          name: String(payload.hotelName ?? slug),
         });
         store.setAuthenticated(true);
         router.replace("/(employee)/dashboard");

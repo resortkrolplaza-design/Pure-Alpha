@@ -4,9 +4,34 @@
 // No react-native-reanimated -- Expo Go SDK 54 compatible.
 // =============================================================================
 
-import { useRef, useEffect, useCallback } from "react";
-import { Animated } from "react-native";
+import { useRef, useEffect, useCallback, useState } from "react";
+import { Animated, AccessibilityInfo } from "react-native";
 import { animation } from "./tokens";
+
+// -- Reduced Motion Hook (a11y) ------------------------------------------------
+// Reads system "Reduce Motion" setting. Returns true when animations should be
+// suppressed (static values only, no loops/springs).
+
+export function useReducedMotion(): boolean {
+  const [reduced, setReduced] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => {
+      if (mounted) setReduced(v);
+    });
+    const sub = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      (v) => { if (mounted) setReduced(v); },
+    );
+    return () => {
+      mounted = false;
+      sub.remove();
+    };
+  }, []);
+
+  return reduced;
+}
 
 // -- Spring Press Animation (for Pressable cards/buttons) ---------------------
 // Returns onPressIn/onPressOut handlers + animated scale style.
@@ -42,16 +67,21 @@ export function useScalePress(toValue = 0.97) {
 // -- Fade In on Mount ---------------------------------------------------------
 
 export function useFadeIn(delay = 0) {
-  const opacity = useRef(new Animated.Value(0)).current;
+  const reducedMotion = useReducedMotion();
+  const opacity = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
 
   useEffect(() => {
+    if (reducedMotion) {
+      opacity.setValue(1);
+      return;
+    }
     Animated.timing(opacity, {
       toValue: 1,
       duration: animation.normal,
       delay,
       useNativeDriver: true,
     }).start();
-  }, [opacity, delay]);
+  }, [opacity, delay, reducedMotion]);
 
   return { opacity };
 }
@@ -59,10 +89,16 @@ export function useFadeIn(delay = 0) {
 // -- Slide Up + Fade In on Mount ----------------------------------------------
 
 export function useSlideUp(delay = 0, distance = 20) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(distance)).current;
+  const reducedMotion = useReducedMotion();
+  const opacity = useRef(new Animated.Value(reducedMotion ? 1 : 0)).current;
+  const translateY = useRef(new Animated.Value(reducedMotion ? 0 : distance)).current;
 
   useEffect(() => {
+    if (reducedMotion) {
+      opacity.setValue(1);
+      translateY.setValue(0);
+      return;
+    }
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
@@ -79,7 +115,7 @@ export function useSlideUp(delay = 0, distance = 20) {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [opacity, translateY, delay, distance]);
+  }, [opacity, translateY, delay, distance, reducedMotion]);
 
   return { opacity, transform: [{ translateY }] };
 }

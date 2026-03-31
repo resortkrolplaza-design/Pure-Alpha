@@ -15,6 +15,7 @@ import {
   Linking,
   ActivityIndicator,
 } from "react-native";
+import { useReducedMotion } from "@/lib/animations";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -92,6 +93,7 @@ function ClockScanScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const navigation = useNavigation();
+  const reducedMotion = useReducedMotion();
 
   // Web: CameraView not supported
   useEffect(() => {
@@ -113,6 +115,10 @@ function ClockScanScreenInner() {
   const pulseAnim = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
+    if (reducedMotion) {
+      pulseAnim.setValue(1);
+      return;
+    }
     const anim = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -129,7 +135,7 @@ function ClockScanScreenInner() {
     );
     anim.start();
     return () => anim.stop();
-  }, [pulseAnim]);
+  }, [pulseAnim, reducedMotion]);
 
   // Request camera permission on mount
   useEffect(() => {

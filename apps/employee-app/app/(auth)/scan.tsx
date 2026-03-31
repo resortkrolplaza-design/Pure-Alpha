@@ -14,6 +14,7 @@ import {
   Platform,
   Linking,
 } from "react-native";
+import { useReducedMotion } from "@/lib/animations";
 // CameraView is not supported on web -- guard below
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useNavigation } from "expo-router";
@@ -102,6 +103,7 @@ function ScanScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
   const navigation = useNavigation();
+  const reducedMotion = useReducedMotion();
 
   // Web: CameraView not supported -- redirect to manual login
   useEffect(() => {
@@ -122,6 +124,10 @@ function ScanScreenInner() {
   const pulseAnim = useRef(new Animated.Value(0.6)).current;
 
   useEffect(() => {
+    if (reducedMotion) {
+      pulseAnim.setValue(1);
+      return;
+    }
     const anim = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -138,7 +144,7 @@ function ScanScreenInner() {
     );
     anim.start();
     return () => anim.stop();
-  }, [pulseAnim]);
+  }, [pulseAnim, reducedMotion]);
 
   // Request camera permission on mount
   useEffect(() => {

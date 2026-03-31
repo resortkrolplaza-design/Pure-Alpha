@@ -13,6 +13,7 @@ import {
   Dimensions,
   Platform,
 } from "react-native";
+import { useReducedMotion } from "@/lib/animations";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -119,6 +120,7 @@ function AnimatedWave({
 function WelcomeScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
+  const reducedMotion = useReducedMotion();
 
   // Entrance animations
   const iconScale = useRef(new Animated.Value(0.3)).current;
@@ -197,25 +199,30 @@ function WelcomeScreenInner() {
     ]);
     entranceAnim.start();
 
-    const pulseAnim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(iconPulse, {
-          toValue: 1.08,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-        Animated.timing(iconPulse, {
-          toValue: 1,
-          duration: 1500,
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    pulseAnim.start();
+    let pulseAnim: Animated.CompositeAnimation | null = null;
+    if (reducedMotion) {
+      iconPulse.setValue(1);
+    } else {
+      pulseAnim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(iconPulse, {
+            toValue: 1.08,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(iconPulse, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      pulseAnim.start();
+    }
 
     return () => {
       entranceAnim.stop();
-      pulseAnim.stop();
+      pulseAnim?.stop();
     };
   }, [
     iconScale, iconOpacity, iconPulse,
@@ -223,6 +230,7 @@ function WelcomeScreenInner() {
     descOpacity, descTranslateY,
     btnOpacity, btnTranslateY,
     footerOpacity,
+    reducedMotion,
   ]);
 
   const handleScanQr = () => {
