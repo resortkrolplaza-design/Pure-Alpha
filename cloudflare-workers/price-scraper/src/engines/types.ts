@@ -128,6 +128,9 @@ export interface ScrapeResult {
   hotelDetails?: ProfitroomHotelDetails;
   exchangeRates?: Record<string, number>;
   roomDetails?: ProfitroomRoomDetail[];
+  // Discount detection: original price before promotion (per-night)
+  lowestOriginalPrice?: number;
+  lowestRecentLowestPrice?: number; // Omnibus: lowest price in last 30 days
   // Meal plan pricing: cheapest per-night price per mealPlanType (18=room-only, 19=breakfast, 20=half-board)
   pricesByMealPlan?: Record<string, MealPlanPrice>;
 }

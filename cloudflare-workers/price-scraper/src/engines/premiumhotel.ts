@@ -655,11 +655,30 @@ export async function scrapePremiumHotelFull(
       }
     }
 
+    // Extract original price from cheapest proposal (discount detection)
+    let lowestOriginalPrice: number | undefined;
+    if (rooms.length > 0 && data.proposals.length > 0) {
+      // Find proposal matching cheapest room
+      const cheapestRoom = rooms[0];
+      for (const proposal of data.proposals) {
+        const [, totalAmount] = Object.entries(proposal.price)[0] || ["PLN", 0];
+        const perNight = Math.round((totalAmount / nights) * 100) / 100;
+        if (perNight === cheapestRoom.price && proposal.originalPrice) {
+          const origAmount = Object.values(proposal.originalPrice)[0];
+          if (origAmount && origAmount !== totalAmount) {
+            lowestOriginalPrice = Math.round((origAmount / nights) * 100) / 100;
+          }
+          break;
+        }
+      }
+    }
+
     return {
       success: true,
       rooms,
       durationMs: Date.now() - startTime,
       engine: "PREMIUMHOTEL",
+      lowestOriginalPrice,
       hotelMeta: {
         description: hotelDetails?.name || `${tenant} (${context || "default"})`,
       },
