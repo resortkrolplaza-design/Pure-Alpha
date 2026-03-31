@@ -556,6 +556,7 @@ function LoginScreenInner() {
                       secureTextEntry
                       autoFocus={false}
                       accessibilityLabel={`PIN`}
+                      importantForAccessibility="yes"
                     />
                   </View>
                 )}

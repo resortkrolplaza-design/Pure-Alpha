@@ -381,14 +381,16 @@ function ScanScreenInner() {
         pointerEvents="box-none"
       >
         {/* Scanning indicator */}
-        <Animated.Text
-          style={[
-            styles.scanningText,
-            scanError ? { color: "#ef4444" } : { opacity: pulseAnim },
-          ]}
-        >
-          {scanError ?? t(lang, "scan.scanning")}
-        </Animated.Text>
+        <View accessibilityLiveRegion="assertive">
+          <Animated.Text
+            style={[
+              styles.scanningText,
+              scanError ? { color: emp.danger } : { opacity: pulseAnim },
+            ]}
+          >
+            {scanError ?? t(lang, "scan.scanning")}
+          </Animated.Text>
+        </View>
 
         {/* Manual entry link */}
         <Pressable

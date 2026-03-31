@@ -19,7 +19,7 @@ function ChatScreenInner() {
 
   return (
     <View style={styles.container}>
-      <View style={[styles.content, { paddingTop: insets.top + spacing.xl }]}>
+      <View style={[styles.content, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.xl }]}>
         <Text style={styles.title}>{t(lang, "chat.title")}</Text>
 
         <View style={styles.card}>

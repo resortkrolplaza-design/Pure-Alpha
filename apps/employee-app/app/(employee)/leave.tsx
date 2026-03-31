@@ -26,7 +26,9 @@ import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { LeaveRequest, LeaveType, LeaveBalance } from "@/lib/types";
 
 const LEAVE_TYPES: LeaveType[] = [
-  "vacation", "sick", "personal", "unpaid", "parental", "other",
+  "vacation", "sick", "personal", "unpaid", "parental",
+  "childcare", "compassionate", "training", "blood_donation",
+  "maternity", "paternity", "sick_childcare", "other",
 ];
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -38,6 +40,13 @@ const LEAVE_TYPE_MAP: Record<string, string> = {
   personal: "ON_DEMAND",
   unpaid: "UNPAID",
   parental: "PARENTAL",
+  childcare: "CHILDCARE_LEAVE",
+  compassionate: "COMPASSIONATE",
+  training: "TRAINING",
+  blood_donation: "BLOOD_DONATION",
+  maternity: "MATERNITY",
+  paternity: "PATERNITY",
+  sick_childcare: "SICK_CHILDCARE",
   other: "OTHER",
 };
 
@@ -177,7 +186,7 @@ function LeaveScreenInner() {
 
         {/* Error State */}
         {isError && (
-          <View style={styles.card}>
+          <View style={styles.card} accessibilityLiveRegion="polite">
             <Text style={styles.placeholder}>{t(lang, "common.error")}</Text>
             <Pressable
               onPress={() => onRefresh()}

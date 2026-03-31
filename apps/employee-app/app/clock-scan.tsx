@@ -266,6 +266,17 @@ function ClockScanScreenInner() {
               {t(lang, "clockScan.openSettings")}
             </Text>
           </Pressable>
+
+          <Pressable
+            onPress={handleBack}
+            style={{ paddingVertical: spacing.md, paddingHorizontal: spacing.xl, minHeight: TOUCH_TARGET, justifyContent: "center" as const, alignItems: "center" as const }}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "common.back")}
+          >
+            <Text style={{ fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: emp.primary, textDecorationLine: "underline" as const }}>
+              {t(lang, "common.back")}
+            </Text>
+          </Pressable>
         </View>
       </View>
     );
@@ -347,14 +358,16 @@ function ClockScanScreenInner() {
             </Text>
           </View>
         ) : (
-          <Animated.Text
-            style={[
-              styles.scanningText,
-              scanError ? { color: emp.danger } : { opacity: pulseAnim },
-            ]}
-          >
-            {scanError ?? t(lang, "clockScan.scanning")}
-          </Animated.Text>
+          <View accessibilityLiveRegion="assertive">
+            <Animated.Text
+              style={[
+                styles.scanningText,
+                scanError ? { color: emp.danger } : { opacity: pulseAnim },
+              ]}
+            >
+              {scanError ?? t(lang, "clockScan.scanning")}
+            </Animated.Text>
+          </View>
         )}
       </View>
     </View>

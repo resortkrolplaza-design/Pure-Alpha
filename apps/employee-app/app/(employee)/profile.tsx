@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { useState, useEffect } from "react";
-import { View, Text, Pressable, StyleSheet, Alert, Animated, Switch } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert, Animated, Switch, ScrollView } from "react-native";
 import { router } from "expo-router";
 import Constants from "expo-constants";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -177,14 +177,15 @@ function ProfileScreenInner() {
 
   return (
     <View style={styles.container}>
-      <View
-        style={[
+      <ScrollView
+        contentContainerStyle={[
           styles.content,
           {
             paddingTop: insets.top + spacing.xl,
             paddingBottom: insets.bottom + spacing["4xl"],
           },
         ]}
+        showsVerticalScrollIndicator={false}
       >
         {/* Header */}
         <Text style={styles.title}>{t(lang, "profile.title")}</Text>
@@ -319,7 +320,7 @@ function ProfileScreenInner() {
             Pure Alpha Employee v{Constants.expoConfig?.version ?? "1.0"}
           </Text>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }

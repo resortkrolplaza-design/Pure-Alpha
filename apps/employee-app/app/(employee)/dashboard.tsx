@@ -110,9 +110,9 @@ function DashboardScreenInner() {
         gpsAccuracy: params.gpsAccuracy,
       });
     },
-    onSuccess: (res) => {
+    onSuccess: (res, params) => {
       if (res.status === "success") {
-        setClockedIn(!isClockedIn);
+        setClockedIn(params.action === "clock-in");
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         queryClient.invalidateQueries({ queryKey: ["employee-dashboard"] });
       } else {
@@ -480,6 +480,7 @@ function DashboardScreenInner() {
               maxLength={4}
               secureTextEntry
               accessibilityLabel={t(lang, "clock.pinFallback")}
+              importantForAccessibility="yes"
             />
             <View style={styles.pinModalBtns}>
               <Pressable

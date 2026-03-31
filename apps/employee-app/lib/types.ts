@@ -65,6 +65,7 @@ export type LeaveStatus =
   | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 export type LeaveType =
   | "vacation" | "sick" | "personal" | "unpaid" | "parental" | "other"
+  | "childcare" | "compassionate" | "training" | "blood_donation" | "maternity" | "paternity" | "sick_childcare"
   | "VACATION" | "SICK" | "ON_DEMAND" | "UNPAID" | "OTHER" | "COMPASSIONATE" | "TRAINING"
   | "PARENTAL" | "CHILDCARE_LEAVE" | "MATERNITY" | "PATERNITY" | "SICK_CHILDCARE" | "BLOOD_DONATION";
 
