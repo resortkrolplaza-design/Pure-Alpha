@@ -17,13 +17,10 @@ const pl: Record<string, string> = {
   "auth.pinTab": "PIN",
   "auth.credentialsTab": "Dane logowania",
   "auth.scanQr": "Skanuj kod QR",
-  "auth.scanQrDesc": "Zeskanuj kod QR hotelu",
-  "auth.enterManually": "Wpisz identyfikator",
   "auth.biometricEnroll": "W\u0142\u0105cz logowanie biometryczne?",
   "auth.biometricEnrollDesc": "U\u017cyj Face ID lub odcisku palca zamiast wpisywania PIN-u codziennie",
   "auth.biometricAccept": "W\u0142\u0105cz",
   "auth.biometricDecline": "Nie teraz",
-  "auth.biometricLoginFailed": "Logowanie biometryczne nie powiod\u0142o si\u0119",
   "auth.biometricPrompt": "Potwierd\u017a to\u017csamo\u015b\u0107",
   "auth.verifying": "Weryfikacja...",
   "auth.changeHotel": "Zmie\u0144 hotel",
@@ -31,7 +28,6 @@ const pl: Record<string, string> = {
   // -- Welcome ----------------------------------------------------------------
   "welcome.title": "Pure Alpha Employee",
   "welcome.subtitle": "Aplikacja dla pracownik\u00F3w hotelu",
-  "welcome.continue": "Rozpocznij",
   "welcome.poweredBy": "Pure Alpha Hotel Intelligence",
   "welcome.hotelSlug": "Identyfikator hotelu",
   "welcome.hotelSlugPlaceholder": "np. krol-plaza",
@@ -48,7 +44,6 @@ const pl: Record<string, string> = {
   "scan.permissionDenied": "Brak dost\u0119pu do kamery",
   "scan.permissionDesc": "Aby zeskanowa\u0107 kod QR, zezw\u00f3l na dost\u0119p do kamery",
   "scan.openSettings": "Otw\u00f3rz ustawienia",
-  "scan.hotelFound": "Znaleziono hotel",
   "scan.invalidQr": "Nieprawid\u0142owy kod QR",
 
   // -- Clock ------------------------------------------------------------------
@@ -66,10 +61,6 @@ const pl: Record<string, string> = {
   "clockScan.gettingLocation": "Pobieranie lokalizacji...",
   "clockScan.locationDenied": "Brak dost\u0119pu do lokalizacji",
   "clockScan.locationUnavailable": "Nie uda\u0142o si\u0119 pobra\u0107 lokalizacji. Spr\u00F3buj ponownie.",
-  "clockScan.locationDeniedDesc": "Aby zarejestrowa\u0107 obecno\u015B\u0107, zezw\u00F3l na dost\u0119p do lokalizacji",
-  "clockScan.lowAccuracy": "Niska dok\u0142adno\u015B\u0107 GPS. Przejd\u017A na otwart\u0105 przestrze\u0144.",
-  "clockScan.success": "Punkt zeskanowany",
-  "clockScan.tooFar": "Jeste\u015B zbyt daleko od hotelu",
   "clockScan.openSettings": "Otw\u00F3rz ustawienia",
 
   // -- Tabs -------------------------------------------------------------------
@@ -88,7 +79,6 @@ const pl: Record<string, string> = {
   "dash.noShift": "Brak zaplanowanej zmiany",
   "dash.clockIn": "Rozpocznij zmian\u0119",
   "dash.clockOut": "Zako\u0144cz zmian\u0119",
-  "dash.weekStats": "Statystyki tygodnia",
   "dash.hours": "Godziny",
   "dash.shifts": "Zmiany",
   "dash.upcoming": "Najbli\u017Csze zmiany",
@@ -191,20 +181,16 @@ const pl: Record<string, string> = {
   "profile.biometricOff": "Wy\u0142\u0105czone",
   "profile.biometricConfirm": "Potwierd\u017a to\u017csamo\u015b\u0107",
   "profile.biometricReloginNeeded": "Zaloguj si\u0119 ponownie, aby w\u0142\u0105czy\u0107 biometri\u0119",
-  "profile.biometricEnabled": "Biometria w\u0142\u0105czona",
-  "profile.biometricDisabled": "Biometria wy\u0142\u0105czona",
   "profile.pinResetBiometric": "PIN mo\u017cna zmieni\u0107 po ponownym zalogowaniu. Biometria wymaga aktualnego PIN-u.",
 
   // -- App -------------------------------------------------------------------
   "app.subtitle": "Pure Alpha Employee",
 
   // -- Common -----------------------------------------------------------------
-  "common.loading": "\u0141adowanie...",
   "common.error": "Wyst\u0105pi\u0142 b\u0142\u0105d",
   "common.retry": "Spr\u00F3buj ponownie",
   "common.cancel": "Anuluj",
   "common.confirm": "Potwierd\u017A",
-  "common.save": "Zapisz",
   "common.close": "Zamknij",
   "common.back": "Wr\u00F3\u0107",
   "common.noData": "Brak danych",
@@ -228,13 +214,10 @@ const en: Record<string, string> = {
   "auth.pinTab": "PIN",
   "auth.credentialsTab": "Credentials",
   "auth.scanQr": "Scan QR code",
-  "auth.scanQrDesc": "Scan hotel QR code",
-  "auth.enterManually": "Enter manually",
   "auth.biometricEnroll": "Enable biometric login?",
   "auth.biometricEnrollDesc": "Use Face ID or fingerprint instead of entering PIN every day",
   "auth.biometricAccept": "Enable",
   "auth.biometricDecline": "Not now",
-  "auth.biometricLoginFailed": "Biometric login failed",
   "auth.biometricPrompt": "Confirm identity",
   "auth.verifying": "Verifying...",
   "auth.changeHotel": "Change hotel",
@@ -242,7 +225,6 @@ const en: Record<string, string> = {
   // -- Welcome ----------------------------------------------------------------
   "welcome.title": "Pure Alpha Employee",
   "welcome.subtitle": "Hotel employee app",
-  "welcome.continue": "Get started",
   "welcome.poweredBy": "Pure Alpha Hotel Intelligence",
   "welcome.hotelSlug": "Hotel identifier",
   "welcome.hotelSlugPlaceholder": "e.g. krol-plaza",
@@ -259,7 +241,6 @@ const en: Record<string, string> = {
   "scan.permissionDenied": "Camera access denied",
   "scan.permissionDesc": "To scan QR code, allow camera access",
   "scan.openSettings": "Open settings",
-  "scan.hotelFound": "Hotel found",
   "scan.invalidQr": "Invalid QR code",
 
   // -- Clock ------------------------------------------------------------------
@@ -277,10 +258,6 @@ const en: Record<string, string> = {
   "clockScan.gettingLocation": "Getting location...",
   "clockScan.locationDenied": "Location access denied",
   "clockScan.locationUnavailable": "Could not get location. Please try again.",
-  "clockScan.locationDeniedDesc": "To register attendance, allow location access",
-  "clockScan.lowAccuracy": "Low GPS accuracy. Move to an open area.",
-  "clockScan.success": "Clock point scanned",
-  "clockScan.tooFar": "You are too far from the hotel",
   "clockScan.openSettings": "Open settings",
 
   // -- Tabs -------------------------------------------------------------------
@@ -299,7 +276,6 @@ const en: Record<string, string> = {
   "dash.noShift": "No scheduled shift",
   "dash.clockIn": "Clock in",
   "dash.clockOut": "Clock out",
-  "dash.weekStats": "Week stats",
   "dash.hours": "Hours",
   "dash.shifts": "Shifts",
   "dash.upcoming": "Upcoming shifts",
@@ -402,20 +378,16 @@ const en: Record<string, string> = {
   "profile.biometricOff": "Disabled",
   "profile.biometricConfirm": "Confirm identity",
   "profile.biometricReloginNeeded": "Log in again to enable biometrics",
-  "profile.biometricEnabled": "Biometrics enabled",
-  "profile.biometricDisabled": "Biometrics disabled",
   "profile.pinResetBiometric": "PIN can be changed after re-login. Biometrics requires current PIN.",
 
   // -- App -------------------------------------------------------------------
   "app.subtitle": "Pure Alpha Employee",
 
   // -- Common -----------------------------------------------------------------
-  "common.loading": "Loading...",
   "common.error": "An error occurred",
   "common.retry": "Try again",
   "common.cancel": "Cancel",
   "common.confirm": "Confirm",
-  "common.save": "Save",
   "common.close": "Close",
   "common.back": "Back",
   "common.noData": "No data",

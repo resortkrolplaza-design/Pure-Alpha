@@ -20,7 +20,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { router, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { emp, fontSize, radius, spacing, TOUCH_TARGET } from "@/lib/tokens";
+import { emp, fontSize, letterSpacing, radius, spacing, TOUCH_TARGET } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontFamily: "Inter_600SemiBold",
     color: emp.white,
-    letterSpacing: -0.3,
+    letterSpacing: letterSpacing.tight,
   },
 
   circleBtn: {

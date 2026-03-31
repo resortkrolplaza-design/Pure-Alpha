@@ -53,6 +53,8 @@ export async function getEmployeeToken(): Promise<string | null> {
 }
 
 export async function setEmployeeToken(token: string): Promise<void> {
+  // On web, auth is handled by HttpOnly cookies -- skip localStorage write
+  if (Platform.OS === "web") return;
   await setItem(TOKEN_KEY, token);
 }
 

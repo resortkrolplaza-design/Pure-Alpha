@@ -12,7 +12,7 @@ export interface LocationResult {
 
 export type LocationError = "permission_denied" | "unavailable" | "timeout";
 
-export async function requestLocationPermission(): Promise<boolean> {
+async function requestLocationPermission(): Promise<boolean> {
   const { status } = await Location.requestForegroundPermissionsAsync();
   return status === "granted";
 }
@@ -39,7 +39,10 @@ export async function getCurrentLocation(): Promise<
         accuracy: location.coords.accuracy,
       },
     };
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.message === "GPS_TIMEOUT") {
+      return { ok: false, error: "timeout" as LocationError };
+    }
     return { ok: false, error: "unavailable" };
   }
 }

@@ -7,7 +7,7 @@ import { getEmployeeToken, setEmployeeToken, isBiometricEnrolled, getCachedCrede
 import { authenticateWithBiometric, checkBiometricAvailability } from "./biometric";
 import { t, type Lang } from "./i18n";
 import { useAppStore } from "./store";
-import type { ApiResponse } from "./types";
+import type { ApiResponse, LeaveRequest } from "./types";
 
 const API_BASE = "https://purealphahotel.pl";
 
@@ -287,7 +287,7 @@ export async function submitLeaveRequest(data: {
   });
 }
 
-export async function fetchLeaveRequests(): Promise<ApiResponse<unknown[]>> {
+export async function fetchLeaveRequests(): Promise<ApiResponse<LeaveRequest[]>> {
   return employeeFetch("/leave-requests");
 }
 

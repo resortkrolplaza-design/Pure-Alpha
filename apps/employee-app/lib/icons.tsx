@@ -26,7 +26,7 @@ export function Icon({ name, size = 24, color = "#FFFFFF", accessible = false }:
 }
 
 // Tab bar icon helper -- renders filled when active, outline when inactive
-export function TabIcon({
+function TabIcon({
   active,
   activeName,
   inactiveName,

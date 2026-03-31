@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { emp, fontSize, radius, spacing, shadow, shiftColors, TOUCH_TARGET } from "@/lib/tokens";
+import { emp, fontSize, letterSpacing, radius, spacing, shadow, shiftColors, TOUCH_TARGET } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { useFadeIn, useSlideUp, useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
@@ -410,6 +410,7 @@ function DashboardScreenInner() {
           <View
             style={styles.statCard}
             accessible={true}
+            accessibilityRole="summary"
             accessibilityLabel={`${formatHours(data?.weekStats.scheduledHours ?? 0, lang)} ${t(lang, "dash.hours")}`}
           >
             <Text style={styles.statValue}>
@@ -420,6 +421,7 @@ function DashboardScreenInner() {
           <View
             style={styles.statCard}
             accessible={true}
+            accessibilityRole="summary"
             accessibilityLabel={`${data?.weekStats.completedShifts ?? 0}/${data?.weekStats.totalShifts ?? 0} ${t(lang, "dash.shifts")}`}
           >
             <Text style={styles.statValue}>
@@ -551,7 +553,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize["2xl"],
     fontFamily: "Inter_700Bold",
     color: emp.text,
-    letterSpacing: -0.3,
+    letterSpacing: letterSpacing.tight,
   },
   subtitle: {
     fontSize: fontSize.sm,
@@ -620,7 +622,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize["2xl"],
     fontFamily: "Inter_700Bold",
     color: emp.white,
-    letterSpacing: -0.3,
+    letterSpacing: letterSpacing.tight,
   },
   heroDept: {
     fontSize: fontSize.sm,
@@ -664,7 +666,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     fontFamily: "Inter_700Bold",
     color: emp.white,
-    letterSpacing: -0.3,
+    letterSpacing: letterSpacing.tight,
   },
   shieldBadge: {
     position: "absolute",

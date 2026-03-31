@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import {
-  emp, fontSize, radius, spacing, shadow,
+  emp, fontSize, letterSpacing, radius, spacing, shadow,
   leaveStatusColors, TOUCH_TARGET,
 } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
@@ -139,17 +139,20 @@ function LeaveScreenInner() {
   const handleSubmit = () => {
     // Validate date format YYYY-MM-DD
     if (!DATE_REGEX.test(formDateFrom) || !DATE_REGEX.test(formDateTo)) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t(lang, "common.error"), t(lang, "leave.dateInvalid"));
       return;
     }
     // Validate from <= to
     if (formDateFrom > formDateTo) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t(lang, "common.error"), t(lang, "leave.dateFromAfterTo"));
       return;
     }
     // Validate dates are today or in the future
     const today = new Date().toISOString().slice(0, 10);
     if (formDateFrom < today) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t(lang, "common.error"), t(lang, "leave.datePast"));
       return;
     }
@@ -275,6 +278,7 @@ function LeaveScreenInner() {
         }}
         accessibilityRole="button"
         accessibilityLabel={t(lang, "leave.newRequest")}
+        accessibilityHint={lang === "pl" ? "Otwiera formularz wniosku urlopowego" : "Opens leave request form"}
       >
         <Icon name="add" size={28} color={emp.white} />
       </Pressable>
@@ -330,7 +334,7 @@ function LeaveScreenInner() {
               </Pressable>
 
               {showTypePicker && (
-                <View style={styles.typeList}>
+                <View style={styles.typeList} accessibilityRole="radiogroup">
                   {LEAVE_TYPES.map((lt) => (
                     <Pressable
                       key={lt}
@@ -342,7 +346,8 @@ function LeaveScreenInner() {
                         setFormType(lt);
                         setShowTypePicker(false);
                       }}
-                      accessibilityRole="button"
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: lt === formType }}
                       accessibilityLabel={t(lang, `leave.type.${lt}`)}
                     >
                       <Text
@@ -491,7 +496,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize["2xl"],
     fontFamily: "Inter_700Bold",
     color: emp.text,
-    letterSpacing: -0.3,
+    letterSpacing: letterSpacing.tight,
   },
   card: {
     backgroundColor: emp.card,

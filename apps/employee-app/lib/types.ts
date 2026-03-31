@@ -29,7 +29,7 @@ export interface ShiftData {
 
 // -- Dashboard Data -----------------------------------------------------------
 
-export interface ActiveShift {
+interface ActiveShift {
   id: string;
   clockInTime: string;
   startTime: string;
@@ -60,7 +60,7 @@ export interface DashboardData {
 // -- Leave Request ------------------------------------------------------------
 
 // Backend returns UPPERCASE enums, frontend form uses lowercase -- accept both
-export type LeaveStatus =
+type LeaveStatus =
   | "pending" | "approved" | "rejected" | "cancelled"
   | "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
 export type LeaveType =
@@ -98,7 +98,7 @@ export interface LeaveBalance {
   sickDaysUsed?: number;
 }
 
-export interface LeaveData {
+interface LeaveData {
   balance: LeaveBalance;
   requests: LeaveRequest[];
 }
