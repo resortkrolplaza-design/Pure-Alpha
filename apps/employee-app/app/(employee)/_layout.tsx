@@ -150,22 +150,12 @@ export default function EmployeeLayout() {
           tabBarAccessibilityLabel: t(lang, "tab.leave"),
         }}
       />
+      {/* Chat tab hidden until feature is ready -- set href: null to exclude from nav */}
       <Tabs.Screen
         name="chat"
         options={{
+          href: null,
           title: t(lang, "tab.chat"),
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon
-              active={focused}
-              activeName="chatbubble-ellipses"
-              inactiveName="chatbubble-ellipses-outline"
-            />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.chat")} focused={focused} />
-          ),
-          tabBarShowLabel: true,
-          tabBarAccessibilityLabel: t(lang, "tab.chat"),
         }}
       />
       <Tabs.Screen

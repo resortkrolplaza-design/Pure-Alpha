@@ -149,8 +149,9 @@ function LeaveScreenInner() {
       Alert.alert(t(lang, "common.error"), t(lang, "leave.dateFromAfterTo"));
       return;
     }
-    // Validate dates are today or in the future
-    const today = new Date().toISOString().slice(0, 10);
+    // Validate dates are today or in the future (use local date, not UTC)
+    const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     if (formDateFrom < today) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t(lang, "common.error"), t(lang, "leave.datePast"));

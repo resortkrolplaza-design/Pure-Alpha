@@ -5,11 +5,13 @@
 import { Platform } from "react-native";
 import { getEmployeeToken, setEmployeeToken, isBiometricEnrolled, getCachedCredentials, getHotelId } from "./auth";
 import { authenticateWithBiometric, checkBiometricAvailability } from "./biometric";
-import { t, type Lang } from "./i18n";
+import { t } from "./i18n";
 import { useAppStore } from "./store";
 import type { ApiResponse, LeaveRequest } from "./types";
 
 const API_BASE = "https://purealphahotel.pl";
+
+function getLang() { return useAppStore.getState().lang; }
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -52,7 +54,7 @@ async function doSessionRefresh(): Promise<boolean> {
     // silently re-authenticating without user knowledge.
     const bio = await checkBiometricAvailability();
     if (bio.available) {
-      const success = await authenticateWithBiometric("Verify identity to refresh session", {
+      const success = await authenticateWithBiometric(t(getLang(), "auth.biometricRefresh"), {
         allowDeviceFallback: true,
       });
       if (!success) return false;

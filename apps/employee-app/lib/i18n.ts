@@ -22,6 +22,7 @@ const pl: Record<string, string> = {
   "auth.biometricAccept": "W\u0142\u0105cz",
   "auth.biometricDecline": "Nie teraz",
   "auth.biometricPrompt": "Potwierd\u017a to\u017csamo\u015b\u0107",
+  "auth.biometricRefresh": "Potwierd\u017a to\u017csamo\u015b\u0107, aby od\u015bwie\u017cy\u0107 sesj\u0119",
   "auth.verifying": "Weryfikacja...",
   "auth.changeHotel": "Zmie\u0144 hotel",
 
@@ -220,6 +221,7 @@ const en: Record<string, string> = {
   "auth.biometricAccept": "Enable",
   "auth.biometricDecline": "Not now",
   "auth.biometricPrompt": "Confirm identity",
+  "auth.biometricRefresh": "Confirm identity to refresh session",
   "auth.verifying": "Verifying...",
   "auth.changeHotel": "Change hotel",
 

@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
-import { emp, fontSize, letterSpacing, radius, spacing, shadow, shiftColors, TOUCH_TARGET } from "@/lib/tokens";
+import { emp, fontSize, letterSpacing, radius, spacing, shadow, shiftColors, TOUCH_TARGET, PIN_LENGTH } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { useFadeIn, useSlideUp, useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
@@ -457,7 +457,7 @@ function DashboardScreenInner() {
           <View style={styles.pinModalCard} accessibilityViewIsModal={true}>
             <Text style={styles.pinModalTitle}>{t(lang, "clock.pinFallback")}</Text>
             <View style={styles.pinDotsRow}>
-              {Array.from({ length: 4 }).map((_, i) => (
+              {Array.from({ length: PIN_LENGTH }).map((_, i) => (
                 <View
                   key={i}
                   style={[
@@ -472,15 +472,15 @@ function DashboardScreenInner() {
               style={styles.hiddenInput}
               value={pinInput}
               onChangeText={(v) => {
-                const cleaned = v.replace(/\D/g, "").slice(0, 4);
+                const cleaned = v.replace(/\D/g, "").slice(0, PIN_LENGTH);
                 setPinInput(cleaned);
                 pinValueRef.current = cleaned;
-                if (cleaned.length === 4) {
+                if (cleaned.length === PIN_LENGTH) {
                   setTimeout(() => handlePinModalSubmit(cleaned), 100);
                 }
               }}
               keyboardType="number-pad"
-              maxLength={4}
+              maxLength={PIN_LENGTH}
               secureTextEntry
               accessibilityLabel={t(lang, "clock.pinFallback")}
               importantForAccessibility="yes"

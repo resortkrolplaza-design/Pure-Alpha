@@ -86,7 +86,7 @@ function ProfileScreenInner() {
         // Token decode failed -- keep placeholder
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: populate from JWT when Zustand is empty
   }, []);
 
   const initials = profile?.name

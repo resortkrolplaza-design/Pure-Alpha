@@ -24,31 +24,3 @@ export function Icon({ name, size = 24, color = "#FFFFFF", accessible = false }:
     />
   );
 }
-
-// Tab bar icon helper -- renders filled when active, outline when inactive
-function TabIcon({
-  active,
-  activeName,
-  inactiveName,
-  size = 24,
-  activeColor,
-  inactiveColor,
-  accessible = false,
-}: {
-  active: boolean;
-  activeName: IconName;
-  inactiveName: IconName;
-  size?: number;
-  activeColor: string;
-  inactiveColor: string;
-  accessible?: boolean;
-}) {
-  return (
-    <Ionicons
-      name={active ? activeName : inactiveName}
-      size={size}
-      color={active ? activeColor : inactiveColor}
-      accessible={accessible}
-    />
-  );
-}

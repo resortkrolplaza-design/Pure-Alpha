@@ -162,6 +162,10 @@ export const shadow = {
 
 export const TOUCH_TARGET = 44;
 
+// -- PIN Length (SSOT: used in login, dashboard PIN modal, backend) -----------
+
+export const PIN_LENGTH = 4;
+
 // -- Animation ----------------------------------------------------------------
 
 export const animation = {

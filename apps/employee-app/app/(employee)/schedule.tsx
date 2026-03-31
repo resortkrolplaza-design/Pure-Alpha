@@ -5,7 +5,7 @@
 import { useState, useMemo, useCallback } from "react";
 import {
   View, Text, Pressable, FlatList, RefreshControl,
-  StyleSheet, ActivityIndicator, Platform,
+  StyleSheet, Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";

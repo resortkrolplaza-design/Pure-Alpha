@@ -22,7 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router, useNavigation } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
-import { emp, fontSize, letterSpacing, radius, spacing, shadow, TOUCH_TARGET } from "@/lib/tokens";
+import { emp, fontSize, letterSpacing, radius, spacing, shadow, TOUCH_TARGET, PIN_LENGTH } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
@@ -51,7 +51,6 @@ if (
 
 type AuthTab = "pin" | "credentials";
 
-const PIN_LENGTH = 4;
 const PIN_DOT_SIZE = 40;
 
 function LoginScreenInner() {

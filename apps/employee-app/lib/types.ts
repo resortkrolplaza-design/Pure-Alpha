@@ -98,8 +98,4 @@ export interface LeaveBalance {
   sickDaysUsed?: number;
 }
 
-interface LeaveData {
-  balance: LeaveBalance;
-  requests: LeaveRequest[];
-}
 

@@ -269,11 +269,11 @@ function ClockScanScreenInner() {
 
           <Pressable
             onPress={handleBack}
-            style={{ paddingVertical: spacing.md, paddingHorizontal: spacing.xl, minHeight: TOUCH_TARGET, justifyContent: "center" as const, alignItems: "center" as const }}
+            style={styles.permSecondaryBtn}
             accessibilityRole="button"
             accessibilityLabel={t(lang, "common.back")}
           >
-            <Text style={{ fontSize: fontSize.base, fontFamily: "Inter_500Medium", color: emp.primary, textDecorationLine: "underline" as const }}>
+            <Text style={styles.permSecondaryBtnText}>
               {t(lang, "common.back")}
             </Text>
           </Pressable>
@@ -533,6 +533,19 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontFamily: "Inter_700Bold",
     color: emp.white,
+  },
+  permSecondaryBtn: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: TOUCH_TARGET,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  permSecondaryBtnText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_500Medium",
+    color: emp.primary,
+    textDecorationLine: "underline",
   },
 });
 
