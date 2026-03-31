@@ -411,10 +411,10 @@ function DashboardScreenInner() {
             style={styles.statCard}
             accessible={true}
             accessibilityRole="summary"
-            accessibilityLabel={`${formatHours(data?.weekStats.scheduledHours ?? 0, lang)} ${t(lang, "dash.hours")}`}
+            accessibilityLabel={`${formatHours(data?.weekStats?.scheduledHours ?? 0, lang)} ${t(lang, "dash.hours")}`}
           >
             <Text style={styles.statValue}>
-              {formatHours(data?.weekStats.scheduledHours ?? 0, lang)}h
+              {formatHours(data?.weekStats?.scheduledHours ?? 0, lang)}h
             </Text>
             <Text style={styles.statLabel}>{t(lang, "dash.hours")}</Text>
           </View>
@@ -422,10 +422,10 @@ function DashboardScreenInner() {
             style={styles.statCard}
             accessible={true}
             accessibilityRole="summary"
-            accessibilityLabel={`${data?.weekStats.completedShifts ?? 0}/${data?.weekStats.totalShifts ?? 0} ${t(lang, "dash.shifts")}`}
+            accessibilityLabel={`${data?.weekStats?.completedShifts ?? 0}/${data?.weekStats?.totalShifts ?? 0} ${t(lang, "dash.shifts")}`}
           >
             <Text style={styles.statValue}>
-              {data?.weekStats.completedShifts ?? 0}/{data?.weekStats.totalShifts ?? 0}
+              {data?.weekStats?.completedShifts ?? 0}/{data?.weekStats?.totalShifts ?? 0}
             </Text>
             <Text style={styles.statLabel}>{t(lang, "dash.shifts")}</Text>
           </View>

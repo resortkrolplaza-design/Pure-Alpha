@@ -183,8 +183,17 @@ function ScheduleScreenInner() {
 
         {/* Day Cards */}
         {shifts === undefined ? (
-          <View style={styles.loadingOverlay}>
-            <ActivityIndicator size="large" color={emp.primary} />
+          <View style={{ gap: spacing.sm, paddingHorizontal: spacing.md }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <View
+                key={i}
+                style={{
+                  height: 64,
+                  borderRadius: radius.md,
+                  backgroundColor: emp.inputBg,
+                }}
+              />
+            ))}
           </View>
         ) : (
           <FlatList

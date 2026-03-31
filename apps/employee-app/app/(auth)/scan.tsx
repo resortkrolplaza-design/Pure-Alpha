@@ -222,7 +222,7 @@ function ScanScreenInner() {
         const slug = extractSlugFromQr(rawData);
         if (!slug) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          setScanError(`${t(lang, "scan.invalidQr")} [${rawData.slice(0, 40)}]`);
+          setScanError(t(lang, "scan.invalidQr"));
           return;
         }
 

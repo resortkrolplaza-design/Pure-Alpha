@@ -48,7 +48,7 @@ export interface DashboardData {
   };
   isClockedIn: boolean;
   activeShift: ActiveShift | null;
-  leaveBalance: LeaveBalance | null;
+  leaveBalance: LeaveBalance;
   stats: {
     hoursThisMonth: number;
     pendingLeaveRequests: number;

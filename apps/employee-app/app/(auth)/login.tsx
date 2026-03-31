@@ -193,6 +193,12 @@ function LoginScreenInner() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      // Skip biometric enrollment on web -- no biometric hardware available
+      if (Platform.OS === "web") {
+        navigateToDashboard();
+        return;
+      }
+
       // Check biometric availability for enrollment (only for PIN login -- credentials login has no PIN to cache)
       // Use pinValueRef (sync ref) instead of pin state (stale in closure after auto-submit)
       const currentPin = pinValueRef.current;
@@ -219,7 +225,7 @@ function LoginScreenInner() {
     [
       hotelSlugInput, resolvedHotelId, resolvedHotelName,
       setEmployee, setHotel, setAuthenticated,
-      tab, loginInput, pin, username, navigateToDashboard,
+      tab, loginInput, username, navigateToDashboard,
     ],
   );
 
@@ -356,6 +362,7 @@ function LoginScreenInner() {
     setHotelSlugInput("");
     setError(null);
     setPin("");
+    pinValueRef.current = "";
   };
 
   return (
@@ -461,6 +468,7 @@ function LoginScreenInner() {
                 {/* Tab Switcher */}
                 <View style={styles.tabRow} accessibilityRole="tablist">
                   <Pressable
+                    nativeID="tab-pin"
                     style={[styles.tabBtn, tab === "pin" && styles.tabBtnActive]}
                     onPress={() => {
                       setTab("pin");
@@ -480,6 +488,7 @@ function LoginScreenInner() {
                     </Text>
                   </Pressable>
                   <Pressable
+                    nativeID="tab-credentials"
                     style={[
                       styles.tabBtn,
                       tab === "credentials" && styles.tabBtnActive,
@@ -505,7 +514,7 @@ function LoginScreenInner() {
 
                 {/* PIN Tab */}
                 {tab === "pin" && (
-                  <View style={styles.section}>
+                  <View nativeID="tabpanel-pin" accessibilityLabelledBy="tab-pin" style={styles.section}>
                     <Text style={styles.label}>
                       {t(lang, "auth.username")}
                     </Text>
@@ -566,7 +575,7 @@ function LoginScreenInner() {
 
                 {/* Credentials Tab */}
                 {tab === "credentials" && (
-                  <View style={styles.section}>
+                  <View nativeID="tabpanel-credentials" accessibilityLabelledBy="tab-credentials" style={styles.section}>
                     <Text style={styles.label}>
                       {t(lang, "auth.username")}
                     </Text>

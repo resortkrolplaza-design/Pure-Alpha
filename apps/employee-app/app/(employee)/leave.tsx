@@ -247,7 +247,7 @@ function LeaveScreenInner() {
             </View>
             {(balance.pendingRequests ?? 0) > 0 && (
               <Text style={styles.pendingNote}>
-                {t(lang, "leave.pending")}: {balance.pendingRequests} {t(lang, "leave.days")}
+                {t(lang, "leave.pending")}: {balance.pendingRequests} {t(lang, "leave.pendingCount")}
               </Text>
             )}
           </View>
