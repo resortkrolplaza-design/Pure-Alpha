@@ -62,6 +62,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(employee)" />
+          <Stack.Screen name="clock-scan" options={{ headerShown: false, presentation: "fullScreenModal", animation: "slide_from_bottom" }} />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>

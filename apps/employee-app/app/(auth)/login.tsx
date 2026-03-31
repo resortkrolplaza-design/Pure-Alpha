@@ -224,11 +224,19 @@ function LoginScreenInner() {
       return;
     }
 
+    // Verify identity before saving biometric credentials
     const success = await authenticateWithBiometric(t(lang, "auth.biometricPrompt"), { allowDeviceFallback: true });
-    if (success && data.login && data.pin) {
-      await setBiometricCredentials(data.login, data.pin);
-      useAppStore.getState().setBiometricEnrolled(true);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    if (success) {
+      // Save credentials regardless -- login+pin validated by server during login
+      if (data.login && data.pin) {
+        await setBiometricCredentials(data.login, data.pin);
+        useAppStore.getState().setBiometricEnrolled(true);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } else {
+      // User cancelled biometric -- still proceed to dashboard (enrollment skipped)
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
     pendingLoginDataRef.current = null;

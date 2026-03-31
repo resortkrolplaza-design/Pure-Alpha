@@ -18,7 +18,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Skanuj kod QR hotelu",
-        "NSFaceIDUsageDescription": "Logowanie i potwierdzanie obecnosci w pracy"
+        "NSFaceIDUsageDescription": "Logowanie i potwierdzanie obecnosci w pracy",
+        "NSLocationWhenInUseUsageDescription": "Weryfikacja lokalizacji przy rejestracji obecnosci w pracy"
       }
     },
     "android": {
@@ -35,7 +36,8 @@
       "expo-font",
       "expo-splash-screen",
       ["expo-camera", { "cameraPermission": "Zezwol Pure Alpha Employee na dostep do kamery w celu skanowania kodow QR." }],
-      "expo-local-authentication"
+      "expo-local-authentication",
+      ["expo-location", {"locationWhenInUsePermission": "Weryfikacja lokalizacji przy rejestracji obecnosci w pracy"}]
     ]
   }
 }

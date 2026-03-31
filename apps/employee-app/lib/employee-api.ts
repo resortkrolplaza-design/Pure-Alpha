@@ -191,13 +191,25 @@ export async function loginWithCredentials(
   );
 }
 
-export async function clockIn(): Promise<
+export async function clockIn(data: {
+  qrToken: string;
+  latitude: number;
+  longitude: number;
+  gpsAccuracy?: number;
+}): Promise<
   ApiResponse<{ shiftId: string; clockInTime: string }>
 > {
-  return employeeFetch("/clock-in", { method: "POST" });
+  return employeeFetch("/clock-in", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
-export async function clockOut(): Promise<
+export async function clockOut(data?: {
+  latitude?: number;
+  longitude?: number;
+  gpsAccuracy?: number;
+}): Promise<
   ApiResponse<{
     shiftId: string;
     clockInTime: string;
@@ -208,7 +220,10 @@ export async function clockOut(): Promise<
     dailyEarnings: number | null;
   }>
 > {
-  return employeeFetch("/clock-out", { method: "POST" });
+  return employeeFetch("/clock-out", {
+    method: "POST",
+    body: data ? JSON.stringify(data) : undefined,
+  });
 }
 
 export async function submitLeaveRequest(data: {

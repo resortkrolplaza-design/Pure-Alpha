@@ -17,6 +17,7 @@ interface EmployeeState {
   isClockedIn: boolean;
   isBiometricEnrolled: boolean;
   isHotelOnboarded: boolean;
+  pendingClockIn: { qrToken: string; latitude: number; longitude: number; gpsAccuracy?: number } | null;
   setAuthenticated: (auth: boolean) => void;
   setEmployee: (data: { id: string; name: string; department?: string; position?: string }) => void;
   setHotel: (data: { slug: string; id: string; name: string }) => void;
@@ -24,6 +25,7 @@ interface EmployeeState {
   setClockedIn: (value: boolean) => void;
   setBiometricEnrolled: (v: boolean) => void;
   setHotelOnboarded: (v: boolean) => void;
+  setPendingClockIn: (data: { qrToken: string; latitude: number; longitude: number; gpsAccuracy?: number } | null) => void;
   reset: () => void;
 }
 
@@ -40,6 +42,7 @@ const initialState = {
   isClockedIn: false,
   isBiometricEnrolled: false,
   isHotelOnboarded: false,
+  pendingClockIn: null,
 };
 
 export const useAppStore = create<EmployeeState>((set) => ({
@@ -60,5 +63,6 @@ export const useAppStore = create<EmployeeState>((set) => ({
   setClockedIn: (isClockedIn) => set({ isClockedIn }),
   setBiometricEnrolled: (isBiometricEnrolled) => set({ isBiometricEnrolled }),
   setHotelOnboarded: (isHotelOnboarded) => set({ isHotelOnboarded }),
+  setPendingClockIn: (pendingClockIn) => set({ pendingClockIn }),
   reset: () => set(initialState),
 }));

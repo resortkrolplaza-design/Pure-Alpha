@@ -58,6 +58,20 @@ const pl: Record<string, string> = {
   "clock.pinWrong": "Nieprawid\u0142owy PIN",
   "clock.biometricShield": "Chronione biometri\u0105",
 
+  // -- Clock Scan -------------------------------------------------------------
+  "clockScan.title": "Skanuj punkt obecno\u015Bci",
+  "clockScan.scanning": "Szukam kodu QR punktu...",
+  "clockScan.invalidQr": "To nie jest kod punktu obecno\u015Bci",
+  "clockScan.onboardingQr": "To jest kod onboardingowy, nie kod obecno\u015Bci",
+  "clockScan.gettingLocation": "Pobieranie lokalizacji...",
+  "clockScan.locationDenied": "Brak dost\u0119pu do lokalizacji",
+  "clockScan.locationUnavailable": "Nie uda\u0142o si\u0119 pobra\u0107 lokalizacji. Spr\u00F3buj ponownie.",
+  "clockScan.locationDeniedDesc": "Aby zarejestrowa\u0107 obecno\u015B\u0107, zezw\u00F3l na dost\u0119p do lokalizacji",
+  "clockScan.lowAccuracy": "Niska dok\u0142adno\u015B\u0107 GPS. Przejd\u017A na otwart\u0105 przestrze\u0144.",
+  "clockScan.success": "Punkt zeskanowany",
+  "clockScan.tooFar": "Jeste\u015B zbyt daleko od hotelu",
+  "clockScan.openSettings": "Otw\u00F3rz ustawienia",
+
   // -- Tabs -------------------------------------------------------------------
   "tab.dashboard": "Pulpit",
   "tab.schedule": "Grafik",
@@ -241,6 +255,20 @@ const en: Record<string, string> = {
   "clock.pinFallback": "Enter PIN",
   "clock.pinWrong": "Incorrect PIN",
   "clock.biometricShield": "Protected by biometrics",
+
+  // -- Clock Scan -------------------------------------------------------------
+  "clockScan.title": "Scan clock point",
+  "clockScan.scanning": "Looking for clock point QR...",
+  "clockScan.invalidQr": "This is not a clock point QR code",
+  "clockScan.onboardingQr": "This is an onboarding code, not a clock point",
+  "clockScan.gettingLocation": "Getting location...",
+  "clockScan.locationDenied": "Location access denied",
+  "clockScan.locationUnavailable": "Could not get location. Please try again.",
+  "clockScan.locationDeniedDesc": "To register attendance, allow location access",
+  "clockScan.lowAccuracy": "Low GPS accuracy. Move to an open area.",
+  "clockScan.success": "Clock point scanned",
+  "clockScan.tooFar": "You are too far from the hotel",
+  "clockScan.openSettings": "Open settings",
 
   // -- Tabs -------------------------------------------------------------------
   "tab.dashboard": "Dashboard",

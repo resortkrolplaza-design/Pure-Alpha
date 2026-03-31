@@ -10,6 +10,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { emp, fontSize, radius, spacing, shadow, shiftColors, TOUCH_TARGET } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
@@ -19,6 +20,7 @@ import { useAppStore } from "@/lib/store";
 import { employeeFetch, clockIn, clockOut } from "@/lib/employee-api";
 import { checkBiometricAvailability, authenticateWithBiometric } from "@/lib/biometric";
 import { isBiometricEnrolled, getCachedCredentials } from "@/lib/auth";
+import { getCurrentLocation } from "@/lib/location";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { DashboardData, ShiftData } from "@/lib/types";
 
@@ -48,6 +50,8 @@ function DashboardScreenInner() {
   const [pinInput, setPinInput] = useState("");
   const pinModalRef = useRef<TextInput>(null);
   const pinValueRef = useRef("");
+  // Ref to hold pending clock-in data during PIN fallback (avoids re-triggering useEffect)
+  const pendingClockInRef = useRef<{ qrToken: string; latitude: number; longitude: number; gpsAccuracy?: number } | null>(null);
 
   // Check if biometric is enrolled to show shield badge
   useEffect(() => {
@@ -62,6 +66,8 @@ function DashboardScreenInner() {
     })();
     return () => { cancelled = true; };
   }, []);
+
+  const pendingClockIn = useAppStore((s) => s.pendingClockIn);
 
   const queryClient = useQueryClient();
   const fadeStyle = useFadeIn();
@@ -83,11 +89,26 @@ function DashboardScreenInner() {
   });
 
   const clockMutation = useMutation({
-    mutationFn: async (action: "clock-in" | "clock-out") => {
-      if (action === "clock-out") {
-        return clockOut();
+    mutationFn: async (params: {
+      action: "clock-in" | "clock-out";
+      qrToken?: string;
+      latitude?: number;
+      longitude?: number;
+      gpsAccuracy?: number;
+    }) => {
+      if (params.action === "clock-out") {
+        return clockOut(
+          params.latitude != null
+            ? { latitude: params.latitude, longitude: params.longitude, gpsAccuracy: params.gpsAccuracy }
+            : undefined,
+        );
       }
-      return clockIn();
+      return clockIn({
+        qrToken: params.qrToken!,
+        latitude: params.latitude!,
+        longitude: params.longitude!,
+        gpsAccuracy: params.gpsAccuracy,
+      });
     },
     onSuccess: (res) => {
       if (res.status === "success") {
@@ -110,15 +131,71 @@ function DashboardScreenInner() {
     },
   });
 
+  // Watch for pendingClockIn from clock-scan screen
+  useEffect(() => {
+    if (!pendingClockIn) return;
+    const pending = pendingClockIn;
+    useAppStore.getState().setPendingClockIn(null);
+
+    (async () => {
+      // Biometric verification before finalizing clock-in
+      const enrolled = await isBiometricEnrolled();
+      if (enrolled) {
+        const bio = await checkBiometricAvailability();
+        if (bio.available) {
+          const success = await authenticateWithBiometric(t(lang, "clock.biometricPrompt"));
+          if (!success) {
+            // Biometric failed -- show PIN fallback
+            if (Platform.OS === "ios") {
+              Alert.prompt(
+                t(lang, "clock.pinFallback"),
+                undefined,
+                async (enteredPin: string) => {
+                  const creds = await getCachedCredentials();
+                  if (creds && enteredPin === creds.pin) {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                    clockMutation.mutate({ action: "clock-in", ...pending });
+                  } else {
+                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+                    Alert.alert(t(lang, "common.error"), t(lang, "clock.pinWrong"));
+                  }
+                },
+                "secure-text",
+                undefined,
+                "number-pad",
+              );
+            } else {
+              // Android: store in ref (not Zustand) to avoid re-triggering this effect
+              pendingClockInRef.current = pending;
+              setPinInput("");
+              setShowPinModal(true);
+              setTimeout(() => pinModalRef.current?.focus(), 300);
+            }
+            return;
+          }
+        }
+      }
+
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      clockMutation.mutate({ action: "clock-in", ...pending });
+    })();
+  }, [pendingClockIn, lang, clockMutation]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refetch();
     setRefreshing(false);
   }, [refetch]);
 
-  const doClock = useCallback(() => {
-    clockMutation.mutate(isClockedIn ? "clock-out" : "clock-in");
-  }, [clockMutation, isClockedIn]);
+  const doClockOut = useCallback(async () => {
+    const loc = await getCurrentLocation();
+    clockMutation.mutate({
+      action: "clock-out",
+      latitude: loc.ok ? loc.data.latitude : undefined,
+      longitude: loc.ok ? loc.data.longitude : undefined,
+      gpsAccuracy: loc.ok ? (loc.data.accuracy ?? undefined) : undefined,
+    });
+  }, [clockMutation]);
 
   const handleClock = useCallback(async () => {
     if (clockingRef.current) return;
@@ -126,34 +203,37 @@ function DashboardScreenInner() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-    // Check if biometric is enrolled for this user
+    // Clock IN: redirect to QR scanner (GPS collected there)
+    if (!isClockedIn) {
+      clockingRef.current = false;
+      router.push("/clock-scan");
+      return;
+    }
+
+    // Clock OUT: biometric verification then send with GPS
     const enrolled = await isBiometricEnrolled();
     if (!enrolled) {
       clockingRef.current = false;
-      doClock();
+      doClockOut();
       return;
     }
 
-    // Check device capability
     const bio = await checkBiometricAvailability();
     if (!bio.available) {
       clockingRef.current = false;
-      doClock();
+      doClockOut();
       return;
     }
 
-    // Attempt biometric verification
     const success = await authenticateWithBiometric(t(lang, "clock.biometricPrompt"));
     if (success) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       clockingRef.current = false;
-      doClock();
+      doClockOut();
       return;
     }
 
     // Biometric failed -- offer PIN fallback
-    // NOTE: Alert.prompt/Alert.alert are non-blocking. clockingRef stays true
-    // until user completes or cancels the alert (prevents double-tap during alert).
     if (Platform.OS === "ios") {
       Alert.prompt(
         t(lang, "clock.pinFallback"),
@@ -162,7 +242,7 @@ function DashboardScreenInner() {
           clockingRef.current = false;
           const creds = await getCachedCredentials();
           if (creds && enteredPin === creds.pin) {
-            doClock();
+            doClockOut();
           } else {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert(t(lang, "common.error"), t(lang, "clock.pinWrong"));
@@ -173,31 +253,40 @@ function DashboardScreenInner() {
         "number-pad",
       );
     } else {
-      // Android: show custom PIN modal (Alert.prompt is iOS-only)
       setPinInput("");
       setShowPinModal(true);
       setTimeout(() => pinModalRef.current?.focus(), 300);
     }
-  }, [lang, doClock]);
+  }, [lang, isClockedIn, doClockOut]);
 
   const handlePinModalSubmit = useCallback(async (submittedPin: string) => {
     setShowPinModal(false);
     clockingRef.current = false;
     const creds = await getCachedCredentials();
     if (creds && submittedPin === creds.pin) {
-      doClock();
+      // Check if this is a clock-in PIN fallback (stored in ref, not Zustand)
+      const pending = pendingClockInRef.current;
+      if (pending) {
+        pendingClockInRef.current = null;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        clockMutation.mutate({ action: "clock-in", ...pending });
+      } else {
+        doClockOut();
+      }
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t(lang, "common.error"), t(lang, "clock.pinWrong"));
+      pendingClockInRef.current = null;
     }
     setPinInput("");
     pinValueRef.current = "";
-  }, [lang, doClock]);
+  }, [lang, doClockOut, clockMutation]);
 
   const handlePinModalCancel = useCallback(() => {
     setShowPinModal(false);
     clockingRef.current = false;
     setPinInput("");
+    pendingClockInRef.current = null;
   }, []);
 
   const shiftColor = data?.todayShift
