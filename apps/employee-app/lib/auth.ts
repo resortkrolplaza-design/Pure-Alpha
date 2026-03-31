@@ -193,19 +193,21 @@ export function decodeBase64(str: string): string {
   }
 
   // Manual base64 decode for older Hermes without atob
+  // Produces raw bytes, then uses TextDecoder for proper UTF-8 multi-byte support
+  // (Polish diacritics in employee names etc.)
   input = input.replace(/[^A-Za-z0-9+/=]/g, "");
-  let output = "";
+  const bytes: number[] = [];
   let i = 0;
   while (i < input.length) {
     const e1 = B64.indexOf(input.charAt(i++));
     const e2 = B64.indexOf(input.charAt(i++));
     const e3 = B64.indexOf(input.charAt(i++));
     const e4 = B64.indexOf(input.charAt(i++));
-    output += String.fromCharCode((e1 << 2) | (e2 >> 4));
-    if (e3 !== 64) output += String.fromCharCode(((e2 & 15) << 4) | (e3 >> 2));
-    if (e4 !== 64) output += String.fromCharCode(((e3 & 3) << 6) | e4);
+    bytes.push((e1 << 2) | (e2 >> 4));
+    if (e3 !== 64) bytes.push(((e2 & 15) << 4) | (e3 >> 2));
+    if (e4 !== 64) bytes.push(((e3 & 3) << 6) | e4);
   }
-  return output;
+  return new TextDecoder().decode(new Uint8Array(bytes));
 }
 
 export function isTokenExpired(token: string): boolean {

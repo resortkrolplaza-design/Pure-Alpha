@@ -192,22 +192,24 @@ function ScheduleScreenInner() {
             keyExtractor={(d) => d.dateStr}
             renderItem={({ item: day }) => {
               const dayShifts = shiftsByDate.get(day.dateStr) ?? [];
-              const ownShift = dayShifts.find((s) => s.isOwnShift);
-              const shiftLabel = ownShift
-                ? `${day.dayLabel} ${day.date.getDate()}, ${t(lang, `shift.${ownShift.shiftType}`)} ${ownShift.startTime}--${ownShift.endTime}`
-                : `${day.dayLabel} ${day.date.getDate()}, ${t(lang, "dash.noShift")}`;
-              const borderColor = ownShift
-                ? shiftColors[ownShift.shiftType] ?? shiftColors.CUSTOM
+              const ownShifts = dayShifts.filter((s) => s.isOwnShift);
+              const firstShift = ownShifts[0];
+              const shiftLabel = firstShift
+                ? ownShifts.map((s) => `${t(lang, `shift.${s.shiftType}`)} ${s.startTime}--${s.endTime}`).join(", ")
+                : t(lang, "dash.noShift");
+              const accessLabel = `${day.dayLabel} ${day.date.getDate()}, ${shiftLabel}`;
+              const borderColor = firstShift
+                ? shiftColors[firstShift.shiftType] ?? shiftColors.CUSTOM
                 : "transparent";
               return (
                 <View
                   style={[
                     styles.dayCard,
                     day.isToday && styles.dayCardToday,
-                    { borderLeftColor: borderColor, borderLeftWidth: ownShift ? 4 : 0 },
+                    { borderLeftColor: borderColor, borderLeftWidth: firstShift ? 4 : 0 },
                   ]}
                   accessible={true}
-                  accessibilityLabel={shiftLabel}
+                  accessibilityLabel={accessLabel}
                 >
                   <View style={styles.dayHeader}>
                     <Text style={[styles.dayLabel, day.isToday && styles.dayLabelToday]}>
@@ -217,28 +219,32 @@ function ScheduleScreenInner() {
                       {day.date.getDate()}
                     </Text>
                   </View>
-                  {ownShift ? (
-                    <View style={styles.shiftInfo}>
-                      <Text style={styles.shiftTime}>
-                        {ownShift.startTime}--{ownShift.endTime}
-                      </Text>
-                      <View
-                        style={[
-                          styles.shiftTypeBadge,
-                          {
-                            backgroundColor: `${shiftColors[ownShift.shiftType] ?? shiftColors.CUSTOM}1A`,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.shiftTypeLabel,
-                            { color: shiftColors[ownShift.shiftType] ?? shiftColors.CUSTOM },
-                          ]}
-                        >
-                          {t(lang, `shift.${ownShift.shiftType}`)}
-                        </Text>
-                      </View>
+                  {ownShifts.length > 0 ? (
+                    <View style={styles.shiftsColumn}>
+                      {ownShifts.map((ownShift) => (
+                        <View key={ownShift.id} style={styles.shiftInfo}>
+                          <Text style={styles.shiftTime}>
+                            {ownShift.startTime}--{ownShift.endTime}
+                          </Text>
+                          <View
+                            style={[
+                              styles.shiftTypeBadge,
+                              {
+                                backgroundColor: `${shiftColors[ownShift.shiftType] ?? shiftColors.CUSTOM}1A`,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.shiftTypeLabel,
+                                { color: shiftColors[ownShift.shiftType] ?? shiftColors.CUSTOM },
+                              ]}
+                            >
+                              {t(lang, `shift.${ownShift.shiftType}`)}
+                            </Text>
+                          </View>
+                        </View>
+                      ))}
                     </View>
                   ) : (
                     <Text style={styles.noShift}>--</Text>
@@ -359,6 +365,9 @@ const styles = StyleSheet.create({
   },
   dayDateToday: {
     color: emp.primary,
+  },
+  shiftsColumn: {
+    gap: spacing.xs,
   },
   shiftInfo: {
     flexDirection: "row",

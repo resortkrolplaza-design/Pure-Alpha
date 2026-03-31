@@ -168,10 +168,13 @@ function LoginScreenInner() {
       employee: { id: string; name: string; department: string; position: string };
     }) => {
       const slug = hotelSlugInput.trim().toLowerCase();
+      const hid = resolvedHotelId;
+      const hname = resolvedHotelName;
+      if (!hid) return; // guard against stale closure
       await Promise.all([
         setEmployeeToken(data.token),
         setHotelSlug(slug),
-        setHotelId(resolvedHotelId!),
+        setHotelId(hid),
         setHotelOnboarded(),
       ]);
 
@@ -183,8 +186,8 @@ function LoginScreenInner() {
       });
       setHotel({
         slug,
-        id: resolvedHotelId!,
-        name: resolvedHotelName ?? slug,
+        id: hid,
+        name: hname ?? slug,
       });
       setAuthenticated(true);
 

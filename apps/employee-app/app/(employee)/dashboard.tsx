@@ -179,7 +179,7 @@ function DashboardScreenInner() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       clockMutation.mutate({ action: "clock-in", ...pending });
     })();
-  }, [pendingClockIn, lang, clockMutation]);
+  }, [pendingClockIn, lang]); // clockMutation.mutate is stable in TanStack Query v5
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -253,6 +253,7 @@ function DashboardScreenInner() {
         "number-pad",
       );
     } else {
+      clockingRef.current = false;
       setPinInput("");
       setShowPinModal(true);
       setTimeout(() => pinModalRef.current?.focus(), 300);

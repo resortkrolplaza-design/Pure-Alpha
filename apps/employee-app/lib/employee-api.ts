@@ -58,11 +58,19 @@ async function doSessionRefresh(): Promise<boolean> {
       if (!success) return false;
     }
 
-    const res = await fetch(`${API_BASE}/api/employee-app/auth/pin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ login: creds.login, pin: creds.pin, hotelId }),
-    });
+    const refreshController = new AbortController();
+    const refreshTimeout = setTimeout(() => refreshController.abort(), 10_000);
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/api/employee-app/auth/pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login: creds.login, pin: creds.pin, hotelId }),
+        signal: refreshController.signal,
+      });
+    } finally {
+      clearTimeout(refreshTimeout);
+    }
     if (!res.ok) return false;
 
     const json = await res.json();
