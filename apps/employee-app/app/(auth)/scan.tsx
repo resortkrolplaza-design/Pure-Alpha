@@ -10,9 +10,9 @@ import {
   Pressable,
   StyleSheet,
   Animated,
-  Dimensions,
   Platform,
   Linking,
+  useWindowDimensions,
 } from "react-native";
 import { useReducedMotion } from "@/lib/animations";
 // CameraView is not supported on web -- guard below
@@ -28,8 +28,6 @@ import { resolveHotel, resolveHotelByToken } from "@/lib/employee-api";
 import { setHotelSlug, setHotelId, setHotelOnboarded } from "@/lib/auth";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const OVERLAY_SIZE = Math.min(SCREEN_W * 0.7, 280);
 const CORNER_SIZE = 28;
 const CORNER_WIDTH = 4;
 const SCAN_DEBOUNCE_MS = 3000;
@@ -101,6 +99,8 @@ function CornerBracket({
 
 function ScanScreenInner() {
   const insets = useSafeAreaInsets();
+  const { width: screenW } = useWindowDimensions();
+  const OVERLAY_SIZE = Math.min(screenW * 0.7, 280);
   const lang = useAppStore((s) => s.lang);
   const navigation = useNavigation();
   const reducedMotion = useReducedMotion();
@@ -330,9 +330,9 @@ function ScanScreenInner() {
         <View style={styles.overlayDarkTop} />
 
         {/* Middle row: left dark | clear center | right dark */}
-        <View style={styles.overlayMiddle}>
+        <View style={[styles.overlayMiddle, { height: OVERLAY_SIZE }]}>
           <View style={styles.overlayDarkSide} />
-          <View style={styles.scanWindow}>
+          <View style={[styles.scanWindow, { width: OVERLAY_SIZE, height: OVERLAY_SIZE }]}>
             <CornerBracket position="topLeft" />
             <CornerBracket position="topRight" />
             <CornerBracket position="bottomLeft" />
@@ -433,16 +433,13 @@ const styles = StyleSheet.create({
   },
   overlayMiddle: {
     flexDirection: "row",
-    height: OVERLAY_SIZE,
   },
   overlayDarkSide: {
     flex: 1,
     backgroundColor: OVERLAY_COLOR,
   },
   scanWindow: {
-    width: OVERLAY_SIZE,
-    height: OVERLAY_SIZE,
-    // Clear center -- no background
+    // width/height set inline via OVERLAY_SIZE (responsive)
   },
   overlayDarkBottom: {
     flex: 1,

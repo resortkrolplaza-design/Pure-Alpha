@@ -10,8 +10,8 @@ import {
   Pressable,
   StyleSheet,
   Animated,
-  Dimensions,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { useReducedMotion } from "@/lib/animations";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,8 +24,6 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-
 // -- Animated sine wave (bottom decorative element) ---------------------------
 
 const WAVE_POINTS = 60;
@@ -37,11 +35,15 @@ function AnimatedWave({
   phaseOffset,
   speed,
   yOffset,
+  screenW,
+  reducedMotion,
 }: {
   color: string;
   phaseOffset: number;
   speed: number;
   yOffset: number;
+  screenW: number;
+  reducedMotion: boolean;
 }) {
   const phase = useRef(new Animated.Value(0)).current;
   const fadeIn = useRef(new Animated.Value(0)).current;
@@ -54,6 +56,11 @@ function AnimatedWave({
       useNativeDriver: true,
     });
     fadeAnim.start();
+
+    if (reducedMotion) {
+      phase.setValue(0);
+      return () => { fadeAnim.stop(); };
+    }
 
     const loopAnim = Animated.loop(
       Animated.timing(phase, {
@@ -68,7 +75,7 @@ function AnimatedWave({
       fadeAnim.stop();
       loopAnim.stop();
     };
-  }, [phase, fadeIn, speed]);
+  }, [phase, fadeIn, speed, reducedMotion]);
 
   const dots = useMemo(() => {
     const arr = [];
@@ -81,7 +88,7 @@ function AnimatedWave({
   return (
     <Animated.View style={[styles.waveContainer, { bottom: yOffset, opacity: fadeIn }]}>
       {dots.map((i) => {
-        const x = (i / WAVE_POINTS) * SCREEN_W;
+        const x = (i / WAVE_POINTS) * screenW;
         const dotPhase = phaseOffset + (i / WAVE_POINTS) * Math.PI * 2;
 
         const translateY = phase.interpolate({
@@ -101,7 +108,7 @@ function AnimatedWave({
             style={{
               position: "absolute",
               left: x,
-              width: SCREEN_W / WAVE_POINTS + 1,
+              width: screenW / WAVE_POINTS + 1,
               height: WAVE_HEIGHT,
               backgroundColor: color,
               borderTopLeftRadius: 2,
@@ -119,6 +126,7 @@ function AnimatedWave({
 
 function WelcomeScreenInner() {
   const insets = useSafeAreaInsets();
+  const { width: screenW } = useWindowDimensions();
   const lang = useAppStore((s) => s.lang);
   const reducedMotion = useReducedMotion();
 
@@ -254,9 +262,9 @@ function WelcomeScreenInner() {
       />
 
       {/* Animated waves at bottom */}
-      <AnimatedWave color={emp.waveLight} phaseOffset={0} speed={6000} yOffset={0} />
-      <AnimatedWave color={emp.waveMedium} phaseOffset={2} speed={5000} yOffset={30} />
-      <AnimatedWave color={emp.waveFaint} phaseOffset={4} speed={7000} yOffset={60} />
+      <AnimatedWave color={emp.waveLight} phaseOffset={0} speed={6000} yOffset={0} screenW={screenW} reducedMotion={reducedMotion} />
+      <AnimatedWave color={emp.waveMedium} phaseOffset={2} speed={5000} yOffset={30} screenW={screenW} reducedMotion={reducedMotion} />
+      <AnimatedWave color={emp.waveFaint} phaseOffset={4} speed={7000} yOffset={60} screenW={screenW} reducedMotion={reducedMotion} />
 
       {/* Content */}
       <View style={[styles.content, { paddingTop: insets.top, paddingBottom: insets.bottom + 32 }]}>

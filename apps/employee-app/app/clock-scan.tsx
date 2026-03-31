@@ -10,10 +10,10 @@ import {
   Pressable,
   StyleSheet,
   Animated,
-  Dimensions,
   Platform,
   Linking,
   ActivityIndicator,
+  useWindowDimensions,
 } from "react-native";
 import { useReducedMotion } from "@/lib/animations";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -27,8 +27,6 @@ import { useAppStore } from "@/lib/store";
 import { getCurrentLocation } from "@/lib/location";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
-const { width: SCREEN_W } = Dimensions.get("window");
-const OVERLAY_SIZE = Math.min(SCREEN_W * 0.7, 280);
 const CORNER_SIZE = 28;
 const CORNER_WIDTH = 4;
 const SCAN_DEBOUNCE_MS = 3000;
@@ -91,6 +89,8 @@ function CornerBracket({
 
 function ClockScanScreenInner() {
   const insets = useSafeAreaInsets();
+  const { width: screenW } = useWindowDimensions();
+  const OVERLAY_SIZE = Math.min(screenW * 0.7, 280);
   const lang = useAppStore((s) => s.lang);
   const navigation = useNavigation();
   const reducedMotion = useReducedMotion();
@@ -299,9 +299,9 @@ function ClockScanScreenInner() {
         <View style={styles.overlayDarkTop} />
 
         {/* Middle row: left dark | clear center | right dark */}
-        <View style={styles.overlayMiddle}>
+        <View style={[styles.overlayMiddle, { height: OVERLAY_SIZE }]}>
           <View style={styles.overlayDarkSide} />
-          <View style={styles.scanWindow}>
+          <View style={[styles.scanWindow, { width: OVERLAY_SIZE, height: OVERLAY_SIZE }]}>
             <CornerBracket position="topLeft" />
             <CornerBracket position="topRight" />
             <CornerBracket position="bottomLeft" />
@@ -398,15 +398,13 @@ const styles = StyleSheet.create({
   },
   overlayMiddle: {
     flexDirection: "row",
-    height: OVERLAY_SIZE,
   },
   overlayDarkSide: {
     flex: 1,
     backgroundColor: OVERLAY_COLOR,
   },
   scanWindow: {
-    width: OVERLAY_SIZE,
-    height: OVERLAY_SIZE,
+    // width/height set inline via OVERLAY_SIZE (responsive)
   },
   overlayDarkBottom: {
     flex: 1,
