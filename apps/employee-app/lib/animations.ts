@@ -37,9 +37,11 @@ export function useReducedMotion(): boolean {
 // Returns onPressIn/onPressOut handlers + animated scale style.
 
 export function useScalePress(toValue = 0.97) {
+  const reducedMotion = useReducedMotion();
   const scale = useRef(new Animated.Value(1)).current;
 
   const onPressIn = useCallback(() => {
+    if (reducedMotion) return;
     Animated.spring(scale, {
       toValue,
       damping: animation.spring.damping,
@@ -47,9 +49,10 @@ export function useScalePress(toValue = 0.97) {
       mass: animation.spring.mass,
       useNativeDriver: true,
     }).start();
-  }, [scale, toValue]);
+  }, [scale, toValue, reducedMotion]);
 
   const onPressOut = useCallback(() => {
+    if (reducedMotion) return;
     Animated.spring(scale, {
       toValue: 1,
       damping: animation.spring.damping,
@@ -57,7 +60,7 @@ export function useScalePress(toValue = 0.97) {
       mass: animation.spring.mass,
       useNativeDriver: true,
     }).start();
-  }, [scale]);
+  }, [scale, reducedMotion]);
 
   const scaleStyle = { transform: [{ scale }] };
 

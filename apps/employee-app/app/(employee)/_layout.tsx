@@ -10,6 +10,7 @@ import { Tabs, router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { emp, fontSize, spacing } from "@/lib/tokens";
+import { useReducedMotion } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 
@@ -26,9 +27,14 @@ function AnimatedTabIcon({
   activeName: IoniconName;
   inactiveName: IoniconName;
 }) {
+  const reducedMotion = useReducedMotion();
   const scale = useRef(new Animated.Value(active ? 1.1 : 1)).current;
 
   useEffect(() => {
+    if (reducedMotion) {
+      scale.setValue(active ? 1.1 : 1);
+      return;
+    }
     Animated.spring(scale, {
       toValue: active ? 1.1 : 1,
       damping: 12,
@@ -36,7 +42,7 @@ function AnimatedTabIcon({
       mass: 0.8,
       useNativeDriver: true,
     }).start();
-  }, [active, scale]);
+  }, [active, scale, reducedMotion]);
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>

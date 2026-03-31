@@ -97,8 +97,9 @@ function EntryScreenInner() {
             }
           }
 
-          // Biometric auto-login failed or not available -- fall through
-          await logout();
+          // Biometric auto-login failed or not available -- redirect to login
+          // Do NOT call logout() here: it wipes biometric enrollment.
+          // User can still log in manually with PIN/credentials.
           if (cancelled) return;
           setState("ready");
           return;

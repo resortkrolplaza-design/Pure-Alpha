@@ -2,16 +2,13 @@
 // Employee App -- API helpers (custom JWT auth)
 // =============================================================================
 
-import { Platform } from "react-native";
 import { getEmployeeToken, setEmployeeToken, isBiometricEnrolled, getCachedCredentials, getHotelId } from "./auth";
 import { authenticateWithBiometric, checkBiometricAvailability } from "./biometric";
-import { t } from "./i18n";
+import { t, type Lang } from "./i18n";
 import { useAppStore } from "./store";
 import type { ApiResponse, LeaveRequest } from "./types";
 
 const API_BASE = "https://purealphahotel.pl";
-
-function getLang() { return useAppStore.getState().lang; }
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -50,15 +47,15 @@ async function doSessionRefresh(): Promise<boolean> {
     if (!enrolled || !creds || !hotelId) return false;
 
     // Require biometric verification before using cached credentials for re-auth.
-    // This shows a brief Face ID / Touch ID prompt -- acceptable UX tradeoff vs
-    // silently re-authenticating without user knowledge.
+    // If biometric hardware is unavailable but was enrolled, refuse silent re-auth
+    // (security: stolen device with disabled biometrics must not silently refresh).
     const bio = await checkBiometricAvailability();
-    if (bio.available) {
-      const success = await authenticateWithBiometric(t(getLang(), "auth.biometricRefresh"), {
-        allowDeviceFallback: true,
-      });
-      if (!success) return false;
-    }
+    if (!bio.available) return false;
+
+    const success = await authenticateWithBiometric(t(getLang(), "auth.biometricRefresh"), {
+      allowDeviceFallback: true,
+    });
+    if (!success) return false;
 
     const refreshController = new AbortController();
     const refreshTimeout = setTimeout(() => refreshController.abort(), 10_000);
@@ -73,7 +70,15 @@ async function doSessionRefresh(): Promise<boolean> {
     } finally {
       clearTimeout(refreshTimeout);
     }
-    if (!res.ok) return false;
+    if (!res.ok) {
+      // 401 = stale PIN (changed server-side). Clear cached creds to prevent
+      // progressive lockout from repeated retries with wrong PIN.
+      if (res.status === 401) {
+        const { clearBiometricCredentials } = await import("./auth");
+        await clearBiometricCredentials();
+      }
+      return false;
+    }
 
     const json = await res.json();
     if (json.status === "success" && json.data?.token) {
