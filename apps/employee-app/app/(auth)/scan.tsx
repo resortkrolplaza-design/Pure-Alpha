@@ -23,7 +23,7 @@ import { emp, fontSize, radius, spacing, TOUCH_TARGET } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { resolveHotel } from "@/lib/employee-api";
+import { resolveHotel, resolveHotelByToken } from "@/lib/employee-api";
 import { setHotelSlug, setHotelId, setHotelOnboarded } from "@/lib/auth";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
@@ -186,6 +186,33 @@ function ScanScreenInner() {
       const rawData = typeof result.data === "string" ? result.data : String(result.data ?? "");
 
       try {
+        // Check if this is a ClockPoint QR (PA-CLK-*) -- unified QR for onboarding + clock-in
+        const isClockPointQr = rawData.trim().startsWith("PA-CLK-") && rawData.trim().length > 7;
+
+        if (isClockPointQr) {
+          setScanError(null);
+          const res = await resolveHotelByToken(rawData.trim());
+          if (res.status === "success" && res.data) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            await Promise.all([
+              setHotelSlug(res.data.slug),
+              setHotelId(res.data.hotelId),
+              setHotelOnboarded(),
+            ]);
+            const store = useAppStore.getState();
+            store.setHotel({
+              slug: res.data.slug,
+              id: res.data.hotelId,
+              name: res.data.hotelName,
+            });
+            router.replace("/(auth)/login");
+          } else {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            setScanError(res.errorMessage ?? t(lang, "welcome.hotelNotFound"));
+          }
+          return;
+        }
+
         const slug = extractSlugFromQr(rawData);
         if (!slug) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -199,14 +226,14 @@ function ScanScreenInner() {
         if (res.status === "success" && res.data) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           await Promise.all([
-            setHotelSlug(slug),
+            setHotelSlug(res.data.slug ?? slug),
             setHotelId(res.data.hotelId),
             setHotelOnboarded(),
           ]);
 
           const store = useAppStore.getState();
           store.setHotel({
-            slug,
+            slug: res.data.slug ?? slug,
             id: res.data.hotelId,
             name: res.data.hotelName,
           });

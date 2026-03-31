@@ -132,10 +132,22 @@ export async function employeeFetch<T>(
 export async function resolveHotel(
   slug: string,
 ): Promise<
-  ApiResponse<{ hotelId: string; hotelName: string }>
+  ApiResponse<{ hotelId: string; hotelName: string; slug?: string }>
 > {
   return employeeFetch(
     `/auth/resolve-hotel?slug=${encodeURIComponent(slug)}`,
+    {},
+    { authenticated: false },
+  );
+}
+
+export async function resolveHotelByToken(
+  token: string,
+): Promise<
+  ApiResponse<{ hotelId: string; hotelName: string; slug: string }>
+> {
+  return employeeFetch(
+    `/auth/resolve-hotel?token=${encodeURIComponent(token)}`,
     {},
     { authenticated: false },
   );
