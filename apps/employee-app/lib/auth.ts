@@ -178,7 +178,21 @@ export async function logout(): Promise<void> {
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
 
 export function decodeBase64(str: string): string {
-  const input = str.replace(/-/g, "+").replace(/_/g, "/").replace(/[^A-Za-z0-9+/=]/g, "");
+  // Convert base64url to base64 and add padding
+  let input = str.replace(/-/g, "+").replace(/_/g, "/");
+  while (input.length % 4 !== 0) input += "=";
+
+  // Try native atob first (available in newer Hermes versions)
+  if (typeof globalThis.atob === "function") {
+    try {
+      return globalThis.atob(input);
+    } catch {
+      // Fall through to manual decoder
+    }
+  }
+
+  // Manual base64 decode for older Hermes without atob
+  input = input.replace(/[^A-Za-z0-9+/=]/g, "");
   let output = "";
   let i = 0;
   while (i < input.length) {
@@ -195,10 +209,9 @@ export function decodeBase64(str: string): string {
 
 export function isTokenExpired(token: string): boolean {
   try {
-    const parts = token.split(".");
-    if (parts.length < 2) return true;
-    const payload = JSON.parse(decodeBase64(parts[1]));
-    if (typeof payload.exp !== "number") return true; // no exp claim, treat as expired (server should always include exp)
+    const payload = decodeTokenPayload(token);
+    if (!payload) return true;
+    if (typeof payload.exp !== "number") return true;
     return payload.exp * 1000 < Date.now();
   } catch {
     return true;

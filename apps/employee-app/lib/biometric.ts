@@ -47,13 +47,16 @@ export async function checkBiometricAvailability(): Promise<{
  */
 export async function authenticateWithBiometric(
   promptMessage: string,
-  cancelLabel?: string,
+  options?: { allowDeviceFallback?: boolean; cancelLabel?: string },
 ): Promise<boolean> {
   try {
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage,
-      fallbackLabel: cancelLabel,
-      disableDeviceFallback: false,
+      cancelLabel: options?.cancelLabel,
+      fallbackLabel: options?.cancelLabel,
+      // In standalone build: true = require actual biometric (Face ID / fingerprint)
+      // In Expo Go: Face ID not available, falls back to device passcode regardless
+      disableDeviceFallback: !(options?.allowDeviceFallback ?? false),
     });
     return result.success;
   } catch {

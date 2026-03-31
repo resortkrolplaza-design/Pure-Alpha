@@ -174,7 +174,7 @@ function ScanScreenInner() {
 
   // -- QR Scanned callback ----------------------------------------------------
   const handleBarcodeScanned = useCallback(
-    async (result: { data: string }) => {
+    async (result: { data: string; type: string }) => {
       const now = Date.now();
       if (now - lastScanRef.current < SCAN_DEBOUNCE_MS) return;
       if (processingRef.current) return;
@@ -183,15 +183,18 @@ function ScanScreenInner() {
       processingRef.current = true;
       setScanError(null);
 
+      const rawData = typeof result.data === "string" ? result.data : String(result.data ?? "");
+
       try {
-        const slug = extractSlugFromQr(result.data);
+        const slug = extractSlugFromQr(rawData);
         if (!slug) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          setScanError(t(lang, "scan.invalidQr"));
+          setScanError(`${t(lang, "scan.invalidQr")} [${rawData.slice(0, 40)}]`);
           return;
         }
 
-        // Validate with API
+        // Validate slug with API
+        setScanError(null);
         const res = await resolveHotel(slug);
         if (res.status === "success" && res.data) {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -211,7 +214,7 @@ function ScanScreenInner() {
           router.replace("/(auth)/login");
         } else {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          setScanError(t(lang, "scan.invalidQr"));
+          setScanError(res.errorMessage ?? t(lang, "welcome.hotelNotFound"));
         }
       } catch {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);

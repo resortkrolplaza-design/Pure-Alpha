@@ -74,6 +74,7 @@ function LoginScreenInner() {
   const [pin, setPin] = useState("");
   const pinInputRef = useRef<TextInput>(null);
   const loginInProgressRef = useRef(false);
+  const pinValueRef = useRef("");
 
   // Credentials fields
   const [username, setUsername] = useState("");
@@ -185,14 +186,16 @@ function LoginScreenInner() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Check biometric availability for enrollment (only for PIN login -- credentials login has no PIN to cache)
-      if (tab === "pin" && pin) {
+      // Use pinValueRef (sync ref) instead of pin state (stale in closure after auto-submit)
+      const currentPin = pinValueRef.current;
+      if (tab === "pin" && currentPin) {
         const alreadyEnrolled = await isBiometricEnrolled();
         if (!alreadyEnrolled) {
           const bio = await checkBiometricAvailability();
           if (bio.available) {
             pendingLoginDataRef.current = {
               login: loginInput.trim(),
-              pin,
+              pin: currentPin,
               token: data.token,
               employee: data.employee,
             };
@@ -221,7 +224,7 @@ function LoginScreenInner() {
       return;
     }
 
-    const success = await authenticateWithBiometric(t(lang, "auth.biometricPrompt"));
+    const success = await authenticateWithBiometric(t(lang, "auth.biometricPrompt"), { allowDeviceFallback: true });
     if (success && data.login && data.pin) {
       await setBiometricCredentials(data.login, data.pin);
       useAppStore.getState().setBiometricEnrolled(true);
@@ -280,6 +283,7 @@ function LoginScreenInner() {
     (value: string) => {
       const cleaned = value.replace(/\D/g, "").slice(0, PIN_LENGTH);
       setPin(cleaned);
+      pinValueRef.current = cleaned;
 
       // Auto-submit when all digits entered
       if (cleaned.length === PIN_LENGTH) {

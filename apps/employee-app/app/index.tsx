@@ -62,7 +62,7 @@ function EntryScreenInner() {
 
                 const currentLang = savedLang ?? "pl";
                 const prompt = t(currentLang, "auth.biometricPrompt");
-                const success = await authenticateWithBiometric(prompt);
+                const success = await authenticateWithBiometric(prompt, { allowDeviceFallback: true });
                 if (cancelled) return;
 
                 if (success) {
