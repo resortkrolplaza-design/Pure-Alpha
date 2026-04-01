@@ -7,6 +7,7 @@ import {
   View, Text, ScrollView, Pressable, RefreshControl, TextInput,
   StyleSheet, ActivityIndicator, Modal, Platform, Alert, KeyboardAvoidingView,
 } from "react-native";
+import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
@@ -67,6 +68,7 @@ function LeaveScreenInner() {
   const [formDateTo, setFormDateTo] = useState("");
   const [formReason, setFormReason] = useState("");
   const [showTypePicker, setShowTypePicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState<"from" | "to" | null>(null);
 
   // Fetch leave balance
   const balanceQuery = useQuery({
@@ -98,6 +100,25 @@ function LeaveScreenInner() {
     setFormDateTo("");
     setFormReason("");
   }, []);
+
+  const formatDateLocal = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  const handleDateChange = useCallback(
+    (_event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (Platform.OS === "android") setShowDatePicker(null);
+      if (!selectedDate) return;
+      const formatted = formatDateLocal(selectedDate);
+      if (showDatePicker === "from") {
+        setFormDateFrom(formatted);
+        // Auto-set "to" if empty or before "from"
+        if (!formDateTo || formDateTo < formatted) setFormDateTo(formatted);
+      } else if (showDatePicker === "to") {
+        setFormDateTo(formatted);
+      }
+    },
+    [showDatePicker, formDateTo],
+  );
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -366,29 +387,71 @@ function LeaveScreenInner() {
 
               {/* Date From */}
               <Text style={styles.fieldLabel}>{t(lang, "leave.dateFrom")}</Text>
-              <TextInput
-                style={styles.input}
-                value={formDateFrom}
-                onChangeText={setFormDateFrom}
-                placeholder={t(lang, "leave.datePlaceholder")}
-                placeholderTextColor={emp.textMuted}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
+              <Pressable
+                style={styles.datePickerBtn}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowDatePicker("from");
+                }}
+                accessibilityRole="button"
                 accessibilityLabel={t(lang, "leave.dateFrom")}
-              />
+              >
+                <Icon name="calendar-outline" size={20} color={emp.primary} />
+                <Text style={[styles.datePickerText, !formDateFrom && styles.datePickerPlaceholder]}>
+                  {formDateFrom || t(lang, "leave.datePlaceholder")}
+                </Text>
+              </Pressable>
+              {showDatePicker === "from" && (
+                <View>
+                  <DateTimePicker
+                    value={formDateFrom ? new Date(formDateFrom + "T12:00:00") : new Date()}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    minimumDate={new Date()}
+                    onChange={handleDateChange}
+                    locale={lang === "pl" ? "pl-PL" : "en-US"}
+                  />
+                  {Platform.OS === "ios" && (
+                    <Pressable style={styles.datePickerDone} onPress={() => setShowDatePicker(null)} accessibilityRole="button">
+                      <Text style={styles.datePickerDoneText}>{t(lang, "common.confirm")}</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
 
               {/* Date To */}
               <Text style={styles.fieldLabel}>{t(lang, "leave.dateTo")}</Text>
-              <TextInput
-                style={styles.input}
-                value={formDateTo}
-                onChangeText={setFormDateTo}
-                placeholder={t(lang, "leave.datePlaceholder")}
-                placeholderTextColor={emp.textMuted}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
+              <Pressable
+                style={styles.datePickerBtn}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowDatePicker("to");
+                }}
+                accessibilityRole="button"
                 accessibilityLabel={t(lang, "leave.dateTo")}
-              />
+              >
+                <Icon name="calendar-outline" size={20} color={emp.primary} />
+                <Text style={[styles.datePickerText, !formDateTo && styles.datePickerPlaceholder]}>
+                  {formDateTo || t(lang, "leave.datePlaceholder")}
+                </Text>
+              </Pressable>
+              {showDatePicker === "to" && (
+                <View>
+                  <DateTimePicker
+                    value={formDateTo ? new Date(formDateTo + "T12:00:00") : (formDateFrom ? new Date(formDateFrom + "T12:00:00") : new Date())}
+                    mode="date"
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    minimumDate={formDateFrom ? new Date(formDateFrom + "T12:00:00") : new Date()}
+                    onChange={handleDateChange}
+                    locale={lang === "pl" ? "pl-PL" : "en-US"}
+                  />
+                  {Platform.OS === "ios" && (
+                    <Pressable style={styles.datePickerDone} onPress={() => setShowDatePicker(null)} accessibilityRole="button">
+                      <Text style={styles.datePickerDoneText}>{t(lang, "common.confirm")}</Text>
+                    </Pressable>
+                  )}
+                </View>
+              )}
 
               {/* Reason */}
               <Text style={styles.fieldLabel}>{t(lang, "leave.reason")}</Text>
@@ -749,6 +812,37 @@ const styles = StyleSheet.create({
   inputMultiline: {
     minHeight: 80,
     paddingTop: spacing.md,
+  },
+  datePickerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    backgroundColor: emp.inputBg,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: emp.inputBorder,
+    padding: spacing.lg,
+    minHeight: TOUCH_TARGET,
+  },
+  datePickerText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_500Medium",
+    color: emp.text,
+  },
+  datePickerPlaceholder: {
+    color: emp.textMuted,
+    fontFamily: "Inter_400Regular",
+  },
+  datePickerDone: {
+    alignSelf: "flex-end",
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+  },
+  datePickerDoneText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: emp.primary,
   },
   submitBtn: {
     backgroundColor: emp.primary,

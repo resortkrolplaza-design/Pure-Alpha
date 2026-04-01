@@ -5,14 +5,24 @@
 import { useEffect } from "react";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import { useFonts, Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { StyleSheet } from "react-native";
+import { StyleSheet, AppState, Platform } from "react-native";
 import { configureEmployeeApi } from "@/lib/employee-api";
 import { logout } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
+
+// TanStack Query: refetch on app focus (React Native needs manual AppState wiring)
+if (Platform.OS !== "web") {
+  focusManager.setEventListener((handleFocus) => {
+    const sub = AppState.addEventListener("change", (state) => {
+      handleFocus(state === "active");
+    });
+    return () => sub.remove();
+  });
+}
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,6 +32,8 @@ const queryClient = new QueryClient({
       retry: 2,
       staleTime: 30_000,
       gcTime: 5 * 60_000,
+      refetchOnWindowFocus: true,
+      refetchOnMount: "always",
     },
   },
 });
