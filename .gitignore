@@ -53,3 +53,6 @@ ds-templates-preview.html
 
 # Docs (research reports — not source code)
 docs/
+
+# Expo local state
+apps/employee-app/.expo/
