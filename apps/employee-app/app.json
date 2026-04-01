@@ -4,6 +4,7 @@
     "slug": "pure-alpha-employee",
     "version": "1.0.0",
     "orientation": "portrait",
+    "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
     "scheme": "purealpha-employee",
     "splash": {
@@ -19,7 +20,8 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Skanuj kod QR hotelu",
         "NSFaceIDUsageDescription": "Logowanie i potwierdzanie obecnosci w pracy",
-        "NSLocationWhenInUseUsageDescription": "Weryfikacja lokalizacji przy rejestracji obecnosci w pracy"
+        "NSLocationWhenInUseUsageDescription": "Weryfikacja lokalizacji przy rejestracji obecnosci w pracy",
+        "NSPhotoLibraryUsageDescription": "Wybierz zdjecie dokumentu do przeslania"
       }
     },
     "android": {
@@ -37,7 +39,9 @@
       "expo-splash-screen",
       ["expo-camera", { "cameraPermission": "Zezwol Pure Alpha Employee na dostep do kamery w celu skanowania kodow QR." }],
       "expo-local-authentication",
-      ["expo-location", {"locationWhenInUsePermission": "Weryfikacja lokalizacji przy rejestracji obecnosci w pracy"}]
+      ["expo-location", {"locationWhenInUsePermission": "Weryfikacja lokalizacji przy rejestracji obecnosci w pracy"}],
+      ["expo-image-picker", {"photosPermission": "Wybierz zdjecie dokumentu do przeslania", "cameraPermission": "Zrob zdjecie dokumentu aparatem"}],
+      ["expo-notifications", {"icon": "./assets/icon.png", "color": "#1e40af"}]
     ]
   }
 }

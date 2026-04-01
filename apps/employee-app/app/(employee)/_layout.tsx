@@ -13,6 +13,7 @@ import { emp, fontSize, spacing } from "@/lib/tokens";
 import { useReducedMotion } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { usePushNotifications } from "@/lib/usePushNotifications";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -79,6 +80,9 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
 export default function EmployeeLayout() {
   const lang = useAppStore((s) => s.lang);
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+
+  // Register push token after authentication (best-effort, silent fail)
+  usePushNotifications();
 
   // Auth guard -- redirect unauthenticated users to entry screen
   useEffect(() => {
