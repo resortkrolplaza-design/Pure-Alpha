@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import DateTimePicker, { type DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
@@ -128,8 +129,7 @@ function DocumentsScreenInner() {
     setRefreshing(false);
   }, [refetch]);
 
-  const handlePickFile = useCallback(async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  const pickFromFiles = useCallback(async () => {
     const result = await DocumentPicker.getDocumentAsync({
       type: ["application/pdf", "image/jpeg", "image/png", "image/webp"],
       copyToCacheDirectory: true,
@@ -139,6 +139,37 @@ function DocumentsScreenInner() {
       setSelectedFile({ uri: asset.uri, name: asset.name, type: asset.mimeType ?? "application/octet-stream" });
     }
   }, []);
+
+  const takePhoto = useCallback(async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(t(lang, "common.error"), t(lang, "scan.permissionDenied"));
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets?.[0]) {
+      const asset = result.assets[0];
+      const name = `scan-${Date.now()}.jpg`;
+      setSelectedFile({ uri: asset.uri, name, type: asset.mimeType ?? "image/jpeg" });
+    }
+  }, [lang]);
+
+  const handlePickFile = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Alert.alert(
+      t(lang, "docs.selectFile"),
+      undefined,
+      [
+        { text: t(lang, "docs.takePhoto"), onPress: takePhoto },
+        { text: t(lang, "docs.pickFile"), onPress: pickFromFiles },
+        { text: t(lang, "common.cancel"), style: "cancel" },
+      ],
+    );
+  }, [lang, takePhoto, pickFromFiles]);
 
   const handleDateChange = useCallback((_e: DateTimePickerEvent, date?: Date) => {
     if (Platform.OS === "android") setShowDatePicker(false);
