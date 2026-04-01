@@ -294,8 +294,47 @@ export async function submitLeaveRequest(data: {
   });
 }
 
+export async function cancelLeaveRequest(requestId: string): Promise<ApiResponse<{ id: string; status: string }>> {
+  return employeeFetch(`/leave-requests/${requestId}/cancel`, {
+    method: "POST",
+  });
+}
+
 export async function fetchLeaveRequests(): Promise<ApiResponse<LeaveRequest[]>> {
   return employeeFetch("/leave-requests");
+}
+
+// -- Documents ----------------------------------------------------------------
+
+export async function fetchDocuments(): Promise<ApiResponse<unknown[]>> {
+  return employeeFetch("/documents");
+}
+
+export async function uploadDocument(
+  formData: FormData,
+): Promise<ApiResponse<{ id: string }>> {
+  const token = await getEmployeeToken();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const res = await fetch(`${API_BASE}/api/employee-app/documents`, {
+      method: "POST",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: formData,
+      signal: controller.signal,
+    });
+    return (await res.json()) as ApiResponse<{ id: string }>;
+  } catch {
+    return { status: "error", errorMessage: t(getLang(), "common.networkError") };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function deleteDocument(documentId: string): Promise<ApiResponse<void>> {
+  return employeeFetch(`/documents/${documentId}`, { method: "DELETE" });
 }
 
 export async function fetchLeaveBalance(): Promise<

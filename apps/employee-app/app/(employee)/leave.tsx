@@ -20,6 +20,7 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import {
   submitLeaveRequest,
+  cancelLeaveRequest,
   fetchLeaveRequests,
   fetchLeaveBalance,
 } from "@/lib/employee-api";
@@ -150,6 +151,28 @@ function LeaveScreenInner() {
       );
     },
   });
+
+  const cancelMutation = useMutation({
+    mutationFn: (requestId: string) => cancelLeaveRequest(requestId),
+    onSuccess: (res) => {
+      if (res.status === "success") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(t(lang, "leave.cancelSuccess"));
+        queryClient.invalidateQueries({ queryKey: ["employee-leave-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["employee-leave-balance"] });
+      } else {
+        Alert.alert(t(lang, "common.error"), res.errorMessage ?? t(lang, "common.error"));
+      }
+    },
+    onError: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(t(lang, "common.error"), t(lang, "common.networkError"));
+    },
+  });
+
+  const handleCancelRequest = useCallback((requestId: string) => {
+    cancelMutation.mutate(requestId);
+  }, [cancelMutation]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -285,7 +308,7 @@ function LeaveScreenInner() {
             </View>
           ) : (
             requests.map((req) => (
-              <LeaveRequestRow key={req.id} request={req} lang={lang} />
+              <LeaveRequestRow key={req.id} request={req} lang={lang} onCancel={handleCancelRequest} />
             ))
           )}
         </View>
@@ -501,12 +524,15 @@ function LeaveScreenInner() {
 function LeaveRequestRow({
   request,
   lang,
+  onCancel,
 }: {
   request: LeaveRequest;
   lang: "pl" | "en";
+  onCancel?: (id: string) => void;
 }) {
   const locale = lang === "pl" ? "pl-PL" : "en-US";
   const statusColors = leaveStatusColors[request.status] ?? leaveStatusColors.pending;
+  const canCancel = onCancel && ["PENDING", "APPROVED"].includes(request.status);
 
   const formatLeaveDate = (dateStr: string) => {
     try {
@@ -517,6 +543,22 @@ function LeaveRequestRow({
     } catch {
       return dateStr;
     }
+  };
+
+  const handleCancel = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert(
+      t(lang, "leave.cancelConfirmTitle"),
+      t(lang, "leave.cancelConfirmMessage"),
+      [
+        { text: t(lang, "common.cancel"), style: "cancel" },
+        {
+          text: t(lang, "leave.cancelRequest"),
+          style: "destructive",
+          onPress: () => onCancel?.(request.id),
+        },
+      ],
+    );
   };
 
   return (
@@ -543,6 +585,17 @@ function LeaveRequestRow({
           {request.reason}
         </Text>
       ) : null}
+      {canCancel && (
+        <Pressable
+          onPress={handleCancel}
+          style={styles.cancelRequestBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t(lang, "leave.cancelRequest")}
+        >
+          <Icon name="close-circle-outline" size={16} color={emp.danger} />
+          <Text style={styles.cancelRequestText}>{t(lang, "leave.cancelRequest")}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -691,6 +744,20 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: emp.textMuted,
     lineHeight: 16,
+  },
+  cancelRequestBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+    alignSelf: "flex-start",
+    minHeight: TOUCH_TARGET,
+  },
+  cancelRequestText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_500Medium",
+    color: emp.danger,
   },
 
   // -- FAB --------------------------------------------------------------------
