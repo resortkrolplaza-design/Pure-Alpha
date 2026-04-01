@@ -77,7 +77,7 @@ export function usePushNotifications() {
         const token = await getExpoPushToken();
         if (!token || cancelled) return;
 
-        const deviceId = getDeviceId();
+        const deviceId = await getDeviceId();
         await employeeFetch("/push-subscribe", {
           method: "POST",
           body: JSON.stringify({
