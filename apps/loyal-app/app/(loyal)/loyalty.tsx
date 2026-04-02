@@ -3,7 +3,7 @@
 // Scratch cards, tier, points, challenges, badges, transaction history
 // =============================================================================
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -22,18 +22,20 @@ import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import {
-  fetchLoyaltyData,
+  fetchPortalData,
   fetchScratchCards,
-  fetchTransactions,
-  revealScratchCard,
-} from "@/lib/api";
+  fetchHistory,
+  scratchCard,
+  fetchChallenges,
+  fetchBadges,
+} from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type {
-  LoyaltyData,
-  ScratchCard,
-  Transaction,
-  Challenge,
-  Badge,
+  PortalData,
+  ScratchCardData,
+  TransactionData,
+  ChallengeData,
+  BadgeData,
 } from "@/lib/types";
 
 // -- Scratch Card Component ---------------------------------------------------
@@ -41,18 +43,21 @@ import type {
 function ScratchCardItem({
   card,
   onReveal,
+  lang,
 }: {
-  card: ScratchCard;
+  card: ScratchCardData;
   onReveal: (id: string) => void;
+  lang: "pl" | "en";
 }) {
+  const isRevealed = card.status !== "AVAILABLE";
   return (
     <View style={styles.scratchCard}>
-      {card.revealed ? (
+      {isRevealed ? (
         <View style={styles.scratchRevealed}>
           <Icon name="trophy" size={28} color={loyal.primary} />
-          <Text style={styles.scratchPrize}>{card.prize ?? "--"}</Text>
-          {card.pointsWon != null && card.pointsWon > 0 && (
-            <Text style={styles.scratchPoints}>+{card.pointsWon} pkt</Text>
+          <Text style={styles.scratchPrize}>{card.prizeDescription ?? "--"}</Text>
+          {card.prizeValue != null && card.prizeValue > 0 && (
+            <Text style={styles.scratchPoints}>+{card.prizeValue} pkt</Text>
           )}
         </View>
       ) : (
@@ -60,10 +65,10 @@ function ScratchCardItem({
           style={styles.scratchOverlay}
           onPress={() => onReveal(card.id)}
           accessibilityRole="button"
-          accessibilityLabel={card.label ?? "Zdrap!"}
+          accessibilityLabel={t(lang, "scratch.tapToScratch")}
         >
           <Icon name="sparkles" size={28} color={loyal.bg} />
-          <Text style={styles.scratchBtnText}>{card.label ?? "Zdrap!"}</Text>
+          <Text style={styles.scratchBtnText}>{t(lang, "scratch.tapToScratch")}</Text>
         </Pressable>
       )}
     </View>
@@ -72,10 +77,10 @@ function ScratchCardItem({
 
 // -- Challenge Card -----------------------------------------------------------
 
-function ChallengeCard({ item, lang }: { item: Challenge; lang: "pl" | "en" }) {
-  const progress = item.target > 0 ? Math.min(item.current / item.target, 1) : 0;
-  const daysLeft = item.endsAt
-    ? Math.max(0, Math.ceil((new Date(item.endsAt).getTime() - Date.now()) / 86400000))
+function ChallengeCard({ item, lang }: { item: ChallengeData; lang: "pl" | "en" }) {
+  const progress = item.targetValue > 0 ? Math.min(item.currentValue / item.targetValue, 1) : 0;
+  const daysLeft = item.endDate
+    ? Math.max(0, Math.ceil((new Date(item.endDate).getTime() - Date.now()) / 86400000))
     : null;
 
   return (
@@ -93,7 +98,7 @@ function ChallengeCard({ item, lang }: { item: Challenge; lang: "pl" | "en" }) {
       </View>
       <View style={styles.challengeFooter}>
         <Text style={styles.challengeProgress}>
-          {item.current}/{item.target}
+          {item.currentValue}/{item.targetValue}
         </Text>
         {daysLeft != null && (
           <Text style={styles.challengeDays}>
@@ -107,8 +112,8 @@ function ChallengeCard({ item, lang }: { item: Challenge; lang: "pl" | "en" }) {
 
 // -- Badge Item ---------------------------------------------------------------
 
-function BadgeItem({ item }: { item: Badge }) {
-  const earned = !!item.earnedAt;
+function BadgeItem({ item }: { item: BadgeData }) {
+  const earned = item.isEarned;
   return (
     <View style={[styles.badgeItem, !earned && styles.badgeLocked]}>
       <View style={[styles.badgeIconWrap, earned ? styles.badgeIconEarned : styles.badgeIconGrey]}>
@@ -123,7 +128,7 @@ function BadgeItem({ item }: { item: Badge }) {
 
 // -- Transaction Item ---------------------------------------------------------
 
-function TransactionItem({ item }: { item: Transaction }) {
+function TransactionItem({ item }: { item: TransactionData }) {
   const isEarn = item.type === "EARN";
   const isRedeem = item.type === "REDEEM";
   const iconName = isEarn ? "arrow-up-circle" : isRedeem ? "arrow-down-circle" : "time-outline";
@@ -155,34 +160,66 @@ function LoyaltyScreenInner() {
   const token = useAppStore((s) => s.token);
 
   const [txPage, setTxPage] = useState(0);
-  const [allTx, setAllTx] = useState<Transaction[]>([]);
+  const [allTx, setAllTx] = useState<TransactionData[]>([]);
 
   // -- Queries ----------------------------------------------------------------
-  const { data: loyalty, refetch: refetchLoyalty, isRefetching: isRefetchingLoyalty } = useQuery<LoyaltyData>({
-    queryKey: ["loyalty", token],
-    queryFn: () => fetchLoyaltyData(token!),
+  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal } = useQuery<PortalData>({
+    queryKey: ["portal", token],
+    queryFn: async () => {
+      const res = await fetchPortalData(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load portal data");
+      return res.data;
+    },
     enabled: !!token,
   });
 
-  const { data: scratchCards, refetch: refetchCards } = useQuery<ScratchCard[]>({
+  const { data: scratchCards, refetch: refetchCards } = useQuery<ScratchCardData[]>({
     queryKey: ["scratchCards", token],
-    queryFn: () => fetchScratchCards(token!),
+    queryFn: async () => {
+      const res = await fetchScratchCards(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load scratch cards");
+      return res.data;
+    },
     enabled: !!token,
   });
 
-  const { data: txData, refetch: refetchTx, isFetching: isFetchingTx } = useQuery<{ items: Transaction[]; hasMore: boolean }>({
+  const { data: txData, refetch: refetchTx, isFetching: isFetchingTx } = useQuery<{ transactions: TransactionData[]; hasMore: boolean; total: number }>({
     queryKey: ["transactions", token, txPage],
-    queryFn: () => fetchTransactions(token!, txPage),
+    queryFn: async () => {
+      const res = await fetchHistory(token!, txPage);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load history");
+      return res.data;
+    },
+    enabled: !!token,
+  });
+
+  const { data: challengesData, refetch: refetchChallenges } = useQuery<ChallengeData[]>({
+    queryKey: ["challenges", token],
+    queryFn: async () => {
+      const res = await fetchChallenges(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load challenges");
+      return res.data;
+    },
+    enabled: !!token,
+  });
+
+  const { data: badgesData, refetch: refetchBadges } = useQuery<BadgeData[]>({
+    queryKey: ["badges", token],
+    queryFn: async () => {
+      const res = await fetchBadges(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load badges");
+      return res.data;
+    },
     enabled: !!token,
   });
 
   // Merge paginated transactions
-  useMemo(() => {
-    if (txData?.items) {
+  useEffect(() => {
+    if (txData?.transactions) {
       setAllTx((prev) => {
-        if (txPage === 0) return txData.items;
-        const existingIds = new Set(prev.map((t) => t.id));
-        const newItems = txData.items.filter((t) => !existingIds.has(t.id));
+        if (txPage === 0) return txData.transactions;
+        const existingIds = new Set(prev.map((tx) => tx.id));
+        const newItems = txData.transactions.filter((tx) => !existingIds.has(tx.id));
         return [...prev, ...newItems];
       });
     }
@@ -190,15 +227,20 @@ function LoyaltyScreenInner() {
 
   const handleRefresh = useCallback(() => {
     setTxPage(0);
-    refetchLoyalty();
+    refetchPortal();
     refetchCards();
     refetchTx();
-  }, [refetchLoyalty, refetchCards, refetchTx]);
+    refetchChallenges();
+    refetchBadges();
+  }, [refetchPortal, refetchCards, refetchTx, refetchChallenges, refetchBadges]);
 
   const handleRevealCard = useCallback(async (cardId: string) => {
     if (!token) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    await revealScratchCard(token, cardId);
+    const res = await scratchCard(token, cardId);
+    if (res.status !== "success") {
+      // Silently fail -- card will remain unscratched
+    }
     refetchCards();
   }, [token, refetchCards]);
 
@@ -210,11 +252,21 @@ function LoyaltyScreenInner() {
 
   // -- Render -----------------------------------------------------------------
 
-  const tier = loyalty?.tier;
-  const points = loyalty?.points;
-  const challenges = loyalty?.challenges ?? [];
-  const badges = loyalty?.badges ?? [];
+  const member = portalData?.member;
+  const tier = portalData?.tier;
+  const nextTier = portalData?.nextTier;
+  const expiringPoints = portalData?.expiringPoints;
+  const challenges = challengesData ?? [];
+  const badges = badgesData ?? [];
   const cards = scratchCards ?? [];
+
+  // Compute tier progress toward next tier
+  const tierProgress = useMemo(() => {
+    if (!nextTier) return 0;
+    const target = nextTier.minPoints;
+    if (target > 0) return Math.min((member?.availablePoints ?? 0) / target, 1);
+    return 0;
+  }, [nextTier, member?.availablePoints]);
 
   const renderHeader = () => (
     <View style={{ gap: spacing.xl }}>
@@ -228,7 +280,7 @@ function LoyaltyScreenInner() {
             horizontal
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
-              <ScratchCardItem card={item} onReveal={handleRevealCard} />
+              <ScratchCardItem card={item} onReveal={handleRevealCard} lang={lang} />
             )}
             contentContainerStyle={styles.horizontalList}
           />
@@ -257,21 +309,23 @@ function LoyaltyScreenInner() {
             )}
           </View>
           {/* Progress to next tier */}
-          {tier.nextTierName && (
+          {nextTier && (
             <View style={styles.nextTierSection}>
               <Text style={styles.nextTierLabel}>
-                {tt("loyalty.nextTier")}: {tier.nextTierName}
+                {tt("loyalty.nextTier")}: {nextTier.name}
               </Text>
               <View style={styles.progressTrack}>
                 <View
                   style={[
                     styles.progressFill,
-                    { width: `${Math.min((tier.progressPercent ?? 0), 100)}%` },
+                    { width: `${Math.round(tierProgress * 100)}%` },
                   ]}
                 />
               </View>
-              {tier.criteria && (
-                <Text style={styles.tierCriteria}>{tier.criteria}</Text>
+              {nextTier.minPoints > 0 && (
+                <Text style={styles.tierCriteria}>
+                  {member?.availablePoints ?? 0} / {nextTier.minPoints} {tt("stay.points")}
+                </Text>
               )}
             </View>
           )}
@@ -279,29 +333,29 @@ function LoyaltyScreenInner() {
       )}
 
       {/* Points Summary */}
-      {points && (
+      {member && (
         <View style={styles.pointsRow}>
           <View style={styles.pointCard}>
-            <Text style={styles.pointValue}>{points.available ?? 0}</Text>
+            <Text style={styles.pointValue}>{member.availablePoints ?? 0}</Text>
             <Text style={styles.pointLabel}>{tt("loyalty.available")}</Text>
           </View>
           <View style={styles.pointCard}>
-            <Text style={styles.pointValue}>{points.lifetime ?? 0}</Text>
+            <Text style={styles.pointValue}>{member.lifetimePoints ?? 0}</Text>
             <Text style={styles.pointLabel}>{tt("loyalty.lifetime")}</Text>
           </View>
           <View style={styles.pointCard}>
-            <Text style={styles.pointValue}>{points.pending ?? 0}</Text>
+            <Text style={styles.pointValue}>{member.pendingPoints ?? 0}</Text>
             <Text style={styles.pointLabel}>{tt("loyalty.pending")}</Text>
           </View>
         </View>
       )}
 
       {/* Expiry Warning */}
-      {points?.expiring != null && points.expiring > 0 && (
+      {expiringPoints != null && expiringPoints.totalPoints > 0 && (
         <View style={styles.expiryWarning}>
           <Icon name="warning" size={18} color={loyal.warning} />
           <Text style={styles.expiryText}>
-            {tt("loyalty.expiringWarning").replace("{n}", String(points.expiring))}
+            {tt("loyalty.expiringWarning").replace("{n}", String(expiringPoints.totalPoints))}
           </Text>
         </View>
       )}
@@ -371,7 +425,7 @@ function LoyaltyScreenInner() {
         renderItem={({ item }) => <TransactionItem item={item} />}
         refreshControl={
           <RefreshControl
-            refreshing={isRefetchingLoyalty}
+            refreshing={isRefetchingPortal}
             onRefresh={handleRefresh}
             tintColor={loyal.primary}
           />

@@ -22,7 +22,8 @@ import { loyal, fontSize, letterSpacing, radius, spacing, shadow, TOUCH_TARGET }
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { saveToken } from "@/lib/auth";
+import { saveToken, logout } from "@/lib/auth";
+import { fetchPortalData } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -44,11 +45,10 @@ function extractUUID(input: string): string | null {
 function EnterTokenScreenInner() {
   const insets = useSafeAreaInsets();
   const lang = useAppStore((s) => s.lang);
-  const setToken = useAppStore((s) => s.setToken);
-  const setAuthenticated = useAppStore((s) => s.setAuthenticated);
 
   const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
 
   const handleSubmit = useCallback(async () => {
     setError(null);
@@ -60,12 +60,40 @@ function EnterTokenScreenInner() {
       return;
     }
 
-    await saveToken(uuid);
-    setToken(uuid);
-    setAuthenticated(true);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace("/(loyal)/stay");
-  }, [input, lang, setToken, setAuthenticated]);
+    setVerifying(true);
+    try {
+      await saveToken(uuid);
+      const store = useAppStore.getState();
+      store.setToken(uuid);
+
+      const res = await fetchPortalData(uuid);
+      if (res.status !== "success" || !res.data) {
+        await logout();
+        store.reset();
+        setError(res.errorMessage ?? t(lang, "enterToken.invalidToken"));
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        return;
+      }
+
+      const { member, hotel, program } = res.data;
+      store.setMemberName(member.firstName);
+      store.setHotelName(hotel.name);
+      store.setProgramName(program.programName);
+      if (program.portalLanguage === "en" || program.portalLanguage === "pl") {
+        store.setLang(program.portalLanguage);
+      }
+      store.setAuthenticated(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(loyal)/stay");
+    } catch {
+      await logout();
+      useAppStore.getState().reset();
+      setError(t(lang, "enterToken.invalidToken"));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setVerifying(false);
+    }
+  }, [input, lang]);
 
   const navigation = useNavigation();
   const canGoBack = navigation.canGoBack();
@@ -144,13 +172,15 @@ function EnterTokenScreenInner() {
             )}
 
             <Pressable
-              style={[styles.submitBtn, !input.trim() && styles.disabledBtn]}
+              style={[styles.submitBtn, (!input.trim() || verifying) && styles.disabledBtn]}
               onPress={handleSubmit}
-              disabled={!input.trim()}
+              disabled={!input.trim() || verifying}
               accessibilityRole="button"
-              accessibilityLabel={t(lang, "common.confirm")}
+              accessibilityLabel={verifying ? t(lang, "enterToken.verifying") : t(lang, "common.confirm")}
             >
-              <Text style={styles.submitBtnText}>{t(lang, "common.confirm")}</Text>
+              <Text style={styles.submitBtnText}>
+                {verifying ? t(lang, "enterToken.verifying") : t(lang, "common.confirm")}
+              </Text>
             </Pressable>
           </View>
 

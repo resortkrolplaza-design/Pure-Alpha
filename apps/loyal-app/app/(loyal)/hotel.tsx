@@ -25,7 +25,7 @@ import { Icon } from "@/lib/icons";
 import type { IconName } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { fetchPortalData } from "@/lib/api";
+import { fetchPortalData } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type {
   PortalData,
@@ -83,7 +83,7 @@ function GalleryViewer({
           style={[styles.modalCloseBtn, { top: insets.top + spacing.md }]}
           onPress={onClose}
           accessibilityRole="button"
-          accessibilityLabel="Zamknij"
+          accessibilityLabel="Close"
         >
           <Icon name="close" size={28} color={loyal.white} />
         </Pressable>
@@ -130,8 +130,8 @@ function GalleryThumbnail({
     <Pressable
       onPress={onPress}
       style={styles.galleryThumb}
-      accessibilityRole="imagebutton"
-      accessibilityLabel={item.alt ?? item.caption ?? "Zdjecie hotelu"}
+      accessibilityRole="button"
+      accessibilityLabel={item.alt ?? item.caption ?? "Hotel photo"}
     >
       <Image
         source={{ uri: item.url }}
@@ -254,7 +254,11 @@ function HotelScreenInner() {
 
   const { data, refetch, isRefetching } = useQuery<PortalData>({
     queryKey: ["portal", token],
-    queryFn: () => fetchPortalData(token!),
+    queryFn: async () => {
+      const res = await fetchPortalData(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load portal data");
+      return res.data;
+    },
     enabled: !!token,
   });
 
@@ -283,12 +287,6 @@ function HotelScreenInner() {
     Linking.openURL(`mailto:${hotel.email}`);
   }, [hotel?.email]);
 
-  const handleWebsite = useCallback(() => {
-    if (!hotel?.website) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Linking.openURL(hotel.website);
-  }, [hotel?.website]);
-
   const handleSocialLink = useCallback((url: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Linking.openURL(url);
@@ -307,15 +305,6 @@ function HotelScreenInner() {
 
   const renderHeader = () => (
     <View style={{ gap: spacing.xl }}>
-      {/* Hotel Cover */}
-      {hotel?.coverUrl && (
-        <Image
-          source={{ uri: hotel.coverUrl }}
-          style={styles.coverImage}
-          resizeMode="cover"
-        />
-      )}
-
       {/* Hotel Info Card */}
       {hotel && (
         <View style={styles.infoCard}>
@@ -338,42 +327,19 @@ function HotelScreenInner() {
               <Text style={styles.addressText}>{hotel.address}</Text>
             </Pressable>
           )}
-          {hotel.description && (
-            <Text style={styles.hotelDescription}>{hotel.description}</Text>
-          )}
-
-          {/* Check-in / Check-out times */}
-          {(hotel.checkInTime || hotel.checkOutTime) && (
-            <View style={styles.timesRow}>
-              {hotel.checkInTime && (
-                <View style={styles.timeItem}>
-                  <Icon name="enter-outline" size={16} color={loyal.primary} />
-                  <Text style={styles.timeLabel}>Check-in</Text>
-                  <Text style={styles.timeValue}>{hotel.checkInTime}</Text>
-                </View>
-              )}
-              {hotel.checkOutTime && (
-                <View style={styles.timeItem}>
-                  <Icon name="exit-outline" size={16} color={loyal.primary} />
-                  <Text style={styles.timeLabel}>Check-out</Text>
-                  <Text style={styles.timeValue}>{hotel.checkOutTime}</Text>
-                </View>
-              )}
-            </View>
-          )}
         </View>
       )}
 
       {/* Contact Section */}
-      {hotel && (hotel.phone || hotel.email || hotel.website) && (
+      {hotel && (hotel.phone || hotel.email) && (
         <View style={styles.contactCard}>
-          <Text style={styles.sectionTitle}>{tt("stay.contactHotel")}</Text>
+          <Text style={styles.sectionTitle}>{tt("stay.contact")}</Text>
           {hotel.phone && (
             <Pressable
               style={styles.contactRow}
               onPress={handleCall}
               accessibilityRole="button"
-              accessibilityLabel={tt("hotel.callAria").replace("{phone}", hotel.phone)}
+              accessibilityLabel={`${tt("stay.phone")}: ${hotel.phone}`}
             >
               <View style={styles.contactIconWrap}>
                 <Icon name="call" size={20} color={loyal.primary} />
@@ -387,28 +353,12 @@ function HotelScreenInner() {
               style={styles.contactRow}
               onPress={handleEmail}
               accessibilityRole="button"
-              accessibilityLabel={tt("hotel.emailAria").replace("{email}", hotel.email)}
+              accessibilityLabel={`${tt("stay.email")}: ${hotel.email}`}
             >
               <View style={styles.contactIconWrap}>
                 <Icon name="mail" size={20} color={loyal.primary} />
               </View>
               <Text style={styles.contactText}>{hotel.email}</Text>
-              <Icon name="chevron-forward" size={16} color={loyal.textDim} />
-            </Pressable>
-          )}
-          {hotel.website && (
-            <Pressable
-              style={styles.contactRow}
-              onPress={handleWebsite}
-              accessibilityRole="button"
-              accessibilityLabel={hotel.website}
-            >
-              <View style={styles.contactIconWrap}>
-                <Icon name="globe-outline" size={20} color={loyal.primary} />
-              </View>
-              <Text style={styles.contactText} numberOfLines={1}>
-                {hotel.website.replace(/^https?:\/\//, "")}
-              </Text>
               <Icon name="chevron-forward" size={16} color={loyal.textDim} />
             </Pressable>
           )}
@@ -421,11 +371,11 @@ function HotelScreenInner() {
           style={styles.mapBtn}
           onPress={handleMap}
           accessibilityRole="button"
-          accessibilityLabel={lang === "pl" ? "Pokaz na mapie" : "Show on map"}
+          accessibilityLabel={tt("hotel.showOnMap")}
         >
           <Icon name="map" size={22} color={loyal.bg} />
           <Text style={styles.mapBtnText}>
-            {lang === "pl" ? "Pokaz na mapie" : "Show on map"}
+            {tt("hotel.showOnMap")}
           </Text>
         </Pressable>
       )}
@@ -434,7 +384,7 @@ function HotelScreenInner() {
       {gallery.length > 0 && (
         <View>
           <Text style={styles.sectionTitle}>
-            {lang === "pl" ? "Galeria" : "Gallery"}
+            {tt("hotel.gallery")}
           </Text>
           <FlatList
             data={gallery}
@@ -466,7 +416,7 @@ function HotelScreenInner() {
       {attractions.length > 0 && (
         <View>
           <Text style={styles.sectionTitle}>
-            {lang === "pl" ? "Atrakcje w okolicy" : "Nearby attractions"}
+            {tt("hotel.nearby")}
           </Text>
           {attractions.map((att) => (
             <AttractionCard key={att.id} item={att} />
@@ -495,7 +445,7 @@ function HotelScreenInner() {
                 style={styles.socialBtn}
                 onPress={() => handleSocialLink(link.url)}
                 accessibilityRole="link"
-                accessibilityLabel={link.label ?? link.platform}
+                accessibilityLabel={link.accountUsername ?? link.platform}
               >
                 <Icon
                   name={getSocialIcon(link.platform)}

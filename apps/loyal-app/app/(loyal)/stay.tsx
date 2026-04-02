@@ -23,9 +23,9 @@ import { loyal, fontSize, radius, spacing, shadow, TOUCH_TARGET } from "@/lib/to
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { fetchPortalData } from "@/lib/api";
+import { fetchPortalData } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
-import type { PortalData, LoyalService } from "@/lib/types";
+import type { PortalData, ServiceData } from "@/lib/types";
 
 // -- Greeting helper -----------------------------------------------------------
 
@@ -91,11 +91,11 @@ function ProgressRing({
 
 // -- Service Card (horizontal scroll) -----------------------------------------
 
-function ServiceCard({ item }: { item: LoyalService }) {
+function ServiceCard({ item }: { item: ServiceData }) {
   return (
     <View style={styles.serviceCard}>
       <View style={styles.serviceIconWrap}>
-        <Icon name={(item.icon as any) ?? "sparkles"} size={22} color={loyal.primary} />
+        <Icon name="sparkles" size={22} color={loyal.primary} />
       </View>
       <Text style={styles.serviceName} numberOfLines={2}>{item.name}</Text>
     </View>
@@ -112,26 +112,34 @@ function StayScreenInner() {
 
   const { data, isLoading, refetch, isRefetching } = useQuery<PortalData>({
     queryKey: ["portal", token],
-    queryFn: () => fetchPortalData(token!),
+    queryFn: async () => {
+      const res = await fetchPortalData(token!);
+      if (res.status !== "success" || !res.data) {
+        throw new Error(res.errorMessage ?? "Failed to load portal data");
+      }
+      return res.data;
+    },
     enabled: !!token,
   });
 
   const greeting = useMemo(() => getGreeting(lang), [lang]);
 
-  const heroImage = data?.gallery?.[0];
+  const heroImage = data?.gallery?.[0]?.url ?? null;
   const member = data?.member;
   const hotel = data?.hotel;
-  const config = data?.config;
+  const program = data?.program;
   const services = data?.services ?? [];
+  const tierName = data?.tier?.name ?? null;
+  const tierMultiplier = data?.tier?.multiplier ?? null;
 
   const tierProgress = useMemo(() => {
-    if (!member?.tierProgress) return 0;
-    const tp = member.tierProgress;
-    if (tp.targetPoints && tp.targetPoints > 0) {
-      return Math.min((member.pointsBalance ?? 0) / tp.targetPoints, 1);
+    if (!data?.nextTier) return 0;
+    const target = data.nextTier.minPoints;
+    if (target > 0) {
+      return Math.min((member?.availablePoints ?? 0) / target, 1);
     }
     return 0;
-  }, [member]);
+  }, [data?.nextTier, member?.availablePoints]);
 
   const handleCall = useCallback(() => {
     if (!hotel?.phone) return;
@@ -152,7 +160,7 @@ function StayScreenInner() {
         {heroImage ? (
           <Image
             source={{ uri: heroImage }}
-            style={styles.heroImage}
+            style={styles.heroImage as any}
             resizeMode="cover"
           />
         ) : (
@@ -164,8 +172,8 @@ function StayScreenInner() {
         />
         <View style={[styles.heroContent, { paddingTop: insets.top + spacing.md }]}>
           <Text style={styles.heroGreeting}>{greeting}</Text>
-          {member?.name && (
-            <Text style={styles.heroName}>{member.name}</Text>
+          {member?.firstName && (
+            <Text style={styles.heroName}>{member.firstName}</Text>
           )}
         </View>
       </View>
@@ -181,14 +189,14 @@ function StayScreenInner() {
           >
             <View style={styles.loyaltyTop}>
               <View style={styles.loyaltyInfo}>
-                <Text style={styles.loyaltyName}>{member.name}</Text>
+                <Text style={styles.loyaltyName}>{member.firstName} {member.lastName}</Text>
                 {member.memberNumber && (
                   <Text style={styles.loyaltyNumber}>#{member.memberNumber}</Text>
                 )}
-                {member.tierName && (
+                {tierName && (
                   <View style={styles.tierBadge}>
                     <Icon name="shield-checkmark" size={14} color={loyal.bg} />
-                    <Text style={styles.tierBadgeText}>{member.tierName}</Text>
+                    <Text style={styles.tierBadgeText}>{tierName}</Text>
                   </View>
                 )}
               </View>
@@ -206,20 +214,20 @@ function StayScreenInner() {
             <Text style={styles.statLabel}>{tt("stay.stays")}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{member.pointsBalance ?? 0}</Text>
+            <Text style={styles.statValue}>{member.availablePoints ?? 0}</Text>
             <Text style={styles.statLabel}>{tt("stay.points")}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{member.multiplier ?? "1"}x</Text>
+            <Text style={styles.statValue}>{tierMultiplier ?? 1}x</Text>
             <Text style={styles.statLabel}>{tt("stay.multiplier")}</Text>
           </View>
         </View>
       )}
 
       {/* Welcome Message */}
-      {config?.welcomeMessage && (
+      {program?.portalWelcomeMessage && (
         <View style={styles.welcomeCard}>
-          <Text style={styles.welcomeText}>{config.welcomeMessage}</Text>
+          <Text style={styles.welcomeText}>{program.portalWelcomeMessage}</Text>
         </View>
       )}
 

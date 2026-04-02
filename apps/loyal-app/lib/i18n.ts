@@ -184,9 +184,59 @@ const pl: Record<string, string> = {
 
   "push.title": "Powiadomienia Pure Loyal",
 
+  // -- Welcome / Enter Token --------------------------------------------------
+  "welcome.subtitle": "Program lojalnosciowy Twojego hotelu",
+  "welcome.openLink": "Otworz link",
+  "common.language": "Jezyk",
+  "common.back": "Wstecz",
+  "common.confirm": "Potwierdz",
+  "common.cancel": "Anuluj",
+
+  "enterToken.title": "Wprowadz token",
+  "enterToken.description": "Wklej link lub token otrzymany od hotelu.",
+  "enterToken.label": "Link lub token",
+  "enterToken.placeholder": "https://... lub UUID",
+  "enterToken.invalidFormat": "Nieprawidlowy format linku lub tokenu",
+  "enterToken.invalidToken": "Token jest nieprawidlowy lub wygasl",
+  "enterToken.verifying": "Weryfikacja...",
+  "enterToken.askReception": "Zapytaj w recepcji o link do programu lojalnosciowego",
+
+  // -- Stay greeting ----------------------------------------------------------
+  "stay.greeting.morning": "Dzien dobry",
+  "stay.greeting.afternoon": "Witaj",
+  "stay.greeting.evening": "Dobry wieczor",
+  "stay.greeting.night": "Dobranoc",
+  "stay.points": "Punkty",
+  "stay.services": "Uslugi hotelu",
+  "stay.contact": "Kontakt z hotelem",
+  "stay.phone": "Telefon",
+  "stay.email": "Email",
+
+  // -- Loyalty extras ---------------------------------------------------------
+  "loyalty.scratchCards": "Zdrap i wygraj",
+  "loyalty.discount": "Znizka",
+  "loyalty.nextTier": "Nastepny poziom",
+  "loyalty.challenges": "Wyzwania",
+  "loyalty.badges": "Odznaki",
+  "loyalty.expiringWarning": "{n} punktow wygasa wkrotce",
+
+  // -- Rewards extras ---------------------------------------------------------
+  "rewards.yourPoints": "Twoje punkty",
+  "rewards.notEnoughPoints": "Za malo punktow",
+  "rewards.success": "Nagroda wymieniona!",
+  "rewards.code": "Kod realizacji",
+  "rewards.redeemed": "Nagroda wymieniona",
+  "rewards.cost": "Koszt",
+  "rewards.remaining": "Pozostanie",
+
+  // -- Hotel extras -----------------------------------------------------------
+  "hotel.gallery": "Galeria",
+  "hotel.nearby": "Atrakcje w okolicy",
+  "hotel.showOnMap": "Pokaz na mapie",
+
   // -- Error Boundary ---------------------------------------------------------
-  "error.fallback": "Co\u015b posz\u0142o nie tak",
-  "error.retry": "Spr\u00f3buj ponownie",
+  "error.fallback": "Cos poszlo nie tak",
+  "error.retry": "Sprobuj ponownie",
 };
 
 const en: Record<string, string> = {
@@ -367,6 +417,56 @@ const en: Record<string, string> = {
   "auth.open": "Open",
 
   "push.title": "Pure Loyal Notifications",
+
+  // -- Welcome / Enter Token --------------------------------------------------
+  "welcome.subtitle": "Your hotel loyalty program",
+  "welcome.openLink": "Open link",
+  "common.language": "Language",
+  "common.back": "Back",
+  "common.confirm": "Confirm",
+  "common.cancel": "Cancel",
+
+  "enterToken.title": "Enter token",
+  "enterToken.description": "Paste the link or token received from the hotel.",
+  "enterToken.label": "Link or token",
+  "enterToken.placeholder": "https://... or UUID",
+  "enterToken.invalidFormat": "Invalid link or token format",
+  "enterToken.invalidToken": "Token is invalid or expired",
+  "enterToken.verifying": "Verifying...",
+  "enterToken.askReception": "Ask at the reception for your loyalty program link",
+
+  // -- Stay greeting ----------------------------------------------------------
+  "stay.greeting.morning": "Good morning",
+  "stay.greeting.afternoon": "Welcome",
+  "stay.greeting.evening": "Good evening",
+  "stay.greeting.night": "Good night",
+  "stay.points": "Points",
+  "stay.services": "Hotel services",
+  "stay.contact": "Contact hotel",
+  "stay.phone": "Phone",
+  "stay.email": "Email",
+
+  // -- Loyalty extras ---------------------------------------------------------
+  "loyalty.scratchCards": "Scratch & Win",
+  "loyalty.discount": "Discount",
+  "loyalty.nextTier": "Next tier",
+  "loyalty.challenges": "Challenges",
+  "loyalty.badges": "Badges",
+  "loyalty.expiringWarning": "{n} points expiring soon",
+
+  // -- Rewards extras ---------------------------------------------------------
+  "rewards.yourPoints": "Your points",
+  "rewards.notEnoughPoints": "Not enough points",
+  "rewards.success": "Reward redeemed!",
+  "rewards.code": "Redemption code",
+  "rewards.redeemed": "Reward redeemed",
+  "rewards.cost": "Cost",
+  "rewards.remaining": "Remaining",
+
+  // -- Hotel extras -----------------------------------------------------------
+  "hotel.gallery": "Gallery",
+  "hotel.nearby": "Nearby attractions",
+  "hotel.showOnMap": "Show on map",
 
   // -- Error Boundary ---------------------------------------------------------
   "error.fallback": "Something went wrong",

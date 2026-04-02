@@ -18,57 +18,39 @@ export interface PortalData {
   member: MemberData;
   hotel: HotelData;
   program: ProgramData;
-  tier: TierData;
+  tier: TierData | null;
   tiers: TierData[];
-  transactions: TransactionData[];
-  redemptions: RedemptionData[];
-  rewards: RewardData[];
-  challenges: ChallengeData[];
-  badges: BadgeData[];
-  scratchCards: ScratchCardData[];
+  recentTransactions: TransactionData[];
+  recentRedemptions: RedemptionData[];
   gallery: GalleryImageData[];
   faq: FaqData[];
   attractions: AttractionData[];
   services: ServiceData[];
   socialLinks: SocialLinkData[];
-  messages: MessageData[];
-  hasMoreTransactions: boolean;
-  totalTransactions: number;
+  expiringPoints: ExpiringPointsData | null;
+  cheapestReward: CheapestRewardData | null;
+  nextTier: NextTierData | null;
 }
 
 // -- Member -------------------------------------------------------------------
 
 export interface MemberData {
   id: string;
-  name: string;
   email: string | null;
-  phone: string | null;
-  memberSince: string;
+  firstName: string;
+  lastName: string;
+  memberNumber: string;
+  totalPoints: number;
+  availablePoints: number;
+  lifetimePoints: number;
+  pendingPoints: number;
+  totalSpent: number;
   totalStays: number;
-  pointsAvailable: number;
-  pointsLifetime: number;
-  pointsPending: number;
-  totalSpend: number;
-  tierId: string;
-  tierName: string;
-  tierColor: string | null;
-  tierIcon: string | null;
-  multiplier: number;
-  discount: number;
-  benefits: string[];
-  nextTier: {
-    name: string;
-    pointsRequired: number;
-    spendRequired: number;
-    staysRequired: number;
-    pointsRemaining: number;
-    spendRemaining: number;
-    staysRemaining: number;
-  } | null;
-  pointsExpiry: {
-    amount: number;
-    expiresAt: string;
-  } | null;
+  enrolledAt: string;
+  lastEarnedAt: string | null;
+  lastRedeemedAt: string | null;
+  pointsExpireAt: string | null;
+  preferredLanguage: string | null;
 }
 
 // -- Tier ---------------------------------------------------------------------
@@ -76,15 +58,33 @@ export interface MemberData {
 export interface TierData {
   id: string;
   name: string;
-  color: string | null;
-  icon: string | null;
+  slug: string;
+  description: string | null;
+  badgeColor: string | null;
+  badgeIcon: string | null;
   minPoints: number;
-  minSpend: number;
-  minStays: number;
+  minSpent: number | null;
+  minStays: number | null;
   multiplier: number;
-  discount: number;
-  benefits: string[];
-  isCurrent: boolean;
+  discountPercent: number | null;
+  benefits: unknown;
+  sortOrder: number;
+}
+
+// -- Next Tier (progress display) --------------------------------------------
+
+export interface NextTierData {
+  id: string;
+  name: string;
+  slug: string;
+  minPoints: number;
+  minSpent: number | null;
+  minStays: number | null;
+  multiplier: number;
+  discountPercent: number | null;
+  benefits: unknown;
+  badgeColor: string | null;
+  sortOrder: number;
 }
 
 // -- Hotel --------------------------------------------------------------------
@@ -93,26 +93,27 @@ export interface HotelData {
   id: string;
   name: string;
   logoUrl: string | null;
-  coverUrl: string | null;
   address: string | null;
+  city: string | null;
   phone: string | null;
   email: string | null;
-  website: string | null;
-  description: string | null;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-  currency: string;
 }
 
 // -- Program ------------------------------------------------------------------
 
 export interface ProgramData {
   id: string;
-  name: string;
+  programName: string;
   pointsName: string;
-  description: string | null;
-  termsUrl: string | null;
-  isActive: boolean;
+  pointsNameSingular: string | null;
+  earningRules: unknown;
+  portalWelcomeMessage: string | null;
+  portalLanguage: string | null;
+  portalThemeConfig: unknown;
+  currencyToPointsRatio: number;
+  pointsToCurrencyRatio: number;
+  pointsExpireAfterDays: number | null;
+  currency: string | null;
 }
 
 // -- Transaction --------------------------------------------------------------
@@ -121,24 +122,43 @@ export interface TransactionData {
   id: string;
   type: "EARN" | "REDEEM" | "EXPIRE" | "ADJUST" | "TRANSFER";
   source: string;
-  amount: number;
-  balance: number;
+  points: number;
+  balanceBefore: number;
+  balanceAfter: number;
   description: string | null;
+  referenceType: string | null;
+  referenceId: string | null;
+  multiplier: number | null;
   createdAt: string;
-  metadata: Record<string, unknown> | null;
 }
 
 // -- Redemption ---------------------------------------------------------------
 
 export interface RedemptionData {
   id: string;
-  rewardId: string;
   rewardName: string;
-  pointsCost: number;
-  redemptionCode: string;
+  rewardCategory: string | null;
+  rewardImageUrl: string | null;
+  pointsSpent: number;
   status: "PENDING" | "FULFILLED" | "CANCELLED" | "EXPIRED";
-  createdAt: string;
+  redemptionCode: string;
   fulfilledAt: string | null;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+// -- Expiring Points ----------------------------------------------------------
+
+export interface ExpiringPointsData {
+  totalPoints: number;
+  earliestExpiry: string;
+}
+
+// -- Cheapest Reward ----------------------------------------------------------
+
+export interface CheapestRewardData {
+  pointsCost: number;
+  name: string;
 }
 
 // -- Reward -------------------------------------------------------------------
@@ -218,9 +238,10 @@ export interface MessageData {
 export interface GalleryImageData {
   id: string;
   url: string;
+  thumbnailUrl: string | null;
   alt: string | null;
   caption: string | null;
-  order: number;
+  category: string | null;
 }
 
 // -- FAQ ----------------------------------------------------------------------
@@ -229,7 +250,6 @@ export interface FaqData {
   id: string;
   question: string;
   answer: string;
-  order: number;
 }
 
 // -- Attraction ---------------------------------------------------------------
@@ -241,7 +261,8 @@ export interface AttractionData {
   imageUrl: string | null;
   distance: string | null;
   category: string | null;
-  order: number;
+  mapUrl: string | null;
+  websiteUrl: string | null;
 }
 
 // -- Service ------------------------------------------------------------------
@@ -250,11 +271,10 @@ export interface ServiceData {
   id: string;
   name: string;
   description: string | null;
-  imageUrl: string | null;
   price: number | null;
   currency: string | null;
   category: string | null;
-  order: number;
+  images: unknown;
 }
 
 // -- Social Link --------------------------------------------------------------
@@ -263,5 +283,5 @@ export interface SocialLinkData {
   id: string;
   platform: string;
   url: string;
-  label: string | null;
+  accountUsername: string | null;
 }

@@ -23,9 +23,9 @@ import { loyal, fontSize, radius, spacing, shadow, TOUCH_TARGET } from "@/lib/to
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { fetchRewards, redeemReward } from "@/lib/api";
+import { fetchRewards, redeemReward, fetchPortalData } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
-import type { Reward, RedeemResult } from "@/lib/types";
+import type { RewardData, PortalData } from "@/lib/types";
 
 // -- Reward Card (2-column grid) -----------------------------------------------
 
@@ -35,9 +35,9 @@ function RewardCard({
   onRedeem,
   lang,
 }: {
-  item: Reward;
+  item: RewardData;
   pointsBalance: number;
-  onRedeem: (reward: Reward) => void;
+  onRedeem: (reward: RewardData) => void;
   lang: "pl" | "en";
 }) {
   const tt = (key: string) => t(lang, key);
@@ -104,22 +104,50 @@ function RewardsScreenInner() {
   const token = useAppStore((s) => s.token);
   const queryClient = useQueryClient();
 
-  const { data, refetch, isRefetching } = useQuery<{ rewards: Reward[]; pointsBalance: number }>({
+  // Fetch rewards list
+  const { data: rewards = [], refetch: refetchRewards, isRefetching: isRefetchingRewards } = useQuery<RewardData[]>({
     queryKey: ["rewards", token],
-    queryFn: () => fetchRewards(token!),
+    queryFn: async () => {
+      const res = await fetchRewards(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load rewards");
+      return res.data;
+    },
     enabled: !!token,
   });
 
-  const redeemMutation = useMutation<RedeemResult, Error, string>({
-    mutationFn: (rewardId: string) => redeemReward(token!, rewardId),
+  // Fetch portal data for points balance
+  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal } = useQuery<PortalData>({
+    queryKey: ["portal", token],
+    queryFn: async () => {
+      const res = await fetchPortalData(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load portal data");
+      return res.data;
+    },
+    enabled: !!token,
+  });
+
+  const isRefetching = isRefetchingRewards || isRefetchingPortal;
+  const pointsBalance = portalData?.member?.availablePoints ?? 0;
+
+  const refetch = useCallback(() => {
+    refetchRewards();
+    refetchPortal();
+  }, [refetchRewards, refetchPortal]);
+
+  const redeemMutation = useMutation<{ redemptionCode: string; remainingPoints: number }, Error, string>({
+    mutationFn: async (rewardId: string) => {
+      const res = await redeemReward(token!, rewardId);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Redeem failed");
+      return res.data;
+    },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["rewards", token] });
-      queryClient.invalidateQueries({ queryKey: ["loyalty", token] });
+      queryClient.invalidateQueries({ queryKey: ["portal", token] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
         tt("rewards.success"),
-        result.code
-          ? `${tt("rewards.code")}: ${result.code}`
+        result.redemptionCode
+          ? `${tt("rewards.code")}: ${result.redemptionCode}`
           : tt("rewards.redeemed"),
       );
     },
@@ -130,10 +158,9 @@ function RewardsScreenInner() {
   });
 
   const handleRedeem = useCallback(
-    (reward: Reward) => {
+    (reward: RewardData) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      const balance = data?.pointsBalance ?? 0;
-      const remaining = balance - reward.pointsCost;
+      const remaining = pointsBalance - reward.pointsCost;
 
       Alert.alert(
         tt("rewards.confirmTitle"),
@@ -147,11 +174,8 @@ function RewardsScreenInner() {
         ],
       );
     },
-    [data?.pointsBalance, tt, redeemMutation],
+    [pointsBalance, tt, redeemMutation],
   );
-
-  const rewards = data?.rewards ?? [];
-  const pointsBalance = data?.pointsBalance ?? 0;
 
   const renderHeader = () => (
     <View style={styles.balanceHeader}>

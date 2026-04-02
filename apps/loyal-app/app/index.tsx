@@ -10,7 +10,8 @@ import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { loyal } from "@/lib/tokens";
 import { useAppStore } from "@/lib/store";
-import { getToken, saveToken, getPersistedLang } from "@/lib/auth";
+import { getToken, saveToken, getPersistedLang, logout } from "@/lib/auth";
+import { fetchPortalData } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 const UUID_RE = /\/p\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
@@ -24,12 +25,32 @@ function EntryScreenInner() {
     return match?.[1] ?? null;
   }, []);
 
-  const handleTokenFound = useCallback(async (token: string) => {
-    await saveToken(token);
+  const handleTokenFound = useCallback(async (foundToken: string) => {
+    await saveToken(foundToken);
     const store = useAppStore.getState();
-    store.setToken(token);
-    store.setAuthenticated(true);
-    router.replace("/(loyal)/stay");
+    store.setToken(foundToken);
+    try {
+      const res = await fetchPortalData(foundToken);
+      if (res.status !== "success" || !res.data) {
+        await logout();
+        store.reset();
+        setReady(true);
+        return;
+      }
+      const { member, hotel, program } = res.data;
+      store.setMemberName(member.firstName);
+      store.setHotelName(hotel.name);
+      store.setProgramName(program.programName);
+      if (program.portalLanguage === "en" || program.portalLanguage === "pl") {
+        store.setLang(program.portalLanguage);
+      }
+      store.setAuthenticated(true);
+      router.replace("/(loyal)/stay");
+    } catch {
+      await logout();
+      store.reset();
+      setReady(true);
+    }
   }, []);
 
   useEffect(() => {

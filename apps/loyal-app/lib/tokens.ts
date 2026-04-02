@@ -27,6 +27,15 @@ export const loyal = {
   white: "#ffffff",
   shadowDark: "#000000",
   tabBarBg: "#0a1a2e",
+  contentBg: "#FBF9F5",
+  bgDark: "#081624",
+  primaryFaint: "rgba(212,175,55,0.08)",
+  primaryDark: "#b8941e",
+  textDim: "rgba(255,255,255,0.3)",
+  tabInactive: "rgba(255,255,255,0.5)",
+  waveLight: "rgba(212,175,55,0.15)",
+  waveMedium: "rgba(212,175,55,0.25)",
+  waveFaint: "rgba(212,175,55,0.05)",
 } as const;
 
 // -- Spacing (px values, NOT rem) ---------------------------------------------

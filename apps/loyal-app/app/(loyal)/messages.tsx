@@ -23,7 +23,7 @@ import { loyal, fontSize, radius, spacing, shadow, TOUCH_TARGET } from "@/lib/to
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { fetchMessages, sendMessage } from "@/lib/api";
+import { fetchMessages, sendMessage } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { MessageData } from "@/lib/types";
 
@@ -317,7 +317,11 @@ function MessagesScreenInner() {
     nextCursor: string | null;
   }>({
     queryKey: ["messages", token, "latest"],
-    queryFn: () => fetchMessages(token!),
+    queryFn: async () => {
+      const res = await fetchMessages(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load messages");
+      return res.data;
+    },
     enabled: !!token && pollingEnabled,
     refetchInterval: pollingEnabled ? POLL_INTERVAL_MS : false,
   });
@@ -350,10 +354,10 @@ function MessagesScreenInner() {
     setLoadingOlder(true);
     try {
       const res = await fetchMessages(token, olderCursor, 20);
-      if (res?.messages) {
+      if (res.status === "success" && res.data?.messages) {
         setAllMessages((prev) => {
           const existingIds = new Set(prev.map((m) => m.id));
-          const newMsgs = res.messages.filter((m) => !existingIds.has(m.id));
+          const newMsgs = res.data!.messages.filter((m) => !existingIds.has(m.id));
           const merged = [...newMsgs, ...prev].sort(
             (a, b) =>
               new Date(a.createdAt).getTime() -
@@ -361,8 +365,8 @@ function MessagesScreenInner() {
           );
           return merged;
         });
-        setOlderCursor(res.nextCursor);
-        setHasOlder(!!res.nextCursor);
+        setOlderCursor(res.data.nextCursor);
+        setHasOlder(!!res.data.nextCursor);
       }
     } finally {
       setLoadingOlder(false);
@@ -371,7 +375,11 @@ function MessagesScreenInner() {
 
   // -- Send mutation --------------------------------------------------------
   const sendMutation = useMutation<MessageData, Error, string>({
-    mutationFn: (content: string) => sendMessage(token!, { content }),
+    mutationFn: async (content: string) => {
+      const res = await sendMessage(token!, { content });
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to send message");
+      return res.data;
+    },
     onSuccess: (newMsg) => {
       if (newMsg) {
         setAllMessages((prev) => {
