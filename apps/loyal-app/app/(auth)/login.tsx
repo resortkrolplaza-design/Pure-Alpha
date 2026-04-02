@@ -15,6 +15,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -208,7 +209,7 @@ function LoginScreenInner() {
           </Pressable>
 
           {/* Glass card */}
-          <View style={[styles.card, { opacity: cardAnim.opacity, transform: cardAnim.transform }]}>
+          <Animated.View style={[styles.card, { opacity: cardAnim.opacity, transform: cardAnim.transform }]}>
             {/* Header */}
             <View style={styles.cardHeader}>
               <Icon name="log-in-outline" size={28} color={loyal.primary} />
@@ -318,7 +319,7 @@ function LoginScreenInner() {
                 <Text style={styles.bottomLinkAction}>{t(lang, "auth.register")}</Text>
               </Pressable>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

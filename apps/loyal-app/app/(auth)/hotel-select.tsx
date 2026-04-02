@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import {
+  Animated,
   View,
   Text,
   Pressable,
@@ -214,7 +215,7 @@ function HotelSelectScreenInner() {
 
       <View style={[styles.content, { paddingTop: insets.top + 16, paddingBottom: insets.bottom }]}>
         {/* Header */}
-        <View style={[styles.header, { opacity: headerAnim.opacity, transform: headerAnim.transform }]}>
+        <Animated.View style={[styles.header, { opacity: headerAnim.opacity, transform: headerAnim.transform }]}>
           <Pressable
             style={styles.logoutButton}
             onPress={handleLogout}
@@ -232,7 +233,7 @@ function HotelSelectScreenInner() {
 
           {/* Spacer for symmetry */}
           <View style={styles.logoutButton} />
-        </View>
+        </Animated.View>
 
         {params.firstName ? (
           <Text style={styles.greeting}>

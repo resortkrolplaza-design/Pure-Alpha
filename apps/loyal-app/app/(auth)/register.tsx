@@ -5,6 +5,7 @@
 
 import { useState, useRef } from "react";
 import {
+  Animated,
   View,
   Text,
   TextInput,
@@ -200,7 +201,7 @@ function RegisterScreenInner() {
           </Pressable>
 
           {/* Glass card */}
-          <View style={[styles.card, { opacity: cardAnim.opacity, transform: cardAnim.transform }]}>
+          <Animated.View style={[styles.card, { opacity: cardAnim.opacity, transform: cardAnim.transform }]}>
             {/* Header */}
             <View style={styles.cardHeader}>
               <Icon name="person-add-outline" size={28} color={loyal.primary} />
@@ -378,7 +379,7 @@ function RegisterScreenInner() {
                 <Text style={styles.bottomLinkAction}>{t(lang, "auth.login")}</Text>
               </Pressable>
             </View>
-          </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
