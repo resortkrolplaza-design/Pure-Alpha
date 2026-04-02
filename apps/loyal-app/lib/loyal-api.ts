@@ -1,5 +1,6 @@
 // =============================================================================
 // Loyal App -- API helpers (token-in-URL auth, no Authorization header)
+// + Guest Account API (email/password auth, JWT Bearer)
 // =============================================================================
 
 import { t, type Lang } from "./i18n";
@@ -52,6 +53,139 @@ export async function loyalFetch<T>(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+// =============================================================================
+// Guest Account API (email/password auth)
+// =============================================================================
+
+interface GuestLoginResponse {
+  jwt: string;
+  guestAccountId: string;
+  firstName: string | null;
+  hotelId: string | null;
+  hotels?: { id: string; name: string }[];
+  message?: string;
+}
+
+interface GuestRegisterResponse {
+  message: string;
+}
+
+interface GuestForgotPasswordResponse {
+  message: string;
+}
+
+export interface GuestHotelData {
+  memberId: string;
+  portalToken: string | null;
+  hotelId: string;
+  hotelName: string;
+  hotelLogo: string | null;
+  hotelAddress: string | null;
+  programName: string;
+  pointsName: string;
+  memberNumber: string;
+  availablePoints: number;
+  tierName: string | null;
+  tierColor: string;
+  guestName: string | null;
+}
+
+interface GuestHotelsResponse {
+  hotels: GuestHotelData[];
+}
+
+// -- Guest fetch wrapper (no token in URL, uses base URL) ---------------------
+
+async function guestFetch<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<ApiResponse<T>> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const lang = getLang();
+
+  try {
+    const url = `${API_BASE}${path}`;
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        ...((options.headers as Record<string, string>) ?? {}),
+      },
+      signal: controller.signal,
+    });
+
+    const json = (await res.json()) as ApiResponse<T>;
+    return json;
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return { status: "error", errorMessage: t(lang, "common.error") };
+    }
+    return {
+      status: "error",
+      errorMessage: t(lang, "common.networkError"),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// -- Guest Login --------------------------------------------------------------
+
+export async function guestLogin(
+  email: string,
+  password: string,
+): Promise<ApiResponse<GuestLoginResponse>> {
+  return guestFetch("/api/guest/login", {
+    method: "POST",
+    body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+  });
+}
+
+// -- Guest Register -----------------------------------------------------------
+
+export async function guestRegister(data: {
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+}): Promise<ApiResponse<GuestRegisterResponse>> {
+  return guestFetch("/api/guest/register", {
+    method: "POST",
+    body: JSON.stringify({
+      email: data.email.trim().toLowerCase(),
+      password: data.password,
+      ...(data.firstName && { firstName: data.firstName.trim() }),
+      ...(data.lastName && { lastName: data.lastName.trim() }),
+    }),
+  });
+}
+
+// -- Guest Forgot Password ----------------------------------------------------
+
+export async function guestForgotPassword(
+  email: string,
+): Promise<ApiResponse<GuestForgotPasswordResponse>> {
+  return guestFetch("/api/guest/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email: email.trim().toLowerCase() }),
+  });
+}
+
+// -- Fetch Guest Hotels (JWT Bearer auth) -------------------------------------
+
+export async function fetchGuestHotels(
+  jwt: string,
+): Promise<ApiResponse<GuestHotelsResponse>> {
+  return guestFetch("/api/guest/hotels", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+    },
+  });
 }
 
 // -- Endpoint wrappers --------------------------------------------------------

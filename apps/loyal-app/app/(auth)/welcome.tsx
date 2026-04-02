@@ -1,5 +1,6 @@
 // =============================================================================
 // Loyal App -- Welcome Screen (Navy + Gold + pulsing star + wave)
+// Two buttons: Login (primary) + Register (secondary)
 // =============================================================================
 
 import { useEffect, useRef, useMemo } from "react";
@@ -239,9 +240,14 @@ function WelcomeScreenInner() {
     reducedMotion,
   ]);
 
-  const handleOpenLink = () => {
+  const handleLogin = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push("/(auth)/enter-token");
+    router.push("/(auth)/login");
+  };
+
+  const handleRegister = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push("/(auth)/register");
   };
 
   const handleToggleLang = () => {
@@ -328,18 +334,29 @@ function WelcomeScreenInner() {
             gap: spacing.md,
           }}
         >
-          {/* Primary: Open Link */}
+          {/* Primary: Login */}
           <Pressable
             style={styles.ctaButton}
-            onPress={handleOpenLink}
+            onPress={handleLogin}
             accessibilityRole="button"
-            accessibilityLabel={t(lang, "welcome.openLink")}
+            accessibilityLabel={t(lang, "auth.login")}
           >
-            <Icon name="link" size={22} color={loyal.bg} />
-            <Text style={styles.ctaText}>{t(lang, "welcome.openLink")}</Text>
+            <Icon name="log-in-outline" size={22} color={loyal.bg} />
+            <Text style={styles.ctaText}>{t(lang, "auth.login")}</Text>
           </Pressable>
 
-          {/* Secondary: Language toggle */}
+          {/* Secondary: Register */}
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={handleRegister}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "auth.register")}
+          >
+            <Icon name="person-add-outline" size={20} color={loyal.primary} />
+            <Text style={styles.secondaryText}>{t(lang, "auth.register")}</Text>
+          </Pressable>
+
+          {/* Language toggle */}
           <Pressable
             style={styles.langToggle}
             onPress={handleToggleLang}
@@ -444,6 +461,25 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontFamily: "Inter_700Bold",
     color: loyal.bg,
+    letterSpacing: letterSpacing.tight,
+  },
+
+  secondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: "transparent",
+    borderRadius: radius["2xl"],
+    borderWidth: 1,
+    borderColor: loyal.primary,
+    paddingVertical: spacing.lg,
+    minHeight: 56,
+  },
+  secondaryText: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_600SemiBold",
+    color: loyal.primary,
     letterSpacing: letterSpacing.tight,
   },
 

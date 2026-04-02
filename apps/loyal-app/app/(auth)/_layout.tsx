@@ -1,5 +1,5 @@
 // =============================================================================
-// Loyal App -- Auth Stack (welcome + enter-token)
+// Loyal App -- Auth Stack (welcome, login, register, forgot-password, hotel-select)
 // =============================================================================
 
 import { Stack } from "expo-router";
@@ -13,7 +13,10 @@ export default function AuthLayout() {
       }}
     >
       <Stack.Screen name="welcome" />
-      <Stack.Screen name="enter-token" />
+      <Stack.Screen name="login" />
+      <Stack.Screen name="register" />
+      <Stack.Screen name="forgot-password" />
+      <Stack.Screen name="hotel-select" />
     </Stack>
   );
 }
