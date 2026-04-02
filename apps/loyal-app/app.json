@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Pure Alpha Loyal",
+    "slug": "pure-alpha-loyal",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "scheme": "purealpha-loyal",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D2236"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.purealpha.loyal",
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Wybierz zdjecie profilowe"
+      }
+    },
+    "android": {
+      "package": "com.purealpha.loyal",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#D4AF37"
+      },
+      "permissions": []
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "expo-splash-screen",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Wybierz zdjecie profilowe",
+          "cameraPermission": "Zrob zdjecie aparatem"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#D4AF37"
+        }
+      ]
+    ],
+    "extra": {
+      "router": {}
+    },
+    "owner": "purealpha"
+  }
+}
