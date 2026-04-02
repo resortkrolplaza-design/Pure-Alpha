@@ -32,6 +32,9 @@ backups/
 *.csv
 *.p12
 
+# UN-IGNORE app assets needed for EAS native builds
+!apps/*/assets/**
+
 # Claude session markdown snapshots (ds-*, crm-*, smoke-*, etc.)
 *-snapshot.md
 *-report.md
