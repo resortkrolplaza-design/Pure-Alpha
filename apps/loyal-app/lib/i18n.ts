@@ -273,6 +273,39 @@ const pl: Record<string, string> = {
   "hotel.map": "Mapa",
   "hotel.website": "Strona",
 
+  // -- Offers (exclusive) -----------------------------------------------------
+  "offers.title": "Oferty ekskluzywne",
+  "offers.loadError": "Nie udalo sie zaladowac ofert.",
+  "offers.noOffers": "Brak dostepnych ofert",
+  "offers.noOffersDesc": "Nowe oferty pojawia sie wkrotce.",
+  "offers.locked": "Zablokowana",
+  "offers.unlocked": "Odblokowana",
+  "offers.tierRequired": "Wymagany poziom: {tier}",
+  "offers.discount": "Znizka",
+  "offers.promoCode": "Kod promocyjny",
+  "offers.bookNow": "Zarezerwuj",
+  "offers.validUntil": "Wazne do",
+  "offers.featured": "Wyroznienie",
+
+  // -- Offer categories -------------------------------------------------------
+  "offerCat.ROOM_DEAL": "Pokoje",
+  "offerCat.PACKAGE": "Pakiety",
+  "offerCat.SPA_WELLNESS": "SPA & Wellness",
+  "offerCat.DINING": "Gastronomia",
+  "offerCat.EXPERIENCE": "Doswiadczenia",
+  "offerCat.SEASONAL": "Sezonowe",
+  "offerCat.OTHER": "Inne",
+
+  // -- Global Tier ------------------------------------------------------------
+  "globalTier.title": "Poziom globalny",
+  "globalTier.crossHotel": "Obowiazuje we wszystkich hotelach",
+  "globalTier.lifetimePoints": "Punkty lacznie",
+  "globalTier.totalSpent": "Wydano lacznie",
+  "globalTier.totalStays": "Pobyty lacznie",
+  "globalTier.nextTier": "Nastepny poziom",
+  "globalTier.pointsToNext": "Brakuje {n} pkt",
+  "globalTier.maxTier": "Najwyzszy poziom!",
+
   // -- Error Boundary ---------------------------------------------------------
   "error.fallback": "Cos poszlo nie tak",
   "error.retry": "Sprobuj ponownie",
@@ -545,6 +578,39 @@ const en: Record<string, string> = {
   "hotel.showOnMap": "Show on map",
   "hotel.map": "Map",
   "hotel.website": "Website",
+
+  // -- Offers (exclusive) -----------------------------------------------------
+  "offers.title": "Exclusive offers",
+  "offers.loadError": "Failed to load offers.",
+  "offers.noOffers": "No offers available",
+  "offers.noOffersDesc": "New offers coming soon.",
+  "offers.locked": "Locked",
+  "offers.unlocked": "Unlocked",
+  "offers.tierRequired": "Required tier: {tier}",
+  "offers.discount": "Discount",
+  "offers.promoCode": "Promo code",
+  "offers.bookNow": "Book now",
+  "offers.validUntil": "Valid until",
+  "offers.featured": "Featured",
+
+  // -- Offer categories -------------------------------------------------------
+  "offerCat.ROOM_DEAL": "Rooms",
+  "offerCat.PACKAGE": "Packages",
+  "offerCat.SPA_WELLNESS": "SPA & Wellness",
+  "offerCat.DINING": "Dining",
+  "offerCat.EXPERIENCE": "Experiences",
+  "offerCat.SEASONAL": "Seasonal",
+  "offerCat.OTHER": "Other",
+
+  // -- Global Tier ------------------------------------------------------------
+  "globalTier.title": "Global tier",
+  "globalTier.crossHotel": "Applies across all hotels",
+  "globalTier.lifetimePoints": "Lifetime points",
+  "globalTier.totalSpent": "Total spent",
+  "globalTier.totalStays": "Total stays",
+  "globalTier.nextTier": "Next tier",
+  "globalTier.pointsToNext": "{n} pts to go",
+  "globalTier.maxTier": "Highest tier!",
 
   // -- Error Boundary ---------------------------------------------------------
   "error.fallback": "Something went wrong",

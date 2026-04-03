@@ -25,7 +25,7 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { fetchPortalData } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
-import type { PortalData, ServiceData } from "@/lib/types";
+import type { PortalData, ServiceData, GlobalTierData } from "@/lib/types";
 
 // -- Greeting helper -----------------------------------------------------------
 
@@ -131,6 +131,9 @@ function StayScreenInner() {
   const services = data?.services ?? [];
   const tierName = data?.tier?.name ?? null;
   const tierMultiplier = data?.tier?.multiplier ?? null;
+  const globalTier = data?.globalTier ?? null;
+  const globalStats = data?.globalStats ?? null;
+  const nextGlobalTier = data?.nextGlobalTier ?? null;
 
   // P2-2: Tier Benefits
   const tierBenefits = useMemo(() => {
@@ -154,6 +157,15 @@ function StayScreenInner() {
     }
     return 0;
   }, [data?.nextTier, member?.availablePoints]);
+
+  const globalTierProgress = useMemo(() => {
+    if (!nextGlobalTier) return 1; // max tier
+    const target = nextGlobalTier.minPoints;
+    if (target > 0) {
+      return Math.min((globalStats?.lifetimePoints ?? 0) / target, 1);
+    }
+    return 0;
+  }, [nextGlobalTier, globalStats?.lifetimePoints]);
 
   const handleCall = useCallback(() => {
     if (!hotel?.phone) return;
@@ -217,6 +229,86 @@ function StayScreenInner() {
               <ProgressRing progress={tierProgress} />
             </View>
           </LinearGradient>
+        </View>
+      )}
+
+      {/* Global Tier Card */}
+      {globalTier && globalStats && (
+        <View style={styles.globalTierCard}>
+          <View style={styles.globalTierHeader}>
+            <View
+              style={[
+                styles.globalTierIconWrap,
+                { backgroundColor: globalTier.badgeColor ?? loyal.primary },
+              ]}
+            >
+              <Icon name="globe" size={18} color={loyal.white} />
+            </View>
+            <View style={styles.globalTierHeaderText}>
+              <Text style={styles.globalTierTitle}>{tt("globalTier.title")}</Text>
+              <Text style={styles.globalTierSubtitle}>{tt("globalTier.crossHotel")}</Text>
+            </View>
+          </View>
+
+          <View style={styles.globalTierNameRow}>
+            <Text
+              style={[
+                styles.globalTierName,
+                { color: globalTier.badgeColor ?? loyal.primary },
+              ]}
+            >
+              {lang === "en" && globalTier.nameEn ? globalTier.nameEn : globalTier.name}
+            </Text>
+          </View>
+
+          {/* Global stats */}
+          <View style={styles.globalStatsRow}>
+            <View style={styles.globalStatItem}>
+              <Text style={styles.globalStatValue}>{globalStats.lifetimePoints}</Text>
+              <Text style={styles.globalStatLabel}>{tt("globalTier.lifetimePoints")}</Text>
+            </View>
+            <View style={styles.globalStatItem}>
+              <Text style={styles.globalStatValue}>{globalStats.totalStays}</Text>
+              <Text style={styles.globalStatLabel}>{tt("globalTier.totalStays")}</Text>
+            </View>
+            <View style={styles.globalStatItem}>
+              <Text style={styles.globalStatValue}>{Math.round(globalStats.totalSpent)}</Text>
+              <Text style={styles.globalStatLabel}>{tt("globalTier.totalSpent")}</Text>
+            </View>
+          </View>
+
+          {/* Progress to next global tier */}
+          {nextGlobalTier ? (
+            <View style={styles.globalTierProgressWrap}>
+              <View style={styles.globalTierProgressRow}>
+                <Text style={styles.globalTierProgressLabel}>
+                  {tt("globalTier.nextTier")}: {lang === "en" && nextGlobalTier.nameEn ? nextGlobalTier.nameEn : nextGlobalTier.name}
+                </Text>
+                <Text style={styles.globalTierProgressPct}>
+                  {Math.round(globalTierProgress * 100)}%
+                </Text>
+              </View>
+              <View style={styles.globalTierProgressTrack}>
+                <View
+                  style={[
+                    styles.globalTierProgressFill,
+                    {
+                      width: `${Math.round(globalTierProgress * 100)}%`,
+                      backgroundColor: nextGlobalTier.badgeColor ?? loyal.primary,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.globalTierProgressHint}>
+                {tt("globalTier.pointsToNext").replace("{n}", String(Math.max(0, nextGlobalTier.minPoints - (globalStats.lifetimePoints ?? 0))))}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.globalTierMaxBadge}>
+              <Icon name="trophy" size={16} color={loyal.primary} />
+              <Text style={styles.globalTierMaxText}>{tt("globalTier.maxTier")}</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -561,6 +653,121 @@ const styles = StyleSheet.create({
     fontSize: fontSize.base,
     fontFamily: "Inter_400Regular",
     color: loyal.lightText,
+  },
+
+  // -- Global Tier Card -------------------------------------------------------
+  globalTierCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    backgroundColor: loyal.lightCard,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: loyal.lightCardBorder,
+    padding: spacing.xl,
+    gap: spacing.md,
+    ...shadow.sm,
+  },
+  globalTierHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  globalTierIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  globalTierHeaderText: {
+    flex: 1,
+  },
+  globalTierTitle: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_700Bold",
+    color: loyal.lightText,
+  },
+  globalTierSubtitle: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextSecondary,
+    marginTop: 1,
+  },
+  globalTierNameRow: {
+    alignItems: "center",
+  },
+  globalTierName: {
+    fontSize: fontSize.xl,
+    fontFamily: "Inter_700Bold",
+  },
+  globalStatsRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
+  globalStatItem: {
+    flex: 1,
+    alignItems: "center",
+    backgroundColor: loyal.lightPrimaryFaint,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+  },
+  globalStatValue: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_700Bold",
+    color: loyal.lightText,
+  },
+  globalStatLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextSecondary,
+    textAlign: "center",
+    marginTop: 2,
+  },
+  globalTierProgressWrap: {
+    gap: spacing.xs,
+  },
+  globalTierProgressRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  globalTierProgressLabel: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_500Medium",
+    color: loyal.lightTextSecondary,
+  },
+  globalTierProgressPct: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_700Bold",
+    color: loyal.lightText,
+  },
+  globalTierProgressTrack: {
+    height: 6,
+    backgroundColor: loyal.lightProgressTrack,
+    borderRadius: 3,
+    overflow: "hidden",
+  },
+  globalTierProgressFill: {
+    height: 6,
+    borderRadius: 3,
+  },
+  globalTierProgressHint: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextMuted,
+  },
+  globalTierMaxBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  globalTierMaxText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: loyal.primary,
   },
 });
 

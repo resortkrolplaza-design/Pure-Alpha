@@ -30,6 +30,10 @@ export interface PortalData {
   expiringPoints: ExpiringPointsData | null;
   cheapestReward: CheapestRewardData | null;
   nextTier: NextTierData | null;
+  globalTier: GlobalTierData | null;
+  globalTiers: GlobalTierData[];
+  globalStats: GlobalStatsData | null;
+  nextGlobalTier: GlobalTierData | null;
 }
 
 // -- Member -------------------------------------------------------------------
@@ -295,6 +299,56 @@ export interface ServiceData {
   currency: string | null;
   category: string | null;
   images: unknown;
+}
+
+// -- Global Tier Definition ---------------------------------------------------
+
+export interface GlobalTierData {
+  id: string;
+  slug: string;
+  name: string;
+  nameEn: string | null;
+  description: string | null;
+  descriptionEn: string | null;
+  minPoints: number;
+  badgeColor: string;
+  badgeIcon: string | null;
+  benefits: unknown;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// -- Global Stats (cross-hotel) -----------------------------------------------
+
+export interface GlobalStatsData {
+  lifetimePoints: number;
+  totalSpent: number;
+  totalStays: number;
+}
+
+// -- Offer (exclusive, tier-gated) --------------------------------------------
+
+export interface OfferData {
+  id: string;
+  name: string;
+  description: string | null;
+  imageUrl: string | null;
+  minGlobalTierSlug: string | null;
+  category: string;
+  bookingUrl: string | null;
+  promoCode: string | null;
+  discountPercent: number | null;
+  discountFixed: number | null;
+  validFrom: string | null;
+  validUntil: string | null;
+  maxRedemptions: number | null;
+  usedCount: number;
+  sortOrder: number;
+  featured: boolean;
+  isUnlocked: boolean;
+  reasonsBlocked: string[];
 }
 
 // -- Social Link --------------------------------------------------------------

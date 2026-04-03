@@ -14,6 +14,7 @@ import {
   RefreshControl,
   StyleSheet,
   Platform,
+  Linking,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,9 +24,9 @@ import { loyal, fontSize, radius, spacing, shadow, TOUCH_TARGET } from "@/lib/to
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { fetchRewards, redeemReward, fetchPortalData } from "@/lib/loyal-api";
+import { fetchRewards, redeemReward, fetchPortalData, fetchOffers } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
-import type { RewardData, PortalData } from "@/lib/types";
+import type { RewardData, PortalData, OfferData } from "@/lib/types";
 
 // -- Reward Card (2-column grid) -----------------------------------------------
 
@@ -99,6 +100,99 @@ function RewardCard({
   );
 }
 
+// -- Offer Card (horizontal scroll) -------------------------------------------
+
+function OfferCard({
+  item,
+  lang,
+}: {
+  item: OfferData;
+  lang: "pl" | "en";
+}) {
+  const tt = (key: string) => t(lang, key);
+  const discount = item.discountPercent
+    ? `-${item.discountPercent}%`
+    : item.discountFixed
+      ? `-${item.discountFixed} PLN`
+      : null;
+
+  return (
+    <View style={styles.offerCard}>
+      {item.imageUrl ? (
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={styles.offerImage}
+          resizeMode="cover"
+          onError={() => {}}
+        />
+      ) : (
+        <LinearGradient
+          colors={[loyal.lightPrimaryFaint, loyal.contentBg]}
+          style={styles.offerImage}
+        >
+          <Icon name="pricetag" size={28} color={loyal.primary} />
+        </LinearGradient>
+      )}
+
+      {/* Featured badge */}
+      {item.featured && (
+        <View style={styles.offerFeaturedBadge}>
+          <Icon name="star" size={10} color={loyal.white} />
+        </View>
+      )}
+
+      {/* Discount badge */}
+      {discount && (
+        <View style={styles.offerDiscountBadge}>
+          <Text style={styles.offerDiscountText}>{discount}</Text>
+        </View>
+      )}
+
+      <View style={styles.offerContent}>
+        <Text style={styles.offerName} numberOfLines={2}>{item.name}</Text>
+
+        {item.minGlobalTierSlug && (
+          <View style={styles.offerTierBadge}>
+            <Icon
+              name={item.isUnlocked ? "lock-open" : "lock-closed"}
+              size={10}
+              color={item.isUnlocked ? loyal.success : loyal.lightTextMuted}
+            />
+            <Text
+              style={[
+                styles.offerTierText,
+                { color: item.isUnlocked ? loyal.success : loyal.lightTextMuted },
+              ]}
+              numberOfLines={1}
+            >
+              {item.minGlobalTierSlug}
+            </Text>
+          </View>
+        )}
+
+        {item.isUnlocked && item.bookingUrl ? (
+          <Pressable
+            style={styles.offerBookBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              Linking.openURL(item.bookingUrl!);
+            }}
+            accessibilityRole="link"
+            accessibilityLabel={`${tt("offers.bookNow")} ${item.name}`}
+          >
+            <Text style={styles.offerBookBtnText}>{tt("offers.bookNow")}</Text>
+          </Pressable>
+        ) : !item.isUnlocked ? (
+          <View style={styles.offerLockedBtn}>
+            <Icon name="lock-closed" size={12} color={loyal.lightTextMuted} />
+            <Text style={styles.offerLockedText}>{tt("offers.locked")}</Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
 // -- Main Screen ---------------------------------------------------------------
 
 function RewardsScreenInner() {
@@ -107,6 +201,17 @@ function RewardsScreenInner() {
   const tt = (key: string) => t(lang, key);
   const token = useAppStore((s) => s.token);
   const queryClient = useQueryClient();
+
+  // Fetch exclusive offers
+  const { data: offers = [], refetch: refetchOffers, isRefetching: isRefetchingOffers } = useQuery<OfferData[]>({
+    queryKey: ["offers", token],
+    queryFn: async () => {
+      const res = await fetchOffers(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load offers");
+      return res.data;
+    },
+    enabled: !!token,
+  });
 
   // Fetch rewards list
   const { data: rewards = [], refetch: refetchRewards, isRefetching: isRefetchingRewards } = useQuery<RewardData[]>({
@@ -130,13 +235,14 @@ function RewardsScreenInner() {
     enabled: !!token,
   });
 
-  const isRefetching = isRefetchingRewards || isRefetchingPortal;
+  const isRefetching = isRefetchingRewards || isRefetchingPortal || isRefetchingOffers;
   const pointsBalance = portalData?.member?.availablePoints ?? 0;
 
   const refetch = useCallback(() => {
     refetchRewards();
     refetchPortal();
-  }, [refetchRewards, refetchPortal]);
+    refetchOffers();
+  }, [refetchRewards, refetchPortal, refetchOffers]);
 
   const redeemMutation = useMutation<
     {
@@ -197,10 +303,28 @@ function RewardsScreenInner() {
   );
 
   const renderHeader = () => (
-    <View style={styles.balanceHeader}>
-      <Text style={styles.balanceLabel}>{tt("rewards.yourPoints")}</Text>
-      <Text style={styles.balanceValue}>{pointsBalance}</Text>
-      <Text style={styles.balanceUnit}>pkt</Text>
+    <View>
+      {/* Exclusive Offers horizontal scroll */}
+      {offers.length > 0 && (
+        <View style={styles.offersSection}>
+          <Text style={styles.offersSectionTitle}>{tt("offers.title")}</Text>
+          <FlatList
+            data={offers}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => <OfferCard item={item} lang={lang} />}
+            contentContainerStyle={styles.offersListContent}
+          />
+        </View>
+      )}
+
+      {/* Points balance */}
+      <View style={styles.balanceHeader}>
+        <Text style={styles.balanceLabel}>{tt("rewards.yourPoints")}</Text>
+        <Text style={styles.balanceValue}>{pointsBalance}</Text>
+        <Text style={styles.balanceUnit}>pkt</Text>
+      </View>
     </View>
   );
 
@@ -351,6 +475,116 @@ const styles = StyleSheet.create({
     minHeight: TOUCH_TARGET,
   },
   lockedBtnText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextMuted,
+  },
+
+  // -- Offers Section ---------------------------------------------------------
+  offersSection: {
+    marginBottom: spacing.lg,
+  },
+  offersSectionTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_700Bold",
+    color: loyal.lightText,
+    marginBottom: spacing.md,
+  },
+  offersListContent: {
+    gap: spacing.md,
+  },
+
+  // -- Offer Card -------------------------------------------------------------
+  offerCard: {
+    width: 200,
+    backgroundColor: loyal.lightCard,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: loyal.lightCardBorder,
+    overflow: "hidden",
+    ...shadow.sm,
+  },
+  offerImage: {
+    width: "100%",
+    height: 110,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  offerFeaturedBadge: {
+    position: "absolute",
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: loyal.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  offerDiscountBadge: {
+    position: "absolute",
+    top: spacing.sm,
+    left: spacing.sm,
+    backgroundColor: loyal.success,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  offerDiscountText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_700Bold",
+    color: loyal.white,
+  },
+  offerContent: {
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  offerName: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: loyal.lightText,
+    lineHeight: 18,
+  },
+  offerTierBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xxs,
+    alignSelf: "flex-start",
+    backgroundColor: loyal.lightPrimaryFaint,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xxs,
+  },
+  offerTierText: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+  },
+  offerBookBtn: {
+    backgroundColor: loyal.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+    marginTop: spacing.xs,
+    minHeight: TOUCH_TARGET,
+    justifyContent: "center",
+  },
+  offerBookBtnText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_700Bold",
+    color: loyal.white,
+  },
+  offerLockedBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.xs,
+    backgroundColor: loyal.lightInputBg,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    marginTop: spacing.xs,
+    minHeight: TOUCH_TARGET,
+  },
+  offerLockedText: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: loyal.lightTextMuted,
