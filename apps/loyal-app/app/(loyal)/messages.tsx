@@ -216,20 +216,30 @@ function ComposerBar({
   lang,
   onSend,
   isSending,
+  clearTrigger,
 }: {
   lang: "pl" | "en";
   onSend: (text: string) => void;
   isSending: boolean;
+  clearTrigger: number;
 }) {
   const insets = useSafeAreaInsets();
   const [text, setText] = useState("");
   const inputRef = useRef<TextInput>(null);
+  const prevClearRef = useRef(clearTrigger);
+
+  // Clear text when clearTrigger increments (mutation success)
+  useEffect(() => {
+    if (clearTrigger !== prevClearRef.current) {
+      prevClearRef.current = clearTrigger;
+      setText("");
+    }
+  }, [clearTrigger]);
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
     if (!trimmed || isSending) return;
     onSend(trimmed);
-    setText("");
   }, [text, isSending, onSend]);
 
   const canSend = text.trim().length > 0 && !isSending;
@@ -288,6 +298,7 @@ function MessagesScreenInner() {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const appStateRef = useRef(AppState.currentState);
   const [pollingEnabled, setPollingEnabled] = useState(true);
+  const [clearTrigger, setClearTrigger] = useState(0);
 
   // -- AppState listener: pause polling when backgrounded -------------------
   useEffect(() => {
@@ -386,6 +397,8 @@ function MessagesScreenInner() {
           );
         });
       }
+      // Clear composer text after successful send
+      setClearTrigger((n) => n + 1);
       // Also invalidate the polling query to pick up the new message
       queryClient.invalidateQueries({ queryKey: ["messages", token, "latest"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -496,6 +509,7 @@ function MessagesScreenInner() {
         lang={lang}
         onSend={handleSend}
         isSending={sendMutation.isPending}
+        clearTrigger={clearTrigger}
       />
     </KeyboardAvoidingView>
   );

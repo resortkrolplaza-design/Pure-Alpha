@@ -35,6 +35,7 @@ const pl: Record<string, string> = {
   "stay.currency": "z\u0142",
   "stay.contactHotel": "Kontakt z hotelem",
   "stay.memberSince": "Cz\u0142onek od",
+  "stay.heroImage": "Zdj\u0119cie hotelu",
   "stay.yourBenefits": "Twoje korzy\u015bci",
 
   // -- LoyaltyTab / sources ---------------------------------------------------
@@ -152,7 +153,7 @@ const pl: Record<string, string> = {
   "msg.sendExpired": "Sesja wygas\u0142a \u2014 od\u015bwie\u017c stron\u0119",
   "msg.you": "Ty",
   "msg.sendError": "Nie uda\u0142o si\u0119 wys\u0142a\u0107 wiadomo\u015bci",
-  "msg.title": "Wiadomo\u015bci",
+  "msg.title": "Czat",
   "msg.chatWith": "Czat z",
   "msg.messagesLabel": "Wiadomo\u015bci",
   "msg.loading": "\u0141adowanie wiadomo\u015bci...",
@@ -306,6 +307,7 @@ const pl: Record<string, string> = {
   "globalTier.totalStays": "Pobyty \u0142\u0105cznie",
   "globalTier.nextTier": "Nast\u0119pny poziom",
   "globalTier.pointsToNext": "Brakuje {n} pkt",
+  "globalTier.earnFirst": "Zacznij zbiera\u0107 punkty!",
   "globalTier.maxTier": "Najwy\u017cszy poziom!",
   "globalTier.getFirstTier": "Zdobądź pierwszy poziom!",
 
@@ -344,6 +346,7 @@ const en: Record<string, string> = {
   "stay.currency": "PLN",
   "stay.contactHotel": "Contact hotel",
   "stay.memberSince": "Member since",
+  "stay.heroImage": "Hotel photo",
   "stay.yourBenefits": "Your benefits",
 
   // -- LoyaltyTab / sources ---------------------------------------------------
@@ -461,7 +464,7 @@ const en: Record<string, string> = {
   "msg.sendExpired": "Session expired \u2014 refresh page",
   "msg.you": "You",
   "msg.sendError": "Failed to send message",
-  "msg.title": "Messages",
+  "msg.title": "Chat",
   "msg.chatWith": "Chat with",
   "msg.messagesLabel": "Messages",
   "msg.loading": "Loading messages...",
@@ -615,6 +618,7 @@ const en: Record<string, string> = {
   "globalTier.totalStays": "Total stays",
   "globalTier.nextTier": "Next tier",
   "globalTier.pointsToNext": "{n} pts to go",
+  "globalTier.earnFirst": "Start collecting points!",
   "globalTier.maxTier": "Highest tier!",
   "globalTier.getFirstTier": "Earn your first tier!",
 

@@ -3,7 +3,7 @@
 // Points balance, 2-column reward grid, redeem flow
 // =============================================================================
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   StyleSheet,
   Platform,
   Linking,
+  ActivityIndicator,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -34,25 +35,29 @@ function RewardCard({
   item,
   pointsBalance,
   onRedeem,
+  isRedeeming,
   lang,
 }: {
   item: RewardData;
   pointsBalance: number;
   onRedeem: (reward: RewardData) => void;
+  isRedeeming: boolean;
   lang: "pl" | "en";
 }) {
   const tt = (key: string) => t(lang, key);
   const canRedeem = item.canRedeem && pointsBalance >= item.pointsCost;
+  const [imageError, setImageError] = useState(false);
 
   return (
     <View style={styles.rewardCard}>
       {/* Image or gradient placeholder */}
-      {item.imageUrl ? (
+      {item.imageUrl && !imageError ? (
         <Image
           source={{ uri: item.imageUrl }}
           style={styles.rewardImage}
           resizeMode="cover"
-          onError={() => {}}
+          onError={() => setImageError(true)}
+          accessibilityLabel={item.name}
         />
       ) : (
         <LinearGradient
@@ -80,12 +85,18 @@ function RewardCard({
 
         {canRedeem ? (
           <Pressable
-            style={styles.redeemBtn}
-            onPress={() => onRedeem(item)}
+            style={[styles.redeemBtn, isRedeeming && styles.redeemBtnDisabled]}
+            onPress={() => !isRedeeming && onRedeem(item)}
+            disabled={isRedeeming}
             accessibilityRole="button"
+            accessibilityState={{ disabled: isRedeeming }}
             accessibilityLabel={`${tt("rewards.redeem")} ${item.name}`}
           >
-            <Text style={styles.redeemBtnText}>{tt("rewards.redeem")}</Text>
+            {isRedeeming ? (
+              <ActivityIndicator size="small" color={loyal.white} />
+            ) : (
+              <Text style={styles.redeemBtnText}>{tt("rewards.redeem")}</Text>
+            )}
           </Pressable>
         ) : (
           <View style={styles.lockedBtn}>
@@ -110,6 +121,7 @@ function OfferCard({
   lang: "pl" | "en";
 }) {
   const tt = (key: string) => t(lang, key);
+  const [imageError, setImageError] = useState(false);
   const discount = item.discountPercent
     ? `-${item.discountPercent}%`
     : item.discountFixed
@@ -118,12 +130,13 @@ function OfferCard({
 
   return (
     <View style={styles.offerCard}>
-      {item.imageUrl ? (
+      {item.imageUrl && !imageError ? (
         <Image
           source={{ uri: item.imageUrl }}
           style={styles.offerImage}
           resizeMode="cover"
-          onError={() => {}}
+          onError={() => setImageError(true)}
+          accessibilityLabel={item.name}
         />
       ) : (
         <LinearGradient
@@ -174,8 +187,11 @@ function OfferCard({
           <Pressable
             style={styles.offerBookBtn}
             onPress={() => {
+              const url = item.bookingUrl!;
+              // Block dangerous URI schemes (javascript:, data:, vbscript:)
+              if (!/^https?:\/\//i.test(url)) return;
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              Linking.openURL(item.bookingUrl!);
+              Linking.openURL(url);
             }}
             accessibilityRole="link"
             accessibilityLabel={`${tt("offers.bookNow")} ${item.name}`}
@@ -203,7 +219,7 @@ function RewardsScreenInner() {
   const queryClient = useQueryClient();
 
   // Fetch exclusive offers
-  const { data: offers = [], refetch: refetchOffers, isRefetching: isRefetchingOffers } = useQuery<OfferData[]>({
+  const { data: offers = [], refetch: refetchOffers, isRefetching: isRefetchingOffers, isError: isOffersError } = useQuery<OfferData[]>({
     queryKey: ["offers", token],
     queryFn: async () => {
       const res = await fetchOffers(token!);
@@ -214,7 +230,7 @@ function RewardsScreenInner() {
   });
 
   // Fetch rewards list
-  const { data: rewards = [], refetch: refetchRewards, isRefetching: isRefetchingRewards } = useQuery<RewardData[]>({
+  const { data: rewards = [], refetch: refetchRewards, isRefetching: isRefetchingRewards, isError: isRewardsError } = useQuery<RewardData[]>({
     queryKey: ["rewards", token],
     queryFn: async () => {
       const res = await fetchRewards(token!);
@@ -225,7 +241,7 @@ function RewardsScreenInner() {
   });
 
   // Fetch portal data for points balance
-  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal } = useQuery<PortalData>({
+  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal, isError: isPortalError } = useQuery<PortalData>({
     queryKey: ["portal", token],
     queryFn: async () => {
       const res = await fetchPortalData(token!);
@@ -337,6 +353,29 @@ function RewardsScreenInner() {
     </View>
   );
 
+  const isError = isOffersError || isRewardsError || isPortalError;
+
+  if (isError) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <Icon name="alert-circle-outline" size={48} color={loyal.lightTextMuted} />
+        <Text style={{ color: loyal.lightText, fontSize: fontSize.base, marginTop: spacing.md, textAlign: "center" }}>
+          {tt("common.error")}
+        </Text>
+        <Pressable
+          onPress={refetch}
+          style={{ marginTop: spacing.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, backgroundColor: loyal.primary, borderRadius: radius.lg }}
+          accessibilityRole="button"
+          accessibilityLabel={tt("common.retry")}
+        >
+          <Text style={{ color: loyal.white, fontSize: fontSize.base, fontFamily: "Inter_600SemiBold" }}>
+            {tt("common.retry")}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <FlatList
@@ -350,6 +389,7 @@ function RewardsScreenInner() {
             item={item}
             pointsBalance={pointsBalance}
             onRedeem={handleRedeem}
+            isRedeeming={redeemMutation.isPending}
             lang={lang}
           />
         )}
@@ -465,6 +505,9 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     minHeight: TOUCH_TARGET,
     justifyContent: "center",
+  },
+  redeemBtnDisabled: {
+    opacity: 0.5,
   },
   redeemBtnText: {
     fontSize: fontSize.sm,

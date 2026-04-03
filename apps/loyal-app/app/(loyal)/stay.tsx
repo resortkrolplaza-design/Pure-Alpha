@@ -3,7 +3,7 @@
 // Hero image, loyalty card, stats, services, contact
 // =============================================================================
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -110,7 +110,7 @@ function StayScreenInner() {
   const tt = (key: string) => t(lang, key);
   const token = useAppStore((s) => s.token);
 
-  const { data, isLoading, refetch, isRefetching } = useQuery<PortalData>({
+  const { data, isLoading, refetch, isRefetching, isError } = useQuery<PortalData>({
     queryKey: ["portal", token],
     queryFn: async () => {
       const res = await fetchPortalData(token!);
@@ -124,6 +124,7 @@ function StayScreenInner() {
 
   const greeting = useMemo(() => getGreeting(lang), [lang]);
 
+  const [heroError, setHeroError] = useState(false);
   const heroImage = data?.gallery?.[0]?.url ?? null;
   const member = data?.member;
   const hotel = data?.hotel;
@@ -183,11 +184,13 @@ function StayScreenInner() {
     <View>
       {/* Hero Section */}
       <View style={styles.heroContainer}>
-        {heroImage ? (
+        {heroImage && !heroError ? (
           <Image
             source={{ uri: heroImage }}
             style={styles.heroImage as any}
             resizeMode="cover"
+            onError={() => setHeroError(true)}
+            accessibilityLabel={hotel?.name ? `${hotel.name} - ${tt("stay.heroImage")}` : tt("stay.heroImage")}
           />
         ) : (
           <View style={[styles.heroImage, { backgroundColor: loyal.bgDark }]} />
@@ -311,7 +314,11 @@ function StayScreenInner() {
                 />
               </View>
               <Text style={styles.globalTierProgressHint}>
-                {tt("globalTier.pointsToNext").replace("{n}", String(Math.max(0, nextGlobalTier.minPoints - (globalStats.lifetimePoints ?? 0))))}
+                {(() => {
+                  const remaining = Math.max(0, nextGlobalTier.minPoints - (globalStats.lifetimePoints ?? 0));
+                  if (remaining === 0) return tt("globalTier.earnFirst");
+                  return tt("globalTier.pointsToNext").replace("{n}", String(remaining));
+                })()}
               </Text>
             </View>
           ) : (
@@ -406,6 +413,27 @@ function StayScreenInner() {
       )}
     </View>
   );
+
+  if (isError) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <Icon name="alert-circle-outline" size={48} color={loyal.lightTextMuted} />
+        <Text style={{ color: loyal.lightText, fontSize: fontSize.base, marginTop: spacing.md, textAlign: "center" }}>
+          {tt("common.error")}
+        </Text>
+        <Pressable
+          onPress={() => refetch()}
+          style={{ marginTop: spacing.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, backgroundColor: loyal.primary, borderRadius: radius.lg }}
+          accessibilityRole="button"
+          accessibilityLabel={tt("common.retry")}
+        >
+          <Text style={{ color: loyal.white, fontSize: fontSize.base, fontFamily: "Inter_600SemiBold" }}>
+            {tt("common.retry")}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

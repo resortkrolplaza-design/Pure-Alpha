@@ -57,6 +57,38 @@ function getSocialIcon(platform: string): IconName {
 
 // -- Gallery Image Viewer (modal) ---------------------------------------------
 
+function ModalImageItem({ item }: { item: GalleryImageData }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) {
+    return (
+      <View style={styles.modalImageContainer}>
+        <View style={[styles.modalImage, { backgroundColor: loyal.bgDark, alignItems: "center", justifyContent: "center" }]}>
+          <Icon name="image-outline" size={40} color={loyal.lightTextMuted} />
+        </View>
+        {item.caption && (
+          <Text style={styles.modalCaption}>{item.caption}</Text>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.modalImageContainer}>
+      <Image
+        source={{ uri: item.url }}
+        style={styles.modalImage}
+        resizeMode="contain"
+        onError={() => setHasError(true)}
+        accessibilityLabel={item.alt ?? item.caption ?? "Hotel photo"}
+      />
+      {item.caption && (
+        <Text style={styles.modalCaption}>{item.caption}</Text>
+      )}
+    </View>
+  );
+}
+
 function GalleryViewer({
   images,
   initialIndex,
@@ -99,18 +131,7 @@ function GalleryViewer({
             offset: SCREEN_WIDTH * index,
             index,
           })}
-          renderItem={({ item }) => (
-            <View style={styles.modalImageContainer}>
-              <Image
-                source={{ uri: item.url }}
-                style={styles.modalImage}
-                resizeMode="contain"
-              />
-              {item.caption && (
-                <Text style={styles.modalCaption}>{item.caption}</Text>
-              )}
-            </View>
-          )}
+          renderItem={({ item }) => <ModalImageItem item={item} />}
         />
       </View>
     </Modal>
@@ -126,6 +147,10 @@ function GalleryThumbnail({
   item: GalleryImageData;
   onPress: () => void;
 }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) return null;
+
   return (
     <Pressable
       onPress={onPress}
@@ -137,6 +162,7 @@ function GalleryThumbnail({
         source={{ uri: item.url }}
         style={styles.galleryThumbImage}
         resizeMode="cover"
+        onError={() => setHasError(true)}
       />
     </Pressable>
   );
@@ -174,20 +200,23 @@ function ServiceCard({ item }: { item: ServiceData }) {
 function AttractionCard({ item, lang }: { item: AttractionData; lang: "pl" | "en" }) {
   const tt = (key: string) => t(lang, key);
   const hasLinks = !!(item.mapUrl || item.websiteUrl);
+  const [imageError, setImageError] = useState(false);
 
   const handleOpenUrl = useCallback((url: string) => {
+    if (!/^https?:\/\//i.test(url)) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Linking.openURL(url);
   }, []);
 
   return (
     <View style={styles.attractionCard}>
-      {item.imageUrl ? (
+      {item.imageUrl && !imageError ? (
         <Image
           source={{ uri: item.imageUrl }}
           style={styles.attractionImage}
           resizeMode="cover"
-          onError={() => {}}
+          onError={() => setImageError(true)}
+          accessibilityLabel={item.name}
         />
       ) : (
         <View style={[styles.attractionImage, styles.attractionPlaceholder]}>
@@ -285,8 +314,9 @@ function HotelScreenInner() {
 
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [logoError, setLogoError] = useState(false);
 
-  const { data, refetch, isRefetching } = useQuery<PortalData>({
+  const { data, refetch, isRefetching, isError } = useQuery<PortalData>({
     queryKey: ["portal", token],
     queryFn: async () => {
       const res = await fetchPortalData(token!);
@@ -322,6 +352,7 @@ function HotelScreenInner() {
   }, [hotel?.email]);
 
   const handleSocialLink = useCallback((url: string) => {
+    if (!/^https?:\/\//i.test(url)) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Linking.openURL(url);
   }, []);
@@ -342,11 +373,13 @@ function HotelScreenInner() {
       {/* Hotel Info Card */}
       {hotel && (
         <View style={styles.infoCard}>
-          {hotel.logoUrl && (
+          {hotel.logoUrl && !logoError && (
             <Image
               source={{ uri: hotel.logoUrl }}
               style={styles.hotelLogo}
               resizeMode="contain"
+              onError={() => setLogoError(true)}
+              accessibilityLabel={`${hotel.name} logo`}
             />
           )}
           <Text style={styles.hotelName}>{hotel.name}</Text>
@@ -493,6 +526,27 @@ function HotelScreenInner() {
       )}
     </View>
   );
+
+  if (isError) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <Icon name="alert-circle-outline" size={48} color={loyal.lightTextMuted} />
+        <Text style={{ color: loyal.lightText, fontSize: fontSize.base, marginTop: spacing.md, textAlign: "center" }}>
+          {tt("common.error")}
+        </Text>
+        <Pressable
+          onPress={() => refetch()}
+          style={{ marginTop: spacing.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, backgroundColor: loyal.primary, borderRadius: radius.lg }}
+          accessibilityRole="button"
+          accessibilityLabel={tt("common.retry")}
+        >
+          <Text style={{ color: loyal.white, fontSize: fontSize.base, fontFamily: "Inter_600SemiBold" }}>
+            {tt("common.retry")}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

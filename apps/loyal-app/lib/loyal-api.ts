@@ -3,11 +3,17 @@
 // + Guest Account API (email/password auth, JWT Bearer)
 // =============================================================================
 
+import { Platform } from "react-native";
 import { t, type Lang } from "./i18n";
 import { useAppStore } from "./store";
 import type { ApiResponse, PortalData, RewardData, TransactionData, ChallengeData, BadgeData, ScratchCardData, MessageData, OfferData } from "./types";
 
-const API_BASE = "https://purealphahotel.pl";
+// In web dev mode, route through CORS proxy to avoid browser CORS blocks.
+// Native builds hit production directly (no CORS issue on native).
+const API_BASE =
+  __DEV__ && Platform.OS === "web"
+    ? "http://localhost:3999"
+    : "https://purealphahotel.pl";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 

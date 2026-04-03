@@ -12,6 +12,7 @@ import {
   RefreshControl,
   StyleSheet,
   ActivityIndicator,
+  Alert,
   Platform,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -172,9 +173,10 @@ function LoyaltyScreenInner() {
 
   const [txPage, setTxPage] = useState(0);
   const [allTx, setAllTx] = useState<TransactionData[]>([]);
+  const [revealingCardId, setRevealingCardId] = useState<string | null>(null);
 
   // -- Queries ----------------------------------------------------------------
-  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal } = useQuery<PortalData>({
+  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal, isError: isPortalError } = useQuery<PortalData>({
     queryKey: ["portal", token],
     queryFn: async () => {
       const res = await fetchPortalData(token!);
@@ -279,14 +281,23 @@ function LoyaltyScreenInner() {
   }, [refetchPortal, refetchCards, refetchTx, refetchChallenges, refetchBadges]);
 
   const handleRevealCard = useCallback(async (cardId: string) => {
-    if (!token) return;
+    if (!token || revealingCardId) return;
+    setRevealingCardId(cardId);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    const res = await scratchCard(token, cardId);
-    if (res.status !== "success") {
-      // Silently fail -- card will remain unscratched
+    try {
+      const res = await scratchCard(token, cardId);
+      if (res.status !== "success") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert(tt("common.error"), res.errorMessage ?? tt("common.retry"));
+      }
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(tt("common.error"), tt("common.retry"));
+    } finally {
+      setRevealingCardId(null);
+      refetchCards();
     }
-    refetchCards();
-  }, [token, refetchCards]);
+  }, [token, revealingCardId, refetchCards, tt]);
 
   const handleLoadMore = useCallback(() => {
     if (txData?.hasMore && !isFetchingTx) {
@@ -525,6 +536,27 @@ function LoyaltyScreenInner() {
     }
     return null;
   };
+
+  if (isPortalError) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <Icon name="alert-circle-outline" size={48} color={loyal.lightTextMuted} />
+        <Text style={{ color: loyal.lightText, fontSize: fontSize.base, marginTop: spacing.md, textAlign: "center" }}>
+          {tt("common.error")}
+        </Text>
+        <Pressable
+          onPress={handleRefresh}
+          style={{ marginTop: spacing.lg, paddingHorizontal: spacing.xl, paddingVertical: spacing.md, backgroundColor: loyal.primary, borderRadius: radius.lg }}
+          accessibilityRole="button"
+          accessibilityLabel={tt("common.retry")}
+        >
+          <Text style={{ color: loyal.white, fontSize: fontSize.base, fontFamily: "Inter_600SemiBold" }}>
+            {tt("common.retry")}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
