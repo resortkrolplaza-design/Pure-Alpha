@@ -233,13 +233,13 @@ function StayScreenInner() {
       )}
 
       {/* Global Tier Card */}
-      {globalTier && globalStats && (
+      {(globalTier || nextGlobalTier) && globalStats && (
         <View style={styles.globalTierCard}>
           <View style={styles.globalTierHeader}>
             <View
               style={[
                 styles.globalTierIconWrap,
-                { backgroundColor: globalTier.badgeColor ?? loyal.primary },
+                { backgroundColor: (globalTier?.badgeColor ?? nextGlobalTier?.badgeColor) ?? loyal.primary },
               ]}
             >
               <Icon name="globe" size={18} color={loyal.white} />
@@ -251,14 +251,25 @@ function StayScreenInner() {
           </View>
 
           <View style={styles.globalTierNameRow}>
-            <Text
-              style={[
-                styles.globalTierName,
-                { color: globalTier.badgeColor ?? loyal.primary },
-              ]}
-            >
-              {lang === "en" && globalTier.nameEn ? globalTier.nameEn : globalTier.name}
-            </Text>
+            {globalTier ? (
+              <Text
+                style={[
+                  styles.globalTierName,
+                  { color: globalTier.badgeColor ?? loyal.primary },
+                ]}
+              >
+                {lang === "en" && globalTier.nameEn ? globalTier.nameEn : globalTier.name}
+              </Text>
+            ) : nextGlobalTier ? (
+              <Text
+                style={[
+                  styles.globalTierName,
+                  { color: nextGlobalTier.badgeColor ?? loyal.primary },
+                ]}
+              >
+                {tt("globalTier.getFirstTier")}
+              </Text>
+            ) : null}
           </View>
 
           {/* Global stats */}

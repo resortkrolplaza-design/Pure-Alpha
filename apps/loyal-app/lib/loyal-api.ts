@@ -193,7 +193,7 @@ export async function fetchGuestHotels(
 export async function fetchPortalData(
   token: string,
 ): Promise<ApiResponse<PortalData>> {
-  return loyalFetch(token, "/");
+  return loyalFetch(token, "");
 }
 
 export async function fetchRewards(

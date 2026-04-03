@@ -11,7 +11,7 @@ const pl: Record<string, string> = {
   "tab.loyalty": "Punkty",
   "tab.rewards": "Nagrody",
   "tab.hotel": "Hotel",
-  "tab.messages": "Wiadomo\u015bci",
+  "tab.messages": "Czat",
 
   // -- Shell / misc -----------------------------------------------------------
   "shell.sessionExpired": "Sesja wygas\u0142a",
@@ -98,14 +98,14 @@ const pl: Record<string, string> = {
 
   // -- ScratchCard ------------------------------------------------------------
   "scratch.title": "Zdrap i wygraj!",
-  "scratch.tapToScratch": "Dotknij aby zdrapac",
+  "scratch.tapToScratch": "Dotknij aby zdrapać",
   "scratch.revealing": "Odkrywanie...",
-  "scratch.claim": "Odbierz nagrode",
+  "scratch.claim": "Odbierz nagrod\u0119",
   "scratch.claimed": "Nagroda odebrana!",
-  "scratch.noWin": "Spr\u00f3buj nastepnym razem!",
+  "scratch.noWin": "Spr\u00f3buj nast\u0119pnym razem!",
   "scratch.pointsWin": "Wygra\u0142e\u015b {value} {pointsName}!",
   "scratch.discountWin": "zni\u017cki!",
-  "scratch.error": "Nie uda\u0142o si\u0119 zdrapac.",
+  "scratch.error": "Nie uda\u0142o si\u0119 zdrapać.",
   "scratch.claimError": "Nie uda\u0142o si\u0119 odebra\u0107 nagrody.",
 
   // -- RewardsTab / categories ------------------------------------------------
@@ -213,29 +213,29 @@ const pl: Record<string, string> = {
   "push.title": "Powiadomienia Pure Loyal",
 
   // -- Welcome / Enter Token --------------------------------------------------
-  "welcome.subtitle": "Program lojalnosciowy Twojego hotelu",
-  "welcome.openLink": "Otworz link",
-  "common.language": "Jezyk",
+  "welcome.subtitle": "Program lojalno\u015bciowy Twojego hotelu",
+  "welcome.openLink": "Otw\u00f3rz link",
+  "common.language": "J\u0119zyk",
   "common.back": "Wstecz",
-  "common.confirm": "Potwierdz",
+  "common.confirm": "Potwierd\u017a",
   "common.cancel": "Anuluj",
 
-  "enterToken.title": "Wprowadz token",
+  "enterToken.title": "Wprowad\u017a token",
   "enterToken.description": "Wklej link lub token otrzymany od hotelu.",
   "enterToken.label": "Link lub token",
   "enterToken.placeholder": "https://... lub UUID",
-  "enterToken.invalidFormat": "Nieprawidlowy format linku lub tokenu",
-  "enterToken.invalidToken": "Token jest nieprawidlowy lub wygasl",
+  "enterToken.invalidFormat": "Nieprawid\u0142owy format linku lub tokenu",
+  "enterToken.invalidToken": "Token jest nieprawid\u0142owy lub wygas\u0142",
   "enterToken.verifying": "Weryfikacja...",
-  "enterToken.askReception": "Zapytaj w recepcji o link do programu lojalnosciowego",
+  "enterToken.askReception": "Zapytaj w recepcji o link do programu lojalno\u015bciowego",
 
   // -- Stay greeting ----------------------------------------------------------
-  "stay.greeting.morning": "Dzien dobry",
+  "stay.greeting.morning": "Dzie\u0144 dobry",
   "stay.greeting.afternoon": "Witaj",
-  "stay.greeting.evening": "Dobry wieczor",
+  "stay.greeting.evening": "Dobry wiecz\u00f3r",
   "stay.greeting.night": "Dobranoc",
   "stay.points": "Punkty",
-  "stay.services": "Uslugi hotelu",
+  "stay.services": "Us\u0142ugi hotelu",
   "stay.contact": "Kontakt z hotelem",
   "stay.phone": "Telefon",
   "stay.email": "Email",
@@ -259,56 +259,59 @@ const pl: Record<string, string> = {
 
   // -- Rewards extras ---------------------------------------------------------
   "rewards.yourPoints": "Twoje punkty",
-  "rewards.notEnoughPoints": "Za malo punktow",
+  "rewards.notEnoughPoints": "Za ma\u0142o punkt\u00f3w",
   "rewards.success": "Nagroda wymieniona!",
   "rewards.code": "Kod realizacji",
   "rewards.redeemed": "Nagroda wymieniona",
   "rewards.cost": "Koszt",
   "rewards.remaining": "Pozostanie",
+  "rewards.empty": "Brak dost\u0119pnych nagr\u00f3d",
+  "rewards.emptyDesc": "Hotel przygotowuje dla Ciebie specjalne nagrody",
 
   // -- Hotel extras -----------------------------------------------------------
   "hotel.gallery": "Galeria",
   "hotel.nearby": "Atrakcje w okolicy",
-  "hotel.showOnMap": "Pokaz na mapie",
+  "hotel.showOnMap": "Poka\u017c na mapie",
   "hotel.map": "Mapa",
   "hotel.website": "Strona",
 
   // -- Offers (exclusive) -----------------------------------------------------
   "offers.title": "Oferty ekskluzywne",
-  "offers.loadError": "Nie udalo sie zaladowac ofert.",
-  "offers.noOffers": "Brak dostepnych ofert",
-  "offers.noOffersDesc": "Nowe oferty pojawia sie wkrotce.",
+  "offers.loadError": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 ofert.",
+  "offers.noOffers": "Brak dost\u0119pnych ofert",
+  "offers.noOffersDesc": "Nowe oferty pojawi\u0105 si\u0119 wkr\u00f3tce.",
   "offers.locked": "Zablokowana",
   "offers.unlocked": "Odblokowana",
   "offers.tierRequired": "Wymagany poziom: {tier}",
-  "offers.discount": "Znizka",
+  "offers.discount": "Zni\u017cka",
   "offers.promoCode": "Kod promocyjny",
   "offers.bookNow": "Zarezerwuj",
-  "offers.validUntil": "Wazne do",
-  "offers.featured": "Wyroznienie",
+  "offers.validUntil": "Wa\u017cne do",
+  "offers.featured": "Wyr\u00f3\u017cnienie",
 
   // -- Offer categories -------------------------------------------------------
   "offerCat.ROOM_DEAL": "Pokoje",
   "offerCat.PACKAGE": "Pakiety",
   "offerCat.SPA_WELLNESS": "SPA & Wellness",
   "offerCat.DINING": "Gastronomia",
-  "offerCat.EXPERIENCE": "Doswiadczenia",
+  "offerCat.EXPERIENCE": "Do\u015bwiadczenia",
   "offerCat.SEASONAL": "Sezonowe",
   "offerCat.OTHER": "Inne",
 
   // -- Global Tier ------------------------------------------------------------
   "globalTier.title": "Poziom globalny",
-  "globalTier.crossHotel": "Obowiazuje we wszystkich hotelach",
-  "globalTier.lifetimePoints": "Punkty lacznie",
-  "globalTier.totalSpent": "Wydano lacznie",
-  "globalTier.totalStays": "Pobyty lacznie",
-  "globalTier.nextTier": "Nastepny poziom",
+  "globalTier.crossHotel": "Obowi\u0105zuje we wszystkich hotelach",
+  "globalTier.lifetimePoints": "Punkty \u0142\u0105cznie",
+  "globalTier.totalSpent": "Wydano \u0142\u0105cznie",
+  "globalTier.totalStays": "Pobyty \u0142\u0105cznie",
+  "globalTier.nextTier": "Nast\u0119pny poziom",
   "globalTier.pointsToNext": "Brakuje {n} pkt",
-  "globalTier.maxTier": "Najwyzszy poziom!",
+  "globalTier.maxTier": "Najwy\u017cszy poziom!",
+  "globalTier.getFirstTier": "Zdobądź pierwszy poziom!",
 
   // -- Error Boundary ---------------------------------------------------------
-  "error.fallback": "Cos poszlo nie tak",
-  "error.retry": "Sprobuj ponownie",
+  "error.fallback": "Co\u015b posz\u0142o nie tak",
+  "error.retry": "Spr\u00f3buj ponownie",
 };
 
 const en: Record<string, string> = {
@@ -317,7 +320,7 @@ const en: Record<string, string> = {
   "tab.loyalty": "Points",
   "tab.rewards": "Rewards",
   "tab.hotel": "Hotel",
-  "tab.messages": "Messages",
+  "tab.messages": "Chat",
 
   // -- Shell / misc -----------------------------------------------------------
   "shell.sessionExpired": "Session expired",
@@ -571,6 +574,8 @@ const en: Record<string, string> = {
   "rewards.redeemed": "Reward redeemed",
   "rewards.cost": "Cost",
   "rewards.remaining": "Remaining",
+  "rewards.empty": "No rewards available",
+  "rewards.emptyDesc": "The hotel is preparing special rewards for you",
 
   // -- Hotel extras -----------------------------------------------------------
   "hotel.gallery": "Gallery",
@@ -611,6 +616,7 @@ const en: Record<string, string> = {
   "globalTier.nextTier": "Next tier",
   "globalTier.pointsToNext": "{n} pts to go",
   "globalTier.maxTier": "Highest tier!",
+  "globalTier.getFirstTier": "Earn your first tier!",
 
   // -- Error Boundary ---------------------------------------------------------
   "error.fallback": "Something went wrong",

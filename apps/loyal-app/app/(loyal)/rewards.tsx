@@ -325,6 +325,15 @@ function RewardsScreenInner() {
         <Text style={styles.balanceValue}>{pointsBalance}</Text>
         <Text style={styles.balanceUnit}>pkt</Text>
       </View>
+
+      {/* Empty state when no rewards AND no offers */}
+      {rewards.length === 0 && (
+        <View style={styles.emptyState}>
+          <Icon name="gift-outline" size={48} color={loyal.lightTextMuted} />
+          <Text style={styles.emptyTitle}>{tt("rewards.empty")}</Text>
+          <Text style={styles.emptyDesc}>{tt("rewards.emptyDesc")}</Text>
+        </View>
+      )}
     </View>
   );
 
@@ -588,6 +597,27 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: loyal.lightTextMuted,
+  },
+
+  // -- Empty State ------------------------------------------------------------
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: spacing["4xl"],
+    paddingHorizontal: spacing.xl,
+    gap: spacing.md,
+  },
+  emptyTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_600SemiBold",
+    color: loyal.lightText,
+    textAlign: "center",
+  },
+  emptyDesc: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextSecondary,
+    textAlign: "center",
+    lineHeight: 20,
   },
 });
 
