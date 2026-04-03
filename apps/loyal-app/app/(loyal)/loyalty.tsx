@@ -117,7 +117,7 @@ function BadgeItem({ item }: { item: BadgeData }) {
   return (
     <View style={[styles.badgeItem, !earned && styles.badgeLocked]}>
       <View style={[styles.badgeIconWrap, earned ? styles.badgeIconEarned : styles.badgeIconGrey]}>
-        <Icon name={(item.icon as any) ?? "medal"} size={24} color={earned ? loyal.primary : loyal.textDim} />
+        <Icon name={(item.icon as any) ?? "medal"} size={24} color={earned ? loyal.primary : loyal.lightTextMuted} />
       </View>
       <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]} numberOfLines={2}>
         {item.name}
@@ -132,7 +132,7 @@ function TransactionItem({ item }: { item: TransactionData }) {
   const isEarn = item.type === "EARN";
   const isRedeem = item.type === "REDEEM";
   const iconName = isEarn ? "arrow-up-circle" : isRedeem ? "arrow-down-circle" : "time-outline";
-  const color = isEarn ? loyal.success : isRedeem ? loyal.danger : loyal.textDim;
+  const color = isEarn ? loyal.success : isRedeem ? loyal.danger : loyal.lightTextMuted;
   const sign = isEarn ? "+" : isRedeem ? "-" : "";
 
   return (
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: fontSize.lg,
     fontFamily: "Inter_700Bold",
-    color: loyal.text,
+    color: loyal.lightText,
     marginBottom: spacing.md,
   },
   horizontalList: {
@@ -479,7 +479,7 @@ const styles = StyleSheet.create({
   },
   scratchRevealed: {
     flex: 1,
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderWidth: 2,
     borderColor: loyal.primary,
     borderRadius: radius.lg,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   scratchPrize: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_600SemiBold",
-    color: loyal.text,
+    color: loyal.lightText,
     textAlign: "center",
   },
   scratchPoints: {
@@ -502,10 +502,10 @@ const styles = StyleSheet.create({
 
   // -- Tier -------------------------------------------------------------------
   tierCard: {
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.xl,
     gap: spacing.lg,
     ...shadow.sm,
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
   tierName: {
     fontSize: fontSize.xl,
     fontFamily: "Inter_700Bold",
-    color: loyal.text,
+    color: loyal.lightText,
   },
   tierDetails: {
     flexDirection: "row",
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   tierDetailLabel: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
   },
   tierDetailValue: {
     fontSize: fontSize.lg,
@@ -543,12 +543,12 @@ const styles = StyleSheet.create({
   nextTierLabel: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_500Medium",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
   },
   tierCriteria: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
-    color: loyal.textDim,
+    color: loyal.lightTextMuted,
   },
 
   // -- Points -----------------------------------------------------------------
@@ -558,10 +558,10 @@ const styles = StyleSheet.create({
   },
   pointCard: {
     flex: 1,
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.md,
     alignItems: "center",
     ...shadow.sm,
@@ -574,7 +574,7 @@ const styles = StyleSheet.create({
   pointLabel: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
     marginTop: spacing.xxs,
   },
 
@@ -597,10 +597,10 @@ const styles = StyleSheet.create({
 
   // -- Challenges -------------------------------------------------------------
   challengeCard: {
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.lg,
     marginBottom: spacing.md,
     gap: spacing.sm,
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSize.base,
     fontFamily: "Inter_600SemiBold",
-    color: loyal.text,
+    color: loyal.lightText,
   },
   challengeReward: {
     fontSize: fontSize.sm,
@@ -626,12 +626,12 @@ const styles = StyleSheet.create({
   challengeDesc: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
     lineHeight: 18,
   },
   progressTrack: {
     height: 6,
-    backgroundColor: loyal.inputBorder,
+    backgroundColor: loyal.lightProgressTrack,
     borderRadius: 3,
     overflow: "hidden",
   },
@@ -647,12 +647,12 @@ const styles = StyleSheet.create({
   challengeProgress: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_500Medium",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
   },
   challengeDays: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
-    color: loyal.textDim,
+    color: loyal.lightTextMuted,
   },
 
   // -- Badges -----------------------------------------------------------------
@@ -672,23 +672,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   badgeIconEarned: {
-    backgroundColor: loyal.primaryFaint,
+    backgroundColor: loyal.lightPrimaryFaint,
     borderWidth: 2,
     borderColor: loyal.primary,
   },
   badgeIconGrey: {
-    backgroundColor: loyal.inputBg,
+    backgroundColor: loyal.lightInputBg,
     borderWidth: 1,
-    borderColor: loyal.inputBorder,
+    borderColor: loyal.lightInputBorder,
   },
   badgeName: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_500Medium",
-    color: loyal.text,
+    color: loyal.lightText,
     textAlign: "center",
   },
   badgeNameLocked: {
-    color: loyal.textDim,
+    color: loyal.lightTextMuted,
   },
 
   // -- Transactions -----------------------------------------------------------
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: loyal.inputBorder,
+    borderBottomColor: loyal.lightCardBorder,
     minHeight: TOUCH_TARGET,
   },
   transactionInfo: {
@@ -708,12 +708,12 @@ const styles = StyleSheet.create({
   transactionDesc: {
     fontSize: fontSize.base,
     fontFamily: "Inter_500Medium",
-    color: loyal.text,
+    color: loyal.lightText,
   },
   transactionDate: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
-    color: loyal.textDim,
+    color: loyal.lightTextMuted,
   },
   transactionPoints: {
     fontSize: fontSize.base,
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
-    backgroundColor: loyal.primaryFaint,
+    backgroundColor: loyal.lightPrimaryFaint,
     borderRadius: radius.full,
     marginTop: spacing.lg,
     minHeight: TOUCH_TARGET,

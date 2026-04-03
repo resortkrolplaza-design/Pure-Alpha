@@ -209,7 +209,7 @@ function MessageBubble({
 function EmptyState({ lang }: { lang: "pl" | "en" }) {
   return (
     <View style={styles.emptyContainer}>
-      <Icon name="chatbubble-ellipses-outline" size={48} color={loyal.textDim} />
+      <Icon name="chatbubble-ellipses-outline" size={48} color={loyal.lightTextMuted} />
       <Text style={styles.emptyTitle}>{t(lang, "msg.emptyTitle")}</Text>
       <Text style={styles.emptyDesc}>{t(lang, "msg.emptyDesc")}</Text>
     </View>
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: loyal.cardBorder,
+    borderBottomColor: loyal.lightCardBorder,
     backgroundColor: loyal.bg,
   },
   headerTitle: {
@@ -543,7 +543,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
   },
 
   // -- Empty State ------------------------------------------------------------
@@ -557,13 +557,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: fontSize.lg,
     fontFamily: "Inter_700Bold",
-    color: loyal.text,
+    color: loyal.lightText,
     textAlign: "center",
   },
   emptyDesc: {
     fontSize: fontSize.base,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
     textAlign: "center",
   },
 
@@ -583,12 +583,12 @@ const styles = StyleSheet.create({
   dateLine: {
     flex: 1,
     height: 1,
-    backgroundColor: loyal.cardBorder,
+    backgroundColor: loyal.lightCardBorder,
   },
   dateLabel: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_500Medium",
-    color: loyal.textDim,
+    color: loyal.lightTextMuted,
   },
 
   // -- Message Bubbles --------------------------------------------------------
@@ -612,9 +612,9 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: radius.sm,
   },
   bubbleHotel: {
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     borderBottomLeftRadius: radius.sm,
   },
   senderName: {
@@ -632,7 +632,7 @@ const styles = StyleSheet.create({
     color: loyal.bg,
   },
   bubbleTextHotel: {
-    color: loyal.text,
+    color: loyal.lightText,
   },
   bubbleTime: {
     fontSize: fontSize.xs,
@@ -643,7 +643,7 @@ const styles = StyleSheet.create({
     color: "rgba(13,34,54,0.5)",
   },
   bubbleTimeHotel: {
-    color: loyal.textDim,
+    color: loyal.lightTextMuted,
   },
 
   // -- System Message ---------------------------------------------------------
@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
   systemText: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
-    color: loyal.textDim,
+    color: loyal.lightTextMuted,
     textAlign: "center",
     fontStyle: "italic",
   },
@@ -664,7 +664,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
-    backgroundColor: loyal.primaryLight,
+    backgroundColor: loyal.lightPrimaryFaint,
     borderRadius: radius.full,
     marginVertical: spacing.lg,
     minHeight: TOUCH_TARGET,
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
   // -- Composer ---------------------------------------------------------------
   composerContainer: {
     borderTopWidth: 1,
-    borderTopColor: loyal.cardBorder,
+    borderTopColor: loyal.lightCardBorder,
     backgroundColor: loyal.bg,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,

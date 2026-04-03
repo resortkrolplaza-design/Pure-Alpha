@@ -63,7 +63,7 @@ function ProgressRing({
           height: size,
           borderRadius: center,
           borderWidth: strokeWidth,
-          borderColor: loyal.inputBorder,
+          borderColor: loyal.lightProgressTrack,
         }}
       />
       {/* Filled arc approximation using a rotated half-circle trick */}
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   ringText: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_700Bold",
-    color: loyal.primary,
+    color: loyal.bg,
   },
 
   // -- Stats ------------------------------------------------------------------
@@ -397,10 +397,10 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.md,
     alignItems: "center",
     ...shadow.sm,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
     marginTop: spacing.xxs,
   },
 
@@ -421,17 +421,17 @@ const styles = StyleSheet.create({
   welcomeCard: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.lg,
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.xl,
     ...shadow.sm,
   },
   welcomeText: {
     fontSize: fontSize.base,
     fontFamily: "Inter_400Regular",
-    color: loyal.text,
+    color: loyal.lightText,
     lineHeight: 22,
   },
 
@@ -442,7 +442,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: fontSize.lg,
     fontFamily: "Inter_700Bold",
-    color: loyal.text,
+    color: loyal.lightText,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
@@ -452,10 +452,10 @@ const styles = StyleSheet.create({
   },
   serviceCard: {
     width: 100,
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.md,
     alignItems: "center",
     gap: spacing.sm,
@@ -465,14 +465,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: loyal.primaryFaint,
+    backgroundColor: loyal.lightPrimaryFaint,
     alignItems: "center",
     justifyContent: "center",
   },
   serviceName: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_500Medium",
-    color: loyal.text,
+    color: loyal.lightText,
     textAlign: "center",
   },
 
@@ -480,10 +480,10 @@ const styles = StyleSheet.create({
   contactCard: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.xl,
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.xl,
     gap: spacing.md,
     ...shadow.sm,
@@ -491,7 +491,7 @@ const styles = StyleSheet.create({
   contactTitle: {
     fontSize: fontSize.lg,
     fontFamily: "Inter_700Bold",
-    color: loyal.text,
+    color: loyal.lightText,
   },
   contactRow: {
     flexDirection: "row",
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
   contactText: {
     fontSize: fontSize.base,
     fontFamily: "Inter_400Regular",
-    color: loyal.text,
+    color: loyal.lightText,
   },
 });
 

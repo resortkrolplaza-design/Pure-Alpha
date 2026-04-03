@@ -231,7 +231,7 @@ function FaqItem({ item }: { item: FaqData }) {
         <Icon
           name={expanded ? "chevron-up" : "chevron-down"}
           size={20}
-          color={loyal.textSecondary}
+          color={loyal.lightTextSecondary}
         />
       </Pressable>
       {expanded && (
@@ -345,7 +345,7 @@ function HotelScreenInner() {
                 <Icon name="call" size={20} color={loyal.primary} />
               </View>
               <Text style={styles.contactText}>{hotel.phone}</Text>
-              <Icon name="chevron-forward" size={16} color={loyal.textDim} />
+              <Icon name="chevron-forward" size={16} color={loyal.lightTextMuted} />
             </Pressable>
           )}
           {hotel.email && (
@@ -359,7 +359,7 @@ function HotelScreenInner() {
                 <Icon name="mail" size={20} color={loyal.primary} />
               </View>
               <Text style={styles.contactText}>{hotel.email}</Text>
-              <Icon name="chevron-forward" size={16} color={loyal.textDim} />
+              <Icon name="chevron-forward" size={16} color={loyal.lightTextMuted} />
             </Pressable>
           )}
         </View>
@@ -510,10 +510,10 @@ const styles = StyleSheet.create({
 
   // -- Hotel Info Card --------------------------------------------------------
   infoCard: {
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.xl,
     gap: spacing.md,
     alignItems: "center",
@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
   hotelName: {
     fontSize: fontSize["2xl"],
     fontFamily: "Inter_700Bold",
-    color: loyal.text,
+    color: loyal.lightText,
     textAlign: "center",
   },
   addressRow: {
@@ -539,14 +539,14 @@ const styles = StyleSheet.create({
   addressText: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
     textAlign: "center",
     flex: 1,
   },
   hotelDescription: {
     fontSize: fontSize.base,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
     lineHeight: 22,
     textAlign: "center",
   },
@@ -563,7 +563,7 @@ const styles = StyleSheet.create({
   timeLabel: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_500Medium",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
   },
   timeValue: {
     fontSize: fontSize.sm,
@@ -573,10 +573,10 @@ const styles = StyleSheet.create({
 
   // -- Contact Card -----------------------------------------------------------
   contactCard: {
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.xl,
     gap: spacing.md,
     ...shadow.sm,
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: loyal.primaryLight,
+    backgroundColor: loyal.lightPrimaryFaint,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSize.base,
     fontFamily: "Inter_400Regular",
-    color: loyal.text,
+    color: loyal.lightText,
   },
 
   // -- Map Button -------------------------------------------------------------
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: fontSize.lg,
     fontFamily: "Inter_700Bold",
-    color: loyal.text,
+    color: loyal.lightText,
     marginBottom: spacing.md,
   },
 
@@ -691,10 +691,10 @@ const styles = StyleSheet.create({
   // -- Services ---------------------------------------------------------------
   serviceCard: {
     flexDirection: "row",
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     padding: spacing.lg,
     gap: spacing.md,
     marginBottom: spacing.md,
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: loyal.primaryLight,
+    backgroundColor: loyal.lightPrimaryFaint,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -715,12 +715,12 @@ const styles = StyleSheet.create({
   serviceName: {
     fontSize: fontSize.base,
     fontFamily: "Inter_600SemiBold",
-    color: loyal.text,
+    color: loyal.lightText,
   },
   serviceDesc: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
     lineHeight: 18,
   },
   servicePrice: {
@@ -733,10 +733,10 @@ const styles = StyleSheet.create({
   // -- Attractions ------------------------------------------------------------
   attractionCard: {
     flexDirection: "row",
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     overflow: "hidden",
     marginBottom: spacing.md,
     ...shadow.sm,
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
     height: 100,
   },
   attractionPlaceholder: {
-    backgroundColor: loyal.primaryLight,
+    backgroundColor: loyal.lightPrimaryFaint,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -758,12 +758,12 @@ const styles = StyleSheet.create({
   attractionName: {
     fontSize: fontSize.base,
     fontFamily: "Inter_600SemiBold",
-    color: loyal.text,
+    color: loyal.lightText,
   },
   attractionDesc: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
     lineHeight: 18,
   },
   distanceBadge: {
@@ -780,10 +780,10 @@ const styles = StyleSheet.create({
 
   // -- FAQ --------------------------------------------------------------------
   faqItem: {
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     marginBottom: spacing.md,
     overflow: "hidden",
     ...shadow.sm,
@@ -799,13 +799,13 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSize.base,
     fontFamily: "Inter_600SemiBold",
-    color: loyal.text,
+    color: loyal.lightText,
     lineHeight: 20,
   },
   faqAnswer: {
     fontSize: fontSize.base,
     fontFamily: "Inter_400Regular",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
     lineHeight: 22,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
@@ -821,7 +821,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: loyal.primaryLight,
+    backgroundColor: loyal.lightPrimaryFaint,
     alignItems: "center",
     justifyContent: "center",
     minWidth: TOUCH_TARGET,

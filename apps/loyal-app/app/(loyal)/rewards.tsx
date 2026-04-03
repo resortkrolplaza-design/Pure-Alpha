@@ -55,7 +55,7 @@ function RewardCard({
         />
       ) : (
         <LinearGradient
-          colors={[loyal.primaryFaint, loyal.contentBg]}
+          colors={[loyal.lightPrimaryFaint, loyal.contentBg]}
           style={styles.rewardImage}
         >
           <Icon name="gift" size={32} color={loyal.primary} />
@@ -84,7 +84,7 @@ function RewardCard({
           </Pressable>
         ) : (
           <View style={styles.lockedBtn}>
-            <Icon name="lock-closed" size={14} color={loyal.textDim} />
+            <Icon name="lock-closed" size={14} color={loyal.lightTextMuted} />
             <Text style={styles.lockedBtnText} numberOfLines={1}>
               {item.reasonsBlocked?.[0] ?? tt("rewards.notEnoughPoints")}
             </Text>
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   balanceLabel: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_500Medium",
-    color: loyal.textSecondary,
+    color: loyal.lightTextSecondary,
   },
   balanceValue: {
     fontSize: fontSize["4xl"],
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   balanceUnit: {
     fontSize: fontSize.base,
     fontFamily: "Inter_500Medium",
-    color: loyal.textDim,
+    color: loyal.lightTextMuted,
   },
 
   // -- Grid -------------------------------------------------------------------
@@ -256,10 +256,10 @@ const styles = StyleSheet.create({
   // -- Reward Card ------------------------------------------------------------
   rewardCard: {
     flex: 1,
-    backgroundColor: loyal.card,
+    backgroundColor: loyal.lightCard,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: loyal.cardBorder,
+    borderColor: loyal.lightCardBorder,
     overflow: "hidden",
     marginBottom: spacing.md,
     ...shadow.sm,
@@ -277,12 +277,12 @@ const styles = StyleSheet.create({
   rewardName: {
     fontSize: fontSize.sm,
     fontFamily: "Inter_600SemiBold",
-    color: loyal.text,
+    color: loyal.lightText,
     lineHeight: 18,
   },
   categoryBadge: {
     alignSelf: "flex-start",
-    backgroundColor: loyal.primaryFaint,
+    backgroundColor: loyal.lightPrimaryFaint,
     borderRadius: radius.sm,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs,
@@ -318,7 +318,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.xs,
-    backgroundColor: loyal.inputBg,
+    backgroundColor: loyal.lightInputBg,
     borderRadius: radius.md,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.sm,
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
   lockedBtnText: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
-    color: loyal.textDim,
+    color: loyal.lightTextMuted,
   },
 });
 

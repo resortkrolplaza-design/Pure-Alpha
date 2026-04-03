@@ -8,6 +8,7 @@ import { Platform } from "react-native";
 // -- Loyal App: Navy + Gold ---------------------------------------------------
 
 export const loyal = {
+  // -- Navy background context (tab bar, header, auth screens) --
   bg: "#0D2236",
   bgLight: "#132d47",
   primary: "#D4AF37",
@@ -36,6 +37,17 @@ export const loyal = {
   waveLight: "rgba(212,175,55,0.15)",
   waveMedium: "rgba(212,175,55,0.25)",
   waveFaint: "rgba(212,175,55,0.05)",
+
+  // -- Light content area tokens (for cards/content on cream bg) --
+  lightText: "#0f172a",
+  lightTextSecondary: "#475569",
+  lightTextMuted: "#94a3b8",
+  lightCard: "#ffffff",
+  lightCardBorder: "#e2e8f0",
+  lightInputBg: "#f1f5f9",
+  lightInputBorder: "#cbd5e1",
+  lightPrimaryFaint: "rgba(212,175,55,0.10)",
+  lightProgressTrack: "#e2e8f0",
 } as const;
 
 // -- Spacing (px values, NOT rem) ---------------------------------------------
