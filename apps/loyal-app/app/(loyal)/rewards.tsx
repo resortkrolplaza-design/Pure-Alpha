@@ -3,7 +3,7 @@
 // Points balance, 2-column reward grid, redeem flow
 // =============================================================================
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -116,9 +116,11 @@ function RewardCard({
 function OfferCard({
   item,
   lang,
+  globalTierNameMap,
 }: {
   item: OfferData;
   lang: "pl" | "en";
+  globalTierNameMap: Map<string, string>;
 }) {
   const tt = (key: string) => t(lang, key);
   const [imageError, setImageError] = useState(false);
@@ -164,6 +166,16 @@ function OfferCard({
       <View style={styles.offerContent}>
         <Text style={styles.offerName} numberOfLines={2}>{item.name}</Text>
 
+        {item.description && (
+          <Text style={styles.offerDesc} numberOfLines={2}>{item.description}</Text>
+        )}
+
+        {item.validUntil && (
+          <Text style={styles.offerValidUntil}>
+            {tt("offers.validUntil")}: {new Date(item.validUntil).toLocaleDateString(lang === "en" ? "en-GB" : "pl-PL", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}
+          </Text>
+        )}
+
         {item.minGlobalTierSlug && (
           <View style={styles.offerTierBadge}>
             <Icon
@@ -178,7 +190,7 @@ function OfferCard({
               ]}
               numberOfLines={1}
             >
-              {item.minGlobalTierSlug}
+              {tt("offers.tierRequired").replace("{tier}", globalTierNameMap.get(item.minGlobalTierSlug!) ?? item.minGlobalTierSlug!.charAt(0).toUpperCase() + item.minGlobalTierSlug!.slice(1))}
             </Text>
           </View>
         )}
@@ -204,6 +216,13 @@ function OfferCard({
             <Text style={styles.offerLockedText}>{tt("offers.locked")}</Text>
           </View>
         ) : null}
+
+        {item.isUnlocked && item.promoCode && (
+          <View style={styles.promoCodeRow}>
+            <Text style={styles.promoCodeLabel}>{tt("offers.promoCode")}:</Text>
+            <Text style={styles.promoCodeValue}>{item.promoCode}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -253,6 +272,16 @@ function RewardsScreenInner() {
 
   const isRefetching = isRefetchingRewards || isRefetchingPortal || isRefetchingOffers;
   const pointsBalance = portalData?.member?.availablePoints ?? 0;
+
+  const globalTierNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (portalData?.globalTiers) {
+      for (const gt of portalData.globalTiers) {
+        map.set(gt.slug, lang === "en" && gt.nameEn ? gt.nameEn : gt.name);
+      }
+    }
+    return map;
+  }, [portalData?.globalTiers, lang]);
 
   const refetch = useCallback(() => {
     refetchRewards();
@@ -321,19 +350,25 @@ function RewardsScreenInner() {
   const renderHeader = () => (
     <View>
       {/* Exclusive Offers horizontal scroll */}
-      {offers.length > 0 && (
-        <View style={styles.offersSection}>
-          <Text style={styles.offersSectionTitle}>{tt("offers.title")}</Text>
+      <View style={styles.offersSection}>
+        <Text style={styles.offersSectionTitle}>{tt("offers.title")}</Text>
+        {offers.length > 0 ? (
           <FlatList
             data={offers}
             keyExtractor={(item) => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <OfferCard item={item} lang={lang} />}
+            renderItem={({ item }) => <OfferCard item={item} lang={lang} globalTierNameMap={globalTierNameMap} />}
             contentContainerStyle={styles.offersListContent}
           />
-        </View>
-      )}
+        ) : !isRefetchingOffers ? (
+          <View style={styles.offersEmptyState}>
+            <Icon name="pricetag-outline" size={32} color={loyal.lightTextMuted} />
+            <Text style={styles.offersEmptyText}>{tt("offers.noOffers")}</Text>
+            <Text style={styles.offersEmptyDesc}>{tt("offers.noOffersDesc")}</Text>
+          </View>
+        ) : null}
+      </View>
 
       {/* Points balance */}
       <View style={styles.balanceHeader}>
@@ -640,6 +675,58 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: loyal.lightTextMuted,
+  },
+  offerDesc: {
+    fontSize: fontSize.xs,
+    color: loyal.lightTextMuted,
+    fontFamily: "Inter_400Regular",
+    marginBottom: spacing.xs,
+    lineHeight: fontSize.xs * 1.4,
+  },
+  offerValidUntil: {
+    fontSize: 10,
+    color: loyal.lightTextMuted,
+    fontFamily: "Inter_400Regular",
+    marginBottom: spacing.xs,
+  },
+  promoCodeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: `${loyal.bgDark}15`,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  promoCodeLabel: {
+    fontSize: fontSize.xs,
+    color: loyal.lightTextMuted,
+    fontFamily: "Inter_400Regular",
+  },
+  promoCodeValue: {
+    fontSize: fontSize.xs,
+    color: loyal.primary,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
+  },
+
+  // -- Offers Empty State -----------------------------------------------------
+  offersEmptyState: {
+    alignItems: "center",
+    paddingVertical: spacing.xl,
+  },
+  offersEmptyText: {
+    fontSize: fontSize.sm,
+    color: loyal.lightText,
+    fontFamily: "Inter_600SemiBold",
+    marginTop: spacing.sm,
+  },
+  offersEmptyDesc: {
+    fontSize: fontSize.xs,
+    color: loyal.lightTextMuted,
+    fontFamily: "Inter_400Regular",
+    marginTop: spacing.xs,
   },
 
   // -- Empty State ------------------------------------------------------------
