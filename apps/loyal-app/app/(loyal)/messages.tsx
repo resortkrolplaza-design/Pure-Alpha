@@ -155,16 +155,10 @@ function MessageBubble({
   msg: MessageData;
   lang: "pl" | "en";
 }) {
-  const isGuest = msg.senderType === "GUEST";
-  const isSystem = msg.senderType === "SYSTEM";
-
-  if (isSystem) {
-    return (
-      <View style={styles.systemMessage}>
-        <Text style={styles.systemText}>{msg.content}</Text>
-      </View>
-    );
-  }
+  const isGuest = msg.isGuest === true;
+  const senderName = [msg.sender?.firstName, msg.sender?.lastName]
+    .filter(Boolean)
+    .join(" ") || null;
 
   return (
     <View
@@ -179,8 +173,8 @@ function MessageBubble({
           isGuest ? styles.bubbleGuest : styles.bubbleHotel,
         ]}
       >
-        {!isGuest && msg.senderName && (
-          <Text style={styles.senderName}>{msg.senderName}</Text>
+        {!isGuest && senderName && (
+          <Text style={styles.senderName}>{senderName}</Text>
         )}
         <Text
           style={[
@@ -188,7 +182,7 @@ function MessageBubble({
             isGuest ? styles.bubbleTextGuest : styles.bubbleTextHotel,
           ]}
         >
-          {msg.content}
+          {msg.body}
         </Text>
         <Text
           style={[
@@ -375,8 +369,8 @@ function MessagesScreenInner() {
 
   // -- Send mutation --------------------------------------------------------
   const sendMutation = useMutation<MessageData, Error, string>({
-    mutationFn: async (content: string) => {
-      const res = await sendMessage(token!, { content });
+    mutationFn: async (text: string) => {
+      const res = await sendMessage(token!, { body: text });
       if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to send message");
       return res.data;
     },

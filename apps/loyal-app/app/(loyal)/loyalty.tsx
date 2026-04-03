@@ -28,6 +28,7 @@ import {
   scratchCard,
   fetchChallenges,
   fetchBadges,
+  type HistoryApiResponse,
 } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type {
@@ -37,6 +38,7 @@ import type {
   ChallengeData,
   BadgeData,
 } from "@/lib/types";
+import { deriveScratchCardStatus } from "@/lib/types";
 
 // -- Scratch Card Component ---------------------------------------------------
 
@@ -49,13 +51,14 @@ function ScratchCardItem({
   onReveal: (id: string) => void;
   lang: "pl" | "en";
 }) {
-  const isRevealed = card.status !== "AVAILABLE";
+  const status = deriveScratchCardStatus(card);
+  const isRevealed = status !== "AVAILABLE";
   return (
     <View style={styles.scratchCard}>
       {isRevealed ? (
         <View style={styles.scratchRevealed}>
           <Icon name="trophy" size={28} color={loyal.primary} />
-          <Text style={styles.scratchPrize}>{card.prizeDescription ?? "--"}</Text>
+          <Text style={styles.scratchPrize}>{card.prizeLabel ?? "--"}</Text>
           {card.prizeValue != null && card.prizeValue > 0 && (
             <Text style={styles.scratchPoints}>+{card.prizeValue} pkt</Text>
           )}
@@ -78,13 +81,15 @@ function ScratchCardItem({
 // -- Challenge Card -----------------------------------------------------------
 
 function ChallengeCard({ item, lang }: { item: ChallengeData; lang: "pl" | "en" }) {
-  const progress = item.targetValue > 0 ? Math.min(item.currentValue / item.targetValue, 1) : 0;
+  const currentValue = item.progress?.currentValue ?? 0;
+  const isCompleted = !!item.progress?.completedAt;
+  const progressRatio = item.targetValue > 0 ? Math.min(currentValue / item.targetValue, 1) : 0;
   const daysLeft = item.endDate
     ? Math.max(0, Math.ceil((new Date(item.endDate).getTime() - Date.now()) / 86400000))
     : null;
 
   return (
-    <View style={styles.challengeCard}>
+    <View style={[styles.challengeCard, isCompleted && { opacity: 0.6 }]}>
       <View style={styles.challengeHeader}>
         <Text style={styles.challengeName} numberOfLines={2}>{item.name}</Text>
         <Text style={styles.challengeReward}>+{item.rewardPoints} pkt</Text>
@@ -94,13 +99,13 @@ function ChallengeCard({ item, lang }: { item: ChallengeData; lang: "pl" | "en" 
       )}
       {/* Progress bar */}
       <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
+        <View style={[styles.progressFill, { width: `${progressRatio * 100}%` }]} />
       </View>
       <View style={styles.challengeFooter}>
         <Text style={styles.challengeProgress}>
-          {item.currentValue}/{item.targetValue}
+          {currentValue}/{item.targetValue}
         </Text>
-        {daysLeft != null && (
+        {daysLeft != null && !isCompleted && (
           <Text style={styles.challengeDays}>
             {daysLeft} {lang === "pl" ? "dni" : "days"}
           </Text>
@@ -114,10 +119,16 @@ function ChallengeCard({ item, lang }: { item: ChallengeData; lang: "pl" | "en" 
 
 function BadgeItem({ item }: { item: BadgeData }) {
   const earned = item.isEarned;
+  // Use emoji as display icon if available, otherwise fall back to generic icon
+  const displayLabel = item.emoji ?? null;
   return (
     <View style={[styles.badgeItem, !earned && styles.badgeLocked]}>
       <View style={[styles.badgeIconWrap, earned ? styles.badgeIconEarned : styles.badgeIconGrey]}>
-        <Icon name={(item.icon as any) ?? "medal"} size={24} color={earned ? loyal.primary : loyal.lightTextMuted} />
+        {displayLabel ? (
+          <Text style={{ fontSize: 24 }}>{displayLabel}</Text>
+        ) : (
+          <Icon name="medal" size={24} color={earned ? loyal.primary : loyal.lightTextMuted} />
+        )}
       </View>
       <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]} numberOfLines={2}>
         {item.name}
@@ -183,12 +194,23 @@ function LoyaltyScreenInner() {
     enabled: !!token,
   });
 
-  const { data: txData, refetch: refetchTx, isFetching: isFetchingTx } = useQuery<{ transactions: TransactionData[]; hasMore: boolean; total: number }>({
+  const { data: txData, refetch: refetchTx, isFetching: isFetchingTx } = useQuery<{
+    transactions: TransactionData[];
+    hasMore: boolean;
+    total: number;
+  }>({
     queryKey: ["transactions", token, txPage],
     queryFn: async () => {
       const res = await fetchHistory(token!, txPage);
       if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load history");
-      return res.data;
+      const pagination = res.pagination;
+      const currentPage = pagination?.page ?? 1;
+      const totalPages = pagination?.totalPages ?? 1;
+      return {
+        transactions: res.data,
+        hasMore: currentPage < totalPages,
+        total: pagination?.total ?? res.data.length,
+      };
     },
     enabled: !!token,
   });
@@ -208,7 +230,29 @@ function LoyaltyScreenInner() {
     queryFn: async () => {
       const res = await fetchBadges(token!);
       if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed to load badges");
-      return res.data;
+      const { earned, available } = res.data;
+      // Combine earned + available into a single BadgeData[] with isEarned flag
+      const earnedBadges: BadgeData[] = (earned ?? []).map((b) => ({
+        id: b.badgeId ?? b.id,
+        name: b.name,
+        description: b.description,
+        iconUrl: b.iconUrl,
+        emoji: b.emoji,
+        category: b.category,
+        isEarned: true,
+        earnedAt: b.earnedAt,
+      }));
+      const availableBadges: BadgeData[] = (available ?? []).map((b) => ({
+        id: b.id,
+        name: b.name,
+        description: b.description,
+        iconUrl: b.iconUrl,
+        emoji: b.emoji,
+        category: b.category,
+        isEarned: false,
+        earnedAt: null,
+      }));
+      return [...earnedBadges, ...availableBadges];
     },
     enabled: !!token,
   });

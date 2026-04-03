@@ -170,10 +170,15 @@ export interface RewardData {
   category: string;
   pointsCost: number;
   imageUrl: string | null;
-  isActive: boolean;
+  status: string;
+  totalStock: number | null;
+  usedStock: number;
+  sortOrder: number;
+  featured: boolean;
+  minTierSlug: string | null;
+  estimatedValue: number | null;
   canRedeem: boolean;
   reasonsBlocked: string[];
-  stock: number | null;
   validFrom: string | null;
   validUntil: string | null;
 }
@@ -186,14 +191,16 @@ export interface ChallengeData {
   description: string | null;
   type: string;
   targetValue: number;
-  currentValue: number;
   rewardPoints: number;
-  rewardDescription: string | null;
-  startDate: string;
-  endDate: string;
-  isCompleted: boolean;
-  completedAt: string | null;
-  icon: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  imageUrl: string | null;
+  progress: {
+    currentValue: number;
+    completedAt: string | null;
+    rewardedAt: string | null;
+  } | null;
+  percentComplete: number;
 }
 
 // -- Badge --------------------------------------------------------------------
@@ -202,35 +209,48 @@ export interface BadgeData {
   id: string;
   name: string;
   description: string | null;
-  icon: string | null;
-  imageUrl: string | null;
+  iconUrl: string | null;
+  emoji: string | null;
+  category: string | null;
   isEarned: boolean;
   earnedAt: string | null;
-  criteria: string | null;
 }
 
 // -- Scratch Card -------------------------------------------------------------
 
 export interface ScratchCardData {
   id: string;
-  status: "AVAILABLE" | "SCRATCHED" | "CLAIMED" | "EXPIRED";
-  prizeType: "POINTS" | "DISCOUNT" | "REWARD" | "NONE" | null;
-  prizeValue: number | null;
-  prizeDescription: string | null;
+  prizeType: string;
+  prizeValue: number;
+  prizeLabel: string | null;
   expiresAt: string | null;
   scratchedAt: string | null;
   claimedAt: string | null;
+  createdAt: string;
+}
+
+/** Derive display status from scratch card date fields. */
+export function deriveScratchCardStatus(
+  card: ScratchCardData,
+): "AVAILABLE" | "SCRATCHED" | "CLAIMED" | "EXPIRED" {
+  if (card.claimedAt) return "CLAIMED";
+  if (card.expiresAt && new Date(card.expiresAt) < new Date()) return "EXPIRED";
+  if (card.scratchedAt) return "SCRATCHED";
+  return "AVAILABLE";
 }
 
 // -- Message ------------------------------------------------------------------
 
 export interface MessageData {
   id: string;
-  content: string;
-  senderType: "GUEST" | "HOTEL" | "SYSTEM";
-  senderName: string | null;
+  body: string;
+  isGuest: boolean;
+  sender: {
+    firstName: string | null;
+    lastName: string | null;
+    avatar: string | null;
+  };
   createdAt: string;
-  readAt: string | null;
 }
 
 // -- Gallery Image ------------------------------------------------------------

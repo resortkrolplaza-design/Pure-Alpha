@@ -205,23 +205,64 @@ export async function fetchRewards(
 export async function redeemReward(
   token: string,
   rewardId: string,
-): Promise<ApiResponse<{ redemptionCode: string; remainingPoints: number }>> {
+): Promise<ApiResponse<{
+  redemption: {
+    id: string;
+    rewardId: string;
+    rewardName: string;
+    pointsSpent: number;
+    status: string;
+    redemptionCode?: string | null;
+    createdAt: string;
+  };
+  updatedBalance: number;
+}>> {
   return loyalFetch(token, "/rewards/redeem", {
     method: "POST",
     body: JSON.stringify({ rewardId }),
   });
 }
 
+/** History response has `data` (array) + `pagination` at the same level. */
+export interface HistoryApiResponse {
+  status: "success" | "error";
+  data?: TransactionData[];
+  pagination?: { page: number; limit: number; total: number; totalPages: number };
+  errorMessage?: string;
+}
+
 export async function fetchHistory(
   token: string,
   page?: number,
   limit?: number,
-): Promise<ApiResponse<{ transactions: TransactionData[]; hasMore: boolean; total: number }>> {
+): Promise<HistoryApiResponse> {
   const params = new URLSearchParams();
   if (page != null) params.set("page", String(page));
   if (limit != null) params.set("limit", String(limit));
   const qs = params.toString();
-  return loyalFetch(token, `/history${qs ? `?${qs}` : ""}`);
+  // Use raw fetch since the response shape doesn't fit ApiResponse<T>
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  const lang = getLang();
+
+  try {
+    const url = `${API_BASE}/api/loyal/portal/${token}/history${qs ? `?${qs}` : ""}`;
+    const res = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      signal: controller.signal,
+    });
+    return (await res.json()) as HistoryApiResponse;
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return { status: "error", errorMessage: t(lang, "common.error") };
+    }
+    return { status: "error", errorMessage: t(lang, "common.networkError") };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export async function fetchChallenges(
@@ -230,9 +271,33 @@ export async function fetchChallenges(
   return loyalFetch(token, "/challenges");
 }
 
+/** API returns { earned: [...], available: [...] } -- NOT a flat array */
+export interface BadgesApiData {
+  earned: Array<{
+    id: string;
+    badgeId: string;
+    name: string;
+    description: string | null;
+    iconUrl: string | null;
+    emoji: string | null;
+    category: string | null;
+    sortOrder: number;
+    earnedAt: string;
+  }>;
+  available: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    iconUrl: string | null;
+    emoji: string | null;
+    category: string | null;
+    sortOrder: number;
+  }>;
+}
+
 export async function fetchBadges(
   token: string,
-): Promise<ApiResponse<BadgeData[]>> {
+): Promise<ApiResponse<BadgesApiData>> {
   return loyalFetch(token, "/badges");
 }
 
@@ -274,11 +339,11 @@ export async function fetchMessages(
 
 export async function sendMessage(
   token: string,
-  body: { content: string },
+  payload: { body: string },
 ): Promise<ApiResponse<MessageData>> {
   return loyalFetch(token, "/messages", {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify(payload),
   });
 }
 

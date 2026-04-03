@@ -134,7 +134,22 @@ function RewardsScreenInner() {
     refetchPortal();
   }, [refetchRewards, refetchPortal]);
 
-  const redeemMutation = useMutation<{ redemptionCode: string; remainingPoints: number }, Error, string>({
+  const redeemMutation = useMutation<
+    {
+      redemption: {
+        id: string;
+        rewardId: string;
+        rewardName: string;
+        pointsSpent: number;
+        status: string;
+        redemptionCode?: string | null;
+        createdAt: string;
+      };
+      updatedBalance: number;
+    },
+    Error,
+    string
+  >({
     mutationFn: async (rewardId: string) => {
       const res = await redeemReward(token!, rewardId);
       if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Redeem failed");
@@ -146,8 +161,8 @@ function RewardsScreenInner() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
         tt("rewards.success"),
-        result.redemptionCode
-          ? `${tt("rewards.code")}: ${result.redemptionCode}`
+        result.redemption.redemptionCode
+          ? `${tt("rewards.code")}: ${result.redemption.redemptionCode}`
           : tt("rewards.redeemed"),
       );
     },
