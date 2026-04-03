@@ -3,16 +3,19 @@
 // 5 tabs: Pobyt, Lojalnosc, Nagrody, Hotel, Wiadomosci
 // =============================================================================
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { Animated, Platform, StyleSheet, Text } from "react-native";
 import { Tabs, router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { loyal, fontSize, spacing } from "@/lib/tokens";
 import { useReducedMotion } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { fetchPortalData } from "@/lib/loyal-api";
 import { usePushNotifications } from "@/lib/usePushNotifications";
+import type { PortalData } from "@/lib/types";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -22,10 +25,12 @@ function AnimatedTabIcon({
   active,
   activeName,
   inactiveName,
+  activeColor = loyal.primary,
 }: {
   active: boolean;
   activeName: IoniconName;
   inactiveName: IoniconName;
+  activeColor?: string;
 }) {
   const reducedMotion = useReducedMotion();
   const scale = useRef(new Animated.Value(active ? 1.1 : 1)).current;
@@ -49,7 +54,7 @@ function AnimatedTabIcon({
       <Ionicons
         name={active ? activeName : inactiveName}
         size={24}
-        color={active ? loyal.primary : loyal.tabInactive}
+        color={active ? activeColor : loyal.tabInactive}
       />
     </Animated.View>
   );
@@ -57,13 +62,13 @@ function AnimatedTabIcon({
 
 // -- TabLabel (font weight change on focus) -----------------------------------
 
-function TabLabel({ label, focused }: { label: string; focused: boolean }) {
+function TabLabel({ label, focused, activeColor = loyal.primary }: { label: string; focused: boolean; activeColor?: string }) {
   return (
     <Text
       style={[
         styles.tabLabel,
         {
-          color: focused ? loyal.primary : loyal.tabInactive,
+          color: focused ? activeColor : loyal.tabInactive,
           fontFamily: focused ? "Inter_600SemiBold" : "Inter_400Regular",
         },
       ]}
@@ -79,6 +84,7 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
 export default function LoyalLayout() {
   const lang = useAppStore((s) => s.lang);
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const token = useAppStore((s) => s.token);
 
   // Register push token after authentication (best-effort, silent fail)
   usePushNotifications();
@@ -90,12 +96,30 @@ export default function LoyalLayout() {
     }
   }, [isAuthenticated]);
 
+  // P2-4: Read portalThemeConfig for dynamic accent color
+  const { data: portalData } = useQuery<PortalData>({
+    queryKey: ["portal", token],
+    queryFn: async () => {
+      const res = await fetchPortalData(token!);
+      if (res.status !== "success" || !res.data) throw new Error(res.errorMessage ?? "Failed");
+      return res.data;
+    },
+    enabled: !!token,
+  });
+
+  const accentColor = useMemo(() => {
+    const config = portalData?.program?.portalThemeConfig;
+    if (!config || typeof config !== "object") return loyal.primary;
+    const c = config as Record<string, unknown>;
+    return typeof c.primaryColor === "string" ? c.primaryColor : loyal.primary;
+  }, [portalData?.program?.portalThemeConfig]);
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: loyal.primary,
+        tabBarActiveTintColor: accentColor,
         tabBarInactiveTintColor: loyal.tabInactive,
         tabBarShowLabel: false,
       }}
@@ -114,10 +138,11 @@ export default function LoyalLayout() {
               active={focused}
               activeName="home"
               inactiveName="home-outline"
+              activeColor={accentColor}
             />
           ),
           tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.stay")} focused={focused} />
+            <TabLabel label={t(lang, "tab.stay")} focused={focused} activeColor={accentColor} />
           ),
           tabBarShowLabel: true,
           tabBarAccessibilityLabel: t(lang, "tab.stay"),
@@ -132,10 +157,11 @@ export default function LoyalLayout() {
               active={focused}
               activeName="star"
               inactiveName="star-outline"
+              activeColor={accentColor}
             />
           ),
           tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.loyalty")} focused={focused} />
+            <TabLabel label={t(lang, "tab.loyalty")} focused={focused} activeColor={accentColor} />
           ),
           tabBarShowLabel: true,
           tabBarAccessibilityLabel: t(lang, "tab.loyalty"),
@@ -150,10 +176,11 @@ export default function LoyalLayout() {
               active={focused}
               activeName="gift"
               inactiveName="gift-outline"
+              activeColor={accentColor}
             />
           ),
           tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.rewards")} focused={focused} />
+            <TabLabel label={t(lang, "tab.rewards")} focused={focused} activeColor={accentColor} />
           ),
           tabBarShowLabel: true,
           tabBarAccessibilityLabel: t(lang, "tab.rewards"),
@@ -168,10 +195,11 @@ export default function LoyalLayout() {
               active={focused}
               activeName="business"
               inactiveName="business-outline"
+              activeColor={accentColor}
             />
           ),
           tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.hotel")} focused={focused} />
+            <TabLabel label={t(lang, "tab.hotel")} focused={focused} activeColor={accentColor} />
           ),
           tabBarShowLabel: true,
           tabBarAccessibilityLabel: t(lang, "tab.hotel"),
@@ -186,10 +214,11 @@ export default function LoyalLayout() {
               active={focused}
               activeName="chatbubbles"
               inactiveName="chatbubbles-outline"
+              activeColor={accentColor}
             />
           ),
           tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.messages")} focused={focused} />
+            <TabLabel label={t(lang, "tab.messages")} focused={focused} activeColor={accentColor} />
           ),
           tabBarShowLabel: true,
           tabBarAccessibilityLabel: t(lang, "tab.messages"),

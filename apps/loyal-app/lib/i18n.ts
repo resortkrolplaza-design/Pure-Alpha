@@ -242,11 +242,20 @@ const pl: Record<string, string> = {
 
   // -- Loyalty extras ---------------------------------------------------------
   "loyalty.scratchCards": "Zdrap i wygraj",
-  "loyalty.discount": "Znizka",
-  "loyalty.nextTier": "Nastepny poziom",
+  "loyalty.discount": "Zni\u017cka",
+  "loyalty.nextTier": "Nast\u0119pny poziom",
   "loyalty.challenges": "Wyzwania",
   "loyalty.badges": "Odznaki",
-  "loyalty.expiringWarning": "{n} punktow wygasa wkrotce",
+  "loyalty.expiringWarning": "{n} punkt\u00f3w wygasa wkr\u00f3tce",
+  "loyalty.earningRules": "Zasady naliczania punkt\u00f3w",
+  "loyalty.earningRule.stay": "Za ka\u017cdy pobyt",
+  "loyalty.earningRule.spend": "Za ka\u017cd\u0105 wydan\u0105 z\u0142ot\u00f3wk\u0119",
+  "loyalty.earningRule.review": "Za opini\u0119",
+  "loyalty.earningRule.referral": "Za polecenie",
+  "loyalty.earningRule.booking": "Za rezerwacj\u0119",
+  "loyalty.tierBenefits": "Korzy\u015bci poziomu",
+  "loyalty.spent": "Wydano",
+  "loyalty.stays": "Pobyty",
 
   // -- Rewards extras ---------------------------------------------------------
   "rewards.yourPoints": "Twoje punkty",
@@ -261,6 +270,8 @@ const pl: Record<string, string> = {
   "hotel.gallery": "Galeria",
   "hotel.nearby": "Atrakcje w okolicy",
   "hotel.showOnMap": "Pokaz na mapie",
+  "hotel.map": "Mapa",
+  "hotel.website": "Strona",
 
   // -- Error Boundary ---------------------------------------------------------
   "error.fallback": "Cos poszlo nie tak",
@@ -509,6 +520,15 @@ const en: Record<string, string> = {
   "loyalty.challenges": "Challenges",
   "loyalty.badges": "Badges",
   "loyalty.expiringWarning": "{n} points expiring soon",
+  "loyalty.earningRules": "Earning Rules",
+  "loyalty.earningRule.stay": "Per stay",
+  "loyalty.earningRule.spend": "Per PLN spent",
+  "loyalty.earningRule.review": "Per review",
+  "loyalty.earningRule.referral": "Per referral",
+  "loyalty.earningRule.booking": "Per booking",
+  "loyalty.tierBenefits": "Tier Benefits",
+  "loyalty.spent": "Spent",
+  "loyalty.stays": "Stays",
 
   // -- Rewards extras ---------------------------------------------------------
   "rewards.yourPoints": "Your points",
@@ -523,6 +543,8 @@ const en: Record<string, string> = {
   "hotel.gallery": "Gallery",
   "hotel.nearby": "Nearby attractions",
   "hotel.showOnMap": "Show on map",
+  "hotel.map": "Map",
+  "hotel.website": "Website",
 
   // -- Error Boundary ---------------------------------------------------------
   "error.fallback": "Something went wrong",

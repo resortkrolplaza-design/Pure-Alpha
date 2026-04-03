@@ -91,11 +91,11 @@ function ProgressRing({
 
 // -- Service Card (horizontal scroll) -----------------------------------------
 
-function ServiceCard({ item }: { item: ServiceData }) {
+function ServiceCard({ item, accentColor }: { item: ServiceData; accentColor: string }) {
   return (
     <View style={styles.serviceCard}>
       <View style={styles.serviceIconWrap}>
-        <Icon name="sparkles" size={22} color={loyal.primary} />
+        <Icon name="sparkles" size={22} color={accentColor} />
       </View>
       <Text style={styles.serviceName} numberOfLines={2}>{item.name}</Text>
     </View>
@@ -131,6 +131,20 @@ function StayScreenInner() {
   const services = data?.services ?? [];
   const tierName = data?.tier?.name ?? null;
   const tierMultiplier = data?.tier?.multiplier ?? null;
+
+  // P2-2: Tier Benefits
+  const tierBenefits = useMemo(() => {
+    if (!data?.tier?.benefits) return [];
+    if (Array.isArray(data.tier.benefits)) return data.tier.benefits as string[];
+    return [];
+  }, [data?.tier?.benefits]);
+
+  // P2-4: Dynamic theme accent color
+  const accentColor = useMemo(() => {
+    if (!program?.portalThemeConfig || typeof program.portalThemeConfig !== "object") return loyal.primary;
+    const config = program.portalThemeConfig as Record<string, unknown>;
+    return typeof config.primaryColor === "string" ? config.primaryColor : loyal.primary;
+  }, [program?.portalThemeConfig]);
 
   const tierProgress = useMemo(() => {
     if (!data?.nextTier) return 0;
@@ -182,7 +196,7 @@ function StayScreenInner() {
       {member && (
         <View style={styles.loyaltyCard}>
           <LinearGradient
-            colors={[loyal.primary, loyal.primaryDark]}
+            colors={[accentColor, accentColor === loyal.primary ? loyal.primaryDark : accentColor]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.loyaltyGradient}
@@ -206,19 +220,32 @@ function StayScreenInner() {
         </View>
       )}
 
+      {/* Tier Benefits */}
+      {tierBenefits.length > 0 && (
+        <View style={styles.benefitsCard}>
+          <Text style={styles.benefitsTitle}>{tt("stay.yourBenefits")}</Text>
+          {tierBenefits.map((benefit, idx) => (
+            <View key={idx} style={styles.benefitRow}>
+              <Icon name="checkmark-circle" size={16} color={accentColor} />
+              <Text style={styles.benefitText}>{String(benefit)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Stats Row */}
       {member && (
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{member.totalStays ?? 0}</Text>
+            <Text style={[styles.statValue, { color: accentColor }]}>{member.totalStays ?? 0}</Text>
             <Text style={styles.statLabel}>{tt("stay.stays")}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{member.availablePoints ?? 0}</Text>
+            <Text style={[styles.statValue, { color: accentColor }]}>{member.availablePoints ?? 0}</Text>
             <Text style={styles.statLabel}>{tt("stay.points")}</Text>
           </View>
           <View style={styles.statCard}>
-            <Text style={styles.statValue}>{tierMultiplier ?? 1}x</Text>
+            <Text style={[styles.statValue, { color: accentColor }]}>{tierMultiplier ?? 1}x</Text>
             <Text style={styles.statLabel}>{tt("stay.multiplier")}</Text>
           </View>
         </View>
@@ -240,7 +267,7 @@ function StayScreenInner() {
             keyExtractor={(item) => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <ServiceCard item={item} />}
+            renderItem={({ item }) => <ServiceCard item={item} accentColor={accentColor} />}
             contentContainerStyle={styles.servicesList}
           />
         </View>
@@ -415,6 +442,37 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: loyal.lightTextSecondary,
     marginTop: spacing.xxs,
+  },
+
+  // -- Benefits ---------------------------------------------------------------
+  benefitsCard: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    backgroundColor: loyal.lightCard,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: loyal.lightCardBorder,
+    padding: spacing.xl,
+    gap: spacing.sm,
+    ...shadow.sm,
+  },
+  benefitsTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_700Bold",
+    color: loyal.lightText,
+    marginBottom: spacing.xs,
+  },
+  benefitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  benefitText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightText,
+    lineHeight: 18,
   },
 
   // -- Welcome ----------------------------------------------------------------

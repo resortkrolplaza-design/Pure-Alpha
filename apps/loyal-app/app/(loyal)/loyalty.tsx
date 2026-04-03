@@ -300,9 +300,23 @@ function LoyaltyScreenInner() {
   const tier = portalData?.tier;
   const nextTier = portalData?.nextTier;
   const expiringPoints = portalData?.expiringPoints;
+  const program = portalData?.program;
   const challenges = challengesData ?? [];
   const badges = badgesData ?? [];
   const cards = scratchCards ?? [];
+
+  // Parse earning rules from program data
+  const earningRules = useMemo(() => {
+    if (!program?.earningRules || typeof program.earningRules !== "object") return null;
+    return program.earningRules as Record<string, number>;
+  }, [program?.earningRules]);
+
+  // Parse tier benefits
+  const tierBenefits = useMemo(() => {
+    if (!tier?.benefits) return [];
+    if (Array.isArray(tier.benefits)) return tier.benefits as string[];
+    return [];
+  }, [tier?.benefits]);
 
   // Compute tier progress toward next tier
   const tierProgress = useMemo(() => {
@@ -352,6 +366,18 @@ function LoyaltyScreenInner() {
               </View>
             )}
           </View>
+          {/* Tier Benefits */}
+          {tierBenefits.length > 0 && (
+            <View style={styles.tierBenefitsSection}>
+              <Text style={styles.tierBenefitsLabel}>{tt("loyalty.tierBenefits")}</Text>
+              {tierBenefits.map((benefit, idx) => (
+                <View key={idx} style={styles.benefitRow}>
+                  <Icon name="checkmark-circle" size={16} color={loyal.primary} />
+                  <Text style={styles.benefitText}>{String(benefit)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
           {/* Progress to next tier */}
           {nextTier && (
             <View style={styles.nextTierSection}>
@@ -369,6 +395,16 @@ function LoyaltyScreenInner() {
               {nextTier.minPoints > 0 && (
                 <Text style={styles.tierCriteria}>
                   {member?.availablePoints ?? 0} / {nextTier.minPoints} {tt("stay.points")}
+                </Text>
+              )}
+              {nextTier.minSpent != null && (
+                <Text style={styles.tierCriteria}>
+                  {tt("loyalty.spent")}: {member?.totalSpent ?? 0} / {nextTier.minSpent} PLN
+                </Text>
+              )}
+              {nextTier.minStays != null && (
+                <Text style={styles.tierCriteria}>
+                  {tt("loyalty.stays")}: {member?.totalStays ?? 0} / {nextTier.minStays}
                 </Text>
               )}
             </View>
@@ -426,6 +462,37 @@ function LoyaltyScreenInner() {
             renderItem={({ item }) => <BadgeItem item={item} />}
             contentContainerStyle={styles.horizontalList}
           />
+        </View>
+      )}
+
+      {/* Earning Rules */}
+      {earningRules && Object.keys(earningRules).length > 0 && (
+        <View style={styles.earningRulesCard}>
+          <Text style={styles.sectionTitle}>{tt("loyalty.earningRules")}</Text>
+          {Object.entries(earningRules).map(([key, value]) => {
+            const iconMap: Record<string, import("@/lib/icons").IconName> = {
+              stay: "bed-outline",
+              spend: "wallet-outline",
+              review: "chatbubble-ellipses-outline",
+              referral: "people-outline",
+              booking: "calendar-outline",
+            };
+            const labelKey = `loyalty.earningRule.${key}`;
+            const label = tt(labelKey);
+            return (
+              <View key={key} style={styles.earningRuleRow}>
+                <View style={styles.earningRuleIconWrap}>
+                  <Icon
+                    name={iconMap[key] ?? "ellipse-outline"}
+                    size={18}
+                    color={loyal.primary}
+                  />
+                </View>
+                <Text style={styles.earningRuleLabel}>{label}</Text>
+                <Text style={styles.earningRulePoints}>+{value} pkt</Text>
+              </View>
+            );
+          })}
         </View>
       )}
 
@@ -762,6 +829,65 @@ const styles = StyleSheet.create({
   transactionPoints: {
     fontSize: fontSize.base,
     fontFamily: "Inter_700Bold",
+  },
+
+  // -- Tier Benefits ----------------------------------------------------------
+  tierBenefitsSection: {
+    gap: spacing.sm,
+  },
+  tierBenefitsLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: loyal.lightTextSecondary,
+    marginBottom: spacing.xxs,
+  },
+  benefitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  benefitText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightText,
+    lineHeight: 18,
+  },
+
+  // -- Earning Rules ----------------------------------------------------------
+  earningRulesCard: {
+    backgroundColor: loyal.lightCard,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: loyal.lightCardBorder,
+    padding: spacing.xl,
+    gap: spacing.md,
+    ...shadow.sm,
+  },
+  earningRuleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    minHeight: TOUCH_TARGET,
+  },
+  earningRuleIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: loyal.lightPrimaryFaint,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  earningRuleLabel: {
+    flex: 1,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightText,
+  },
+  earningRulePoints: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_700Bold",
+    color: loyal.primary,
   },
 
   // -- Load More --------------------------------------------------------------

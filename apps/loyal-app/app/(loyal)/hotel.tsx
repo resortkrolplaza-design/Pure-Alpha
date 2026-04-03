@@ -171,7 +171,15 @@ function ServiceCard({ item }: { item: ServiceData }) {
 
 // -- Attraction Card ----------------------------------------------------------
 
-function AttractionCard({ item }: { item: AttractionData }) {
+function AttractionCard({ item, lang }: { item: AttractionData; lang: "pl" | "en" }) {
+  const tt = (key: string) => t(lang, key);
+  const hasLinks = !!(item.mapUrl || item.websiteUrl);
+
+  const handleOpenUrl = useCallback((url: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Linking.openURL(url);
+  }, []);
+
   return (
     <View style={styles.attractionCard}>
       {item.imageUrl ? (
@@ -199,6 +207,32 @@ function AttractionCard({ item }: { item: AttractionData }) {
           <View style={styles.distanceBadge}>
             <Icon name="navigate" size={12} color={loyal.primary} />
             <Text style={styles.distanceText}>{item.distance}</Text>
+          </View>
+        )}
+        {hasLinks && (
+          <View style={styles.attractionLinks}>
+            {item.mapUrl && (
+              <Pressable
+                style={styles.attractionLinkBtn}
+                onPress={() => handleOpenUrl(item.mapUrl!)}
+                accessibilityRole="button"
+                accessibilityLabel={`${tt("hotel.map")} - ${item.name}`}
+              >
+                <Icon name="map-outline" size={14} color={loyal.primary} />
+                <Text style={styles.attractionLinkText}>{tt("hotel.map")}</Text>
+              </Pressable>
+            )}
+            {item.websiteUrl && (
+              <Pressable
+                style={styles.attractionLinkBtn}
+                onPress={() => handleOpenUrl(item.websiteUrl!)}
+                accessibilityRole="button"
+                accessibilityLabel={`${tt("hotel.website")} - ${item.name}`}
+              >
+                <Icon name="globe-outline" size={14} color={loyal.primary} />
+                <Text style={styles.attractionLinkText}>{tt("hotel.website")}</Text>
+              </Pressable>
+            )}
           </View>
         )}
       </View>
@@ -419,7 +453,7 @@ function HotelScreenInner() {
             {tt("hotel.nearby")}
           </Text>
           {attractions.map((att) => (
-            <AttractionCard key={att.id} item={att} />
+            <AttractionCard key={att.id} item={att} lang={lang} />
           ))}
         </View>
       )}
@@ -775,6 +809,29 @@ const styles = StyleSheet.create({
   distanceText: {
     fontSize: fontSize.xs,
     fontFamily: "Inter_500Medium",
+    color: loyal.primary,
+  },
+
+  // -- Attraction Links -------------------------------------------------------
+  attractionLinks: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  attractionLinkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: loyal.lightPrimaryFaint,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: TOUCH_TARGET,
+    justifyContent: "center",
+  },
+  attractionLinkText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_600SemiBold",
     color: loyal.primary,
   },
 

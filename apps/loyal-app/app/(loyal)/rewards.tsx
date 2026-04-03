@@ -65,6 +65,10 @@ function RewardCard({
       <View style={styles.rewardContent}>
         <Text style={styles.rewardName} numberOfLines={2}>{item.name}</Text>
 
+        {item.description && (
+          <Text style={styles.rewardDesc} numberOfLines={2}>{item.description}</Text>
+        )}
+
         {item.category && (
           <View style={styles.categoryBadge}>
             <Text style={styles.categoryText}>{item.category}</Text>
@@ -294,6 +298,12 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: loyal.lightText,
     lineHeight: 18,
+  },
+  rewardDesc: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextSecondary,
+    lineHeight: 16,
   },
   categoryBadge: {
     alignSelf: "flex-start",
