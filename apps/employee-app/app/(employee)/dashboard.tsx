@@ -428,7 +428,7 @@ function DashboardScreenInner() {
             </View>
             <Text style={styles.statUnit}>PLN</Text>
             <Text style={styles.statLabel}>
-              {t(lang, "dash.earnings")}{data?.stats?.isNetRate === false ? ` ${t(lang, "dash.gross")}` : ""}
+              {t(lang, "dash.earnings")}
             </Text>
           </View>
 

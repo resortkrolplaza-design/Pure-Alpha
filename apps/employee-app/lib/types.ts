@@ -55,7 +55,6 @@ export interface DashboardData {
     overtimeThisMonth: number;
     earningsThisMonth: number | null;
     earningsProjected: number | null;
-    isNetRate: boolean;
     pendingLeaveRequests: number;
     vacationRemaining: number;
   };

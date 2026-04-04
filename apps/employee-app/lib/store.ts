@@ -1,8 +1,10 @@
 // =============================================================================
-// Employee App -- Zustand Store
+// Employee App -- Zustand Store (persisted via AsyncStorage)
 // =============================================================================
 
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface EmployeeState {
   isAuthenticated: boolean;
@@ -45,24 +47,46 @@ const initialState = {
   pendingClockIn: null,
 };
 
-export const useAppStore = create<EmployeeState>((set) => ({
-  ...initialState,
-  setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
-  setEmployee: (data) => set({
-    employeeId: data.id,
-    employeeName: data.name,
-    department: data.department ?? null,
-    position: data.position ?? null,
-  }),
-  setHotel: (data) => set({
-    hotelSlug: data.slug,
-    hotelId: data.id,
-    hotelName: data.name,
-  }),
-  setLang: (lang) => set({ lang }),
-  setClockedIn: (isClockedIn) => set({ isClockedIn }),
-  setBiometricEnrolled: (isBiometricEnrolled) => set({ isBiometricEnrolled }),
-  setHotelOnboarded: (isHotelOnboarded) => set({ isHotelOnboarded }),
-  setPendingClockIn: (pendingClockIn) => set({ pendingClockIn }),
-  reset: () => set(initialState),
-}));
+export const useAppStore = create<EmployeeState>()(
+  persist(
+    (set) => ({
+      ...initialState,
+      setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
+      setEmployee: (data) => set({
+        employeeId: data.id,
+        employeeName: data.name,
+        department: data.department ?? null,
+        position: data.position ?? null,
+      }),
+      setHotel: (data) => set({
+        hotelSlug: data.slug,
+        hotelId: data.id,
+        hotelName: data.name,
+      }),
+      setLang: (lang) => set({ lang }),
+      setClockedIn: (isClockedIn) => set({ isClockedIn }),
+      setBiometricEnrolled: (isBiometricEnrolled) => set({ isBiometricEnrolled }),
+      setHotelOnboarded: (isHotelOnboarded) => set({ isHotelOnboarded }),
+      setPendingClockIn: (pendingClockIn) => set({ pendingClockIn }),
+      reset: () => set(initialState),
+    }),
+    {
+      name: "employee-app-store",
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        isAuthenticated: state.isAuthenticated,
+        employeeId: state.employeeId,
+        employeeName: state.employeeName,
+        department: state.department,
+        position: state.position,
+        hotelSlug: state.hotelSlug,
+        hotelId: state.hotelId,
+        hotelName: state.hotelName,
+        lang: state.lang,
+        isBiometricEnrolled: state.isBiometricEnrolled,
+        isHotelOnboarded: state.isHotelOnboarded,
+        // NOT persisted: isClockedIn (re-fetched from API), pendingClockIn (ephemeral)
+      }),
+    },
+  ),
+);

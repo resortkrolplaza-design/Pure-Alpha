@@ -87,7 +87,6 @@ const pl: Record<string, string> = {
   "dash.monthlyHours": "Godziny w miesi\u0105cu",
   "dash.overtime": "Nadgodziny",
   "dash.vacation": "Urlop",
-  "dash.gross": "(brutto)",
   "dash.remaining": "pozosta\u0142o",
   "dash.upcoming": "Najbli\u017Csze zmiany",
 
@@ -334,7 +333,6 @@ const en: Record<string, string> = {
   "dash.monthlyHours": "Hours",
   "dash.overtime": "Overtime",
   "dash.vacation": "Vacation",
-  "dash.gross": "(gross)",
   "dash.remaining": "remaining",
   "dash.upcoming": "Upcoming shifts",
 
