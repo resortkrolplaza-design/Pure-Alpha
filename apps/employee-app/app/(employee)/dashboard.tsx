@@ -92,6 +92,45 @@ function DashboardScreenInner() {
     },
   });
 
+  // Live timer -- counts elapsed time from clockInTime
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    if (data?.isClockedIn && data?.activeShift?.clockInTime) {
+      const clockInMs = new Date(data.activeShift.clockInTime).getTime();
+
+      // Update immediately
+      setElapsedMs(Math.max(0, Date.now() - clockInMs));
+
+      // Update every second
+      timerRef.current = setInterval(() => {
+        setElapsedMs(Math.max(0, Date.now() - clockInMs));
+      }, 1000);
+    } else {
+      setElapsedMs(0);
+    }
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [data?.isClockedIn, data?.activeShift?.clockInTime]);
+
+  // Derived values from elapsed time
+  const elapsedHours = elapsedMs / (1000 * 60 * 60);
+  const elapsedFormatted = (() => {
+    const totalSec = Math.floor(elapsedMs / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  })();
+  const shiftProgress = data?.activeShift?.scheduledHours
+    ? Math.min(1, elapsedHours / data.activeShift.scheduledHours)
+    : 0;
+
   const clockMutation = useMutation({
     mutationFn: async (params: {
       action: "clock-in" | "clock-out";
@@ -364,6 +403,21 @@ function DashboardScreenInner() {
                       {data.todayShift.startTime} -- {data.todayShift.endTime}
                     </Text>
                     <Text style={styles.heroDept}>{data.todayShift.department}</Text>
+                    {/* Live Timer */}
+                    {data?.isClockedIn && data?.activeShift && (
+                      <View style={styles.liveTimerWrap}>
+                        <View style={styles.liveTimerRow}>
+                          <Icon name="timer-outline" size={16} color="rgba(255,255,255,0.9)" />
+                          <Text style={styles.liveTimerText}>{elapsedFormatted}</Text>
+                        </View>
+                        <View style={styles.progressBarBg}>
+                          <View style={[styles.progressBarFill, { width: `${Math.round(shiftProgress * 100)}%` }]} />
+                        </View>
+                        <Text style={styles.progressLabel}>
+                          {Math.round(shiftProgress * 100)}%
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 ) : (
                   <Text style={styles.heroEmpty}>{t(lang, "dash.noShift")}</Text>
@@ -416,9 +470,13 @@ function DashboardScreenInner() {
             <Icon name="cash-outline" size={22} color={emp.success} />
             <View style={styles.statValueRow}>
               <Text style={styles.statValue}>
-                {data?.stats?.earningsThisMonth != null
-                  ? formatMoney(data.stats.earningsThisMonth)
-                  : "\u2014"}
+                {(() => {
+                  const base = data?.stats?.earningsThisMonth;
+                  const rate = data?.stats?.hourlyRateNet;
+                  if (base == null) return "\u2014";
+                  const liveExtra = (data?.isClockedIn && rate) ? elapsedHours * rate : 0;
+                  return formatMoney(Math.round(base + liveExtra));
+                })()}
               </Text>
               {data?.stats?.earningsProjected != null && (
                 <Text style={styles.statProjected}>
@@ -437,7 +495,7 @@ function DashboardScreenInner() {
             <Icon name="time-outline" size={22} color={emp.primary} />
             <View style={styles.statValueRow}>
               <Text style={styles.statValue}>
-                {formatHours(data?.stats?.hoursThisMonth ?? 0, lang)}
+                {formatHours((data?.stats?.hoursThisMonth ?? 0) + (data?.isClockedIn ? elapsedHours : 0), lang)}
               </Text>
               <Text style={styles.statProjected}>
                 {" "}/ {formatHours(data?.stats?.scheduledHoursThisMonth ?? 0, lang)}h
@@ -838,6 +896,41 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     alignItems: "center",
+  },
+
+  // -- Live Timer ---------------------------------------------------------------
+  liveTimerWrap: {
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  liveTimerRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.sm,
+  },
+  liveTimerText: {
+    fontSize: fontSize["2xl"],
+    fontFamily: "Inter_700Bold",
+    color: "rgba(255,255,255,0.95)",
+    fontVariant: ["tabular-nums"] as any,
+    letterSpacing: 1,
+  },
+  progressBarBg: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    overflow: "hidden" as const,
+  },
+  progressBarFill: {
+    height: "100%" as any,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.8)",
+  },
+  progressLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    color: "rgba(255,255,255,0.7)",
+    textAlign: "right" as const,
   },
 
   // -- Android PIN Modal --------------------------------------------------------

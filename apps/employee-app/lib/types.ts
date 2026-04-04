@@ -36,6 +36,7 @@ interface ActiveShift {
   endTime: string;
   department: string;
   shiftType: string;
+  scheduledHours: number;
 }
 
 export interface DashboardData {
@@ -55,6 +56,7 @@ export interface DashboardData {
     overtimeThisMonth: number;
     earningsThisMonth: number | null;
     earningsProjected: number | null;
+    hourlyRateNet: number | null;
     pendingLeaveRequests: number;
     vacationRemaining: number;
   };

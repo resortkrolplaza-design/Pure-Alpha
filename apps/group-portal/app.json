@@ -46,6 +46,13 @@
           "color": "#6366f1"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "8e864590-8574-4ad0-84d3-5f5f459d7c37"
+      }
+    },
+    "owner": "purealpha"
   }
 }

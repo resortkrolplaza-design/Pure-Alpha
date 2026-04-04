@@ -16,6 +16,23 @@ export function mapInitResponse(raw: Record<string, unknown>): PortalInitData {
 
   const program = raw.program as ProgramData;
 
+  // Sanitize earningRules: flatten nested objects to primitives so React
+  // never attempts to render an object like {flatPoints: 100} as a child.
+  // The mobile app does not render earningRules, but Expo Router / RN Web
+  // internals can traverse the entire store and crash on nested objects.
+  const safeEarningRules: Record<string, unknown> = {};
+  if (program.earningRules && typeof program.earningRules === "object") {
+    for (const [key, val] of Object.entries(program.earningRules)) {
+      if (val !== null && typeof val === "object") {
+        // Extract flatPoints or first numeric value as the display-safe value
+        const obj = val as Record<string, unknown>;
+        safeEarningRules[key] = obj.flatPoints ?? obj.pointsPerCurrency ?? Object.values(obj).find(v => typeof v === "number") ?? 0;
+      } else {
+        safeEarningRules[key] = val;
+      }
+    }
+  }
+
   return {
     member: {
       ...(raw.member as MemberData),
@@ -26,6 +43,7 @@ export function mapInitResponse(raw: Record<string, unknown>): PortalInitData {
     program: {
       ...program,
       currency: program.currency ?? undefined,
+      earningRules: safeEarningRules,
     },
     hotel: raw.hotel as HotelData,
     tiers: (raw.tiers as TierData[]) ?? [],

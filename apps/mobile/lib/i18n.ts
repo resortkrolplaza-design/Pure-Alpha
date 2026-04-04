@@ -96,6 +96,13 @@ const pl: Record<string, string> = {
   "points.source.REVIEW": "Opinia",
   "points.source.SCRATCH_CARD": "Zdrapka",
   "points.source.AUTOMATION": "Automatyzacja",
+  "loyalty.earningRule.signup": "Za rejestrację",
+  "loyalty.earningRule.booking": "Za rezerwację",
+  "loyalty.earningRule.checkin": "Za zameldowanie",
+  "loyalty.earningRule.checkout": "Za wymeldowanie",
+  "loyalty.earningRule.spend": "Za wydatki",
+  "loyalty.earningRule.review": "Za opinię",
+  "loyalty.earningRule.referral": "Za polecenie",
 
   // ── Rewards Tab ────────────────────────────────────────────────────
   "rewards.catalog": "Katalog nagród",
@@ -319,6 +326,13 @@ const en: Record<string, string> = {
   "points.source.REVIEW": "Review",
   "points.source.SCRATCH_CARD": "Scratch card",
   "points.source.AUTOMATION": "Automation",
+  "loyalty.earningRule.signup": "For signing up",
+  "loyalty.earningRule.booking": "For booking",
+  "loyalty.earningRule.checkin": "For check-in",
+  "loyalty.earningRule.checkout": "For check-out",
+  "loyalty.earningRule.spend": "For spending",
+  "loyalty.earningRule.review": "For review",
+  "loyalty.earningRule.referral": "For referral",
 
   // ── Rewards Tab ────────────────────────────────────────────────────
   "rewards.catalog": "Reward catalog",
