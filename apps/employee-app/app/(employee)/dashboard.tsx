@@ -479,7 +479,9 @@ function DashboardScreenInner() {
                               <Icon name="cafe-outline" size={16} color="#fbbf24" />
                               <Text style={styles.breakActiveText}>
                                 {t(lang, "dash.breakActive")} {breakElapsedFormatted}
-                                {data?.breakConfig?.maxMinutes ? ` / ${data.breakConfig.maxMinutes}:00` : ""}
+                                {data?.breakConfig?.maxMinutes
+                                  ? ` / ${Math.max(0, data.breakConfig.maxMinutes - (data.activeShift?.actualBreakMinutes ?? 0))}:00`
+                                  : ""}
                               </Text>
                             </View>
                             <Pressable
@@ -510,7 +512,9 @@ function DashboardScreenInner() {
                               <>
                                 <Icon name="cafe-outline" size={14} color="rgba(255,255,255,0.9)" />
                                 <Text style={styles.breakStartText}>
-                                  {t(lang, "dash.break")}{data?.breakConfig?.maxMinutes ? ` (${data.breakConfig.maxMinutes} min)` : ""}
+                                  {t(lang, "dash.break")}{data?.breakConfig?.maxMinutes
+                                    ? ` (${Math.max(0, data.breakConfig.maxMinutes - (data.activeShift?.actualBreakMinutes ?? 0))} min)`
+                                    : ""}
                                 </Text>
                               </>
                             )}
