@@ -91,13 +91,18 @@ function ProgressRing({
 
 // -- Service Card (horizontal scroll) -----------------------------------------
 
-function ServiceCard({ item, accentColor }: { item: ServiceData; accentColor: string }) {
+function ServiceCard({ item, accentColor, currency }: { item: ServiceData; accentColor: string; currency: string }) {
   return (
     <View style={styles.serviceCard}>
       <View style={styles.serviceIconWrap}>
         <Icon name="sparkles" size={22} color={accentColor} />
       </View>
       <Text style={styles.serviceName} numberOfLines={2}>{item.name}</Text>
+      {item.price != null && (
+        <Text style={styles.servicePrice}>
+          {item.price} {item.currency ?? currency}
+        </Text>
+      )}
     </View>
   );
 }
@@ -218,7 +223,9 @@ function StayScreenInner() {
           >
             <View style={styles.loyaltyTop}>
               <View style={styles.loyaltyInfo}>
-                <Text style={styles.loyaltyName}>{member.firstName} {member.lastName}</Text>
+                {(member.firstName || member.lastName) && (
+                  <Text style={styles.loyaltyName}>{[member.firstName, member.lastName].filter(Boolean).join(" ")}</Text>
+                )}
                 {member.memberNumber && (
                   <Text style={styles.loyaltyNumber}>#{member.memberNumber}</Text>
                 )}
@@ -377,7 +384,7 @@ function StayScreenInner() {
             keyExtractor={(item) => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <ServiceCard item={item} accentColor={accentColor} />}
+            renderItem={({ item }) => <ServiceCard item={item} accentColor={accentColor} currency="PLN" />}
             contentContainerStyle={styles.servicesList}
           />
         </View>
@@ -663,6 +670,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: loyal.lightText,
     textAlign: "center",
+  },
+  servicePrice: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: loyal.primary,
+    textAlign: "center" as const,
+    marginTop: 2,
   },
 
   // -- Contact ----------------------------------------------------------------
