@@ -84,7 +84,7 @@ function DashboardScreenInner() {
     queryKey: ["employee-dashboard"],
     queryFn: async () => {
       const res = await employeeFetch<DashboardData>("/dashboard");
-      if (res.status !== "success") return null;
+      if (res.status !== "success") throw new Error(res.errorMessage || "Blad serwera");
       if (res.data?.isClockedIn !== undefined) {
         setClockedIn(res.data.isClockedIn);
       }

@@ -76,7 +76,7 @@ function LeaveScreenInner() {
     queryKey: ["employee-leave-balance"],
     queryFn: async () => {
       const res = await fetchLeaveBalance();
-      if (res.status !== "success") return null;
+      if (res.status !== "success") throw new Error(res.errorMessage || "Blad serwera");
       return res.data ?? null;
     },
   });
@@ -86,7 +86,7 @@ function LeaveScreenInner() {
     queryKey: ["employee-leave-requests"],
     queryFn: async () => {
       const res = await fetchLeaveRequests();
-      if (res.status !== "success") return null;
+      if (res.status !== "success") throw new Error(res.errorMessage || "Blad serwera");
       return (res.data ?? []) as LeaveRequest[];
     },
   });

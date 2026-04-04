@@ -64,7 +64,8 @@ function DocumentsScreenInner() {
     queryKey: ["employee-documents"],
     queryFn: async () => {
       const res = await fetchDocuments();
-      return (res.status === "success" ? res.data : []) as DocItem[];
+      if (res.status !== "success") throw new Error(res.errorMessage || "Blad serwera");
+      return (res.data ?? []) as DocItem[];
     },
   });
 
