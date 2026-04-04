@@ -37,6 +37,10 @@ interface ActiveShift {
   department: string;
   shiftType: string;
   scheduledHours: number;
+  isOnBreak: boolean;
+  breakStartTime: string | null;
+  actualBreakMinutes: number;
+  breakUsed: boolean;
 }
 
 export interface DashboardData {

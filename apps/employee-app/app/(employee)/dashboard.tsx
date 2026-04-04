@@ -95,6 +95,8 @@ function DashboardScreenInner() {
   // Live timer -- counts elapsed time from clockInTime
   const [elapsedMs, setElapsedMs] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [breakElapsedMs, setBreakElapsedMs] = useState(0);
+  const breakTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -102,13 +104,19 @@ function DashboardScreenInner() {
     if (data?.isClockedIn && data?.activeShift?.clockInTime) {
       const clockInMs = new Date(data.activeShift.clockInTime).getTime();
 
-      // Update immediately
-      setElapsedMs(Math.max(0, Date.now() - clockInMs));
-
-      // Update every second
-      timerRef.current = setInterval(() => {
-        setElapsedMs(Math.max(0, Date.now() - clockInMs));
-      }, 1000);
+      // If currently on break, freeze the main timer at break start
+      if (data?.activeShift?.isOnBreak && data?.activeShift?.breakStartTime) {
+        const breakStartMs = new Date(data.activeShift.breakStartTime).getTime();
+        setElapsedMs(Math.max(0, breakStartMs - clockInMs));
+        // No interval needed -- timer is frozen during break
+      } else {
+        // Subtract any completed break time
+        const breakMs = (data?.activeShift?.actualBreakMinutes ?? 0) * 60000;
+        setElapsedMs(Math.max(0, Date.now() - clockInMs - breakMs));
+        timerRef.current = setInterval(() => {
+          setElapsedMs(Math.max(0, Date.now() - clockInMs - breakMs));
+        }, 1000);
+      }
     } else {
       setElapsedMs(0);
     }
@@ -116,7 +124,23 @@ function DashboardScreenInner() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [data?.isClockedIn, data?.activeShift?.clockInTime]);
+  }, [data?.isClockedIn, data?.activeShift?.clockInTime, data?.activeShift?.isOnBreak, data?.activeShift?.breakStartTime, data?.activeShift?.actualBreakMinutes]);
+
+  useEffect(() => {
+    if (breakTimerRef.current) clearInterval(breakTimerRef.current);
+
+    if (data?.activeShift?.isOnBreak && data?.activeShift?.breakStartTime) {
+      const breakStart = new Date(data.activeShift.breakStartTime).getTime();
+      setBreakElapsedMs(Math.max(0, Date.now() - breakStart));
+      breakTimerRef.current = setInterval(() => {
+        setBreakElapsedMs(Math.max(0, Date.now() - breakStart));
+      }, 1000);
+    } else {
+      setBreakElapsedMs(0);
+    }
+
+    return () => { if (breakTimerRef.current) clearInterval(breakTimerRef.current); };
+  }, [data?.activeShift?.isOnBreak, data?.activeShift?.breakStartTime]);
 
   // Derived values from elapsed time
   const elapsedHours = elapsedMs / (1000 * 60 * 60);
@@ -130,6 +154,13 @@ function DashboardScreenInner() {
   const shiftProgress = data?.activeShift?.scheduledHours
     ? Math.min(1, elapsedHours / data.activeShift.scheduledHours)
     : 0;
+
+  const breakElapsedFormatted = (() => {
+    const totalSec = Math.floor(breakElapsedMs / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  })();
 
   const clockMutation = useMutation({
     mutationFn: async (params: {
@@ -171,6 +202,25 @@ function DashboardScreenInner() {
         t(lang, "common.error"),
         t(lang, "common.networkError"),
       );
+    },
+  });
+
+  const breakMutation = useMutation({
+    mutationFn: async (action: "start" | "end") => {
+      const res = await employeeFetch("/break", {
+        method: "POST",
+        body: JSON.stringify({ action }),
+      });
+      if (res.status !== "success") throw new Error(res.errorMessage || "Blad");
+      return res;
+    },
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      queryClient.invalidateQueries({ queryKey: ["employee-dashboard"] });
+    },
+    onError: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(t(lang, "common.error"), t(lang, "common.networkError"));
     },
   });
 
@@ -416,6 +466,49 @@ function DashboardScreenInner() {
                         <Text style={styles.progressLabel}>
                           {Math.round(shiftProgress * 100)}%
                         </Text>
+                        {/* Break button or break active display */}
+                        {data.activeShift.isOnBreak ? (
+                          <View style={styles.breakActiveWrap}>
+                            <View style={styles.breakActiveRow}>
+                              <Icon name="cafe-outline" size={16} color="#fbbf24" />
+                              <Text style={styles.breakActiveText}>
+                                {t(lang, "dash.breakActive")} {breakElapsedFormatted}
+                              </Text>
+                            </View>
+                            <Pressable
+                              style={styles.breakReturnBtn}
+                              onPress={() => breakMutation.mutate("end")}
+                              disabled={breakMutation.isPending}
+                              accessibilityRole="button"
+                              accessibilityLabel={t(lang, "dash.breakReturn")}
+                            >
+                              {breakMutation.isPending ? (
+                                <ActivityIndicator size="small" color={emp.white} />
+                              ) : (
+                                <Text style={styles.breakReturnText}>{t(lang, "dash.breakReturn")}</Text>
+                              )}
+                            </Pressable>
+                          </View>
+                        ) : !data.activeShift.breakUsed ? (
+                          <Pressable
+                            style={styles.breakStartBtn}
+                            onPress={() => breakMutation.mutate("start")}
+                            disabled={breakMutation.isPending}
+                            accessibilityRole="button"
+                            accessibilityLabel={t(lang, "dash.break")}
+                          >
+                            {breakMutation.isPending ? (
+                              <ActivityIndicator size="small" color="rgba(255,255,255,0.9)" />
+                            ) : (
+                              <>
+                                <Icon name="cafe-outline" size={14} color="rgba(255,255,255,0.9)" />
+                                <Text style={styles.breakStartText}>{t(lang, "dash.break")}</Text>
+                              </>
+                            )}
+                          </Pressable>
+                        ) : (
+                          <Text style={styles.breakUsedText}>{t(lang, "dash.breakUsed")}</Text>
+                        )}
                       </View>
                     )}
                   </View>
@@ -931,6 +1024,59 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: "rgba(255,255,255,0.7)",
     textAlign: "right" as const,
+  },
+
+  // -- Break ----------------------------------------------------------------
+  breakActiveWrap: {
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  breakActiveRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.sm,
+  },
+  breakActiveText: {
+    fontSize: fontSize.lg,
+    fontFamily: "Inter_700Bold",
+    color: "#fbbf24",
+    fontVariant: ["tabular-nums"] as any,
+  },
+  breakReturnBtn: {
+    backgroundColor: "rgba(34,197,94,0.3)",
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    minHeight: 36,
+  },
+  breakReturnText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_600SemiBold",
+    color: "rgba(255,255,255,0.95)",
+  },
+  breakStartBtn: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: spacing.xs,
+    backgroundColor: "rgba(251,191,36,0.2)",
+    borderRadius: radius.md,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    alignSelf: "flex-start" as const,
+    marginTop: spacing.sm,
+  },
+  breakStartText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_500Medium",
+    color: "rgba(255,255,255,0.9)",
+  },
+  breakUsedText: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.5)",
+    marginTop: spacing.sm,
   },
 
   // -- Android PIN Modal --------------------------------------------------------
