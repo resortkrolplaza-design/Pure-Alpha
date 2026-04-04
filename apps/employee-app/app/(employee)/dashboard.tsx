@@ -29,8 +29,11 @@ function formatHours(num: number, lang: "pl" | "en"): string {
   return lang === "pl" ? fixed.replace(".", ",") : fixed;
 }
 
-function formatMoney(amount: number): string {
-  return amount.toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+function formatMoney(amount: number, live = false): string {
+  return amount.toLocaleString("pl-PL", {
+    minimumFractionDigits: live ? 2 : 0,
+    maximumFractionDigits: live ? 2 : 0,
+  });
 }
 
 function getGreetingKey(): string {
@@ -110,8 +113,11 @@ function DashboardScreenInner() {
         setElapsedMs(Math.max(0, breakStartMs - clockInMs));
         // No interval needed -- timer is frozen during break
       } else {
-        // Subtract any completed break time
-        const breakMs = (data?.activeShift?.actualBreakMinutes ?? 0) * 60000;
+        // Subtract only UNPAID break time (paidMinutes are counted as work per art. 134 KP)
+        const actualBreakMins = data?.activeShift?.actualBreakMinutes ?? 0;
+        const paidMins = data?.breakConfig?.paidMinutes ?? 0;
+        const unpaidBreakMins = Math.max(0, actualBreakMins - paidMins);
+        const breakMs = unpaidBreakMins * 60000;
         setElapsedMs(Math.max(0, Date.now() - clockInMs - breakMs));
         timerRef.current = setInterval(() => {
           setElapsedMs(Math.max(0, Date.now() - clockInMs - breakMs));
@@ -218,9 +224,9 @@ function DashboardScreenInner() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["employee-dashboard"] });
     },
-    onError: () => {
+    onError: (err: Error) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t(lang, "common.error"), t(lang, "common.networkError"));
+      Alert.alert(t(lang, "common.error"), err.message || t(lang, "common.networkError"));
     },
   });
 
@@ -461,18 +467,19 @@ function DashboardScreenInner() {
                           <Text style={styles.liveTimerText}>{elapsedFormatted}</Text>
                         </View>
                         <View style={styles.progressBarBg}>
-                          <View style={[styles.progressBarFill, { width: `${Math.round(shiftProgress * 100)}%` }]} />
+                          <View style={[styles.progressBarFill, { width: `${Math.round(shiftProgress * 10000) / 100}%` as any }]} />
                         </View>
                         <Text style={styles.progressLabel}>
-                          {Math.round(shiftProgress * 100)}%
+                          {(shiftProgress * 100).toFixed(1)}%
                         </Text>
-                        {/* Break button or break active display */}
-                        {data.activeShift.isOnBreak ? (
+                        {/* Break button or break active display (only when enabled in hotel config) */}
+                        {data?.breakConfig?.enabled !== false && data.activeShift.isOnBreak ? (
                           <View style={styles.breakActiveWrap}>
                             <View style={styles.breakActiveRow}>
                               <Icon name="cafe-outline" size={16} color="#fbbf24" />
                               <Text style={styles.breakActiveText}>
                                 {t(lang, "dash.breakActive")} {breakElapsedFormatted}
+                                {data?.breakConfig?.maxMinutes ? ` / ${data.breakConfig.maxMinutes}:00` : ""}
                               </Text>
                             </View>
                             <Pressable
@@ -489,7 +496,7 @@ function DashboardScreenInner() {
                               )}
                             </Pressable>
                           </View>
-                        ) : !data.activeShift.breakUsed ? (
+                        ) : data?.breakConfig?.enabled !== false && !data.activeShift.breakUsed ? (
                           <Pressable
                             style={styles.breakStartBtn}
                             onPress={() => breakMutation.mutate("start")}
@@ -502,7 +509,9 @@ function DashboardScreenInner() {
                             ) : (
                               <>
                                 <Icon name="cafe-outline" size={14} color="rgba(255,255,255,0.9)" />
-                                <Text style={styles.breakStartText}>{t(lang, "dash.break")}</Text>
+                                <Text style={styles.breakStartText}>
+                                  {t(lang, "dash.break")}{data?.breakConfig?.maxMinutes ? ` (${data.breakConfig.maxMinutes} min)` : ""}
+                                </Text>
                               </>
                             )}
                           </Pressable>
@@ -567,8 +576,9 @@ function DashboardScreenInner() {
                   const base = data?.stats?.earningsThisMonth;
                   const rate = data?.stats?.hourlyRateNet;
                   if (base == null) return "\u2014";
-                  const liveExtra = (data?.isClockedIn && rate) ? elapsedHours * rate : 0;
-                  return formatMoney(Math.round(base + liveExtra));
+                  const isLive = !!(data?.isClockedIn && rate);
+                  const liveExtra = isLive ? elapsedHours * rate : 0;
+                  return formatMoney(base + liveExtra, isLive);
                 })()}
               </Text>
               {data?.stats?.earningsProjected != null && (
@@ -1049,7 +1059,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     alignItems: "center" as const,
     justifyContent: "center" as const,
-    minHeight: 36,
+    minHeight: TOUCH_TARGET,
   },
   breakReturnText: {
     fontSize: fontSize.sm,
@@ -1066,6 +1076,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     alignSelf: "flex-start" as const,
     marginTop: spacing.sm,
+    minHeight: TOUCH_TARGET,
   },
   breakStartText: {
     fontSize: fontSize.xs,

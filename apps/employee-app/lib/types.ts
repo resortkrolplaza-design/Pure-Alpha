@@ -64,6 +64,11 @@ export interface DashboardData {
     pendingLeaveRequests: number;
     vacationRemaining: number;
   };
+  breakConfig: {
+    enabled: boolean;
+    maxMinutes: number;
+    paidMinutes: number;
+  };
   serverTime: string;
 }
 
