@@ -25,7 +25,7 @@ import { loyal, fontSize, radius, spacing, shadow, TOUCH_TARGET } from "@/lib/to
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { fetchRewards, redeemReward, fetchPortalData, fetchOffers } from "@/lib/loyal-api";
+import { fetchRewards, redeemReward, fetchPortalData, fetchOffers, trackOfferClick } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { RewardData, PortalData, OfferData } from "@/lib/types";
 
@@ -117,10 +117,12 @@ function OfferCard({
   item,
   lang,
   globalTierNameMap,
+  token,
 }: {
   item: OfferData;
   lang: "pl" | "en";
   globalTierNameMap: Map<string, string>;
+  token: string | null;
 }) {
   const tt = (key: string) => t(lang, key);
   const [imageError, setImageError] = useState(false);
@@ -202,6 +204,7 @@ function OfferCard({
               const url = item.bookingUrl!;
               // Block dangerous URI schemes (javascript:, data:, vbscript:)
               if (!/^https?:\/\//i.test(url)) return;
+              if (token) trackOfferClick(token, item.id);
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               Linking.openURL(url);
             }}
@@ -358,7 +361,7 @@ function RewardsScreenInner() {
             keyExtractor={(item) => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <OfferCard item={item} lang={lang} globalTierNameMap={globalTierNameMap} />}
+            renderItem={({ item }) => <OfferCard item={item} lang={lang} globalTierNameMap={globalTierNameMap} token={token} />}
             contentContainerStyle={styles.offersListContent}
           />
         ) : !isRefetchingOffers ? (

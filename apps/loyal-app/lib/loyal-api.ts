@@ -368,3 +368,14 @@ export async function subscribePush(
     body: JSON.stringify(data),
   });
 }
+
+export async function trackOfferClick(
+  token: string,
+  offerId: string,
+): Promise<void> {
+  try {
+    await loyalFetch(token, `/offers/${offerId}/click`, { method: "POST" });
+  } catch {
+    /* fire and forget */
+  }
+}
