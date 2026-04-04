@@ -12,10 +12,16 @@
       }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "ios": {
+        "appleTeamId": "MX59BMDM89"
+      }
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "ios": {
+        "appleTeamId": "MX59BMDM89"
+      }
     }
   }
 }

@@ -14,13 +14,13 @@
     "preview": {
       "distribution": "internal",
       "ios": {
-        "appleTeamId": "PENDING_ID"
+        "appleTeamId": "MX59BMDM89"
       }
     },
     "production": {
       "autoIncrement": true,
       "ios": {
-        "appleTeamId": "PENDING_ID"
+        "appleTeamId": "MX59BMDM89"
       }
     }
   },
@@ -29,7 +29,7 @@
       "ios": {
         "appleId": "arek@krolplaza.pl",
         "ascAppId": "",
-        "appleTeamId": "PENDING_ID"
+        "appleTeamId": "MX59BMDM89"
       },
       "android": {
         "serviceAccountKeyPath": ""
