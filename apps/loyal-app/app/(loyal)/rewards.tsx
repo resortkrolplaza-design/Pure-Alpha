@@ -204,7 +204,7 @@ function OfferCard({
               const url = item.bookingUrl!;
               // Block dangerous URI schemes (javascript:, data:, vbscript:)
               if (!/^https?:\/\//i.test(url)) return;
-              if (token) trackOfferClick(token, item.id);
+              if (token) trackOfferClick(token, item.id).catch(() => {});
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               Linking.openURL(url);
             }}
