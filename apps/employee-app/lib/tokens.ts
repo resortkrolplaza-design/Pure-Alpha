@@ -33,6 +33,7 @@ export const emp = {
   danger: "#dc2626",
   dangerLight: "rgba(220,38,38,0.1)",
   warning: "#f59e0b",
+  info: "#3b82f6",
   accent: "#1e40af",
   // Hero / gradient overlay helpers
   heroLabel: "#ffffff",

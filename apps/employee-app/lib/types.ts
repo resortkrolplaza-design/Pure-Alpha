@@ -51,6 +51,11 @@ export interface DashboardData {
   leaveBalance: LeaveBalance;
   stats: {
     hoursThisMonth: number;
+    scheduledHoursThisMonth: number;
+    overtimeThisMonth: number;
+    earningsThisMonth: number | null;
+    earningsProjected: number | null;
+    isNetRate: boolean;
     pendingLeaveRequests: number;
     vacationRemaining: number;
   };

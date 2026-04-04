@@ -29,6 +29,10 @@ function formatHours(num: number, lang: "pl" | "en"): string {
   return lang === "pl" ? fixed.replace(".", ",") : fixed;
 }
 
+function formatMoney(amount: number): string {
+  return amount.toLocaleString("pl-PL", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
 function getGreetingKey(): string {
   const h = new Date().getHours();
   if (h >= 5 && h < 12) return "dash.greeting.morning";
@@ -405,29 +409,60 @@ function DashboardScreenInner() {
           </Pressable>
         </Animated.View>
 
-        {/* Week Stats */}
-        <View style={styles.statsRow}>
-          <View
-            style={styles.statCard}
-            accessible={true}
-            accessibilityRole="summary"
-            accessibilityLabel={`${formatHours(data?.weekStats?.scheduledHours ?? 0, lang)} ${t(lang, "dash.hours")}`}
-          >
-            <Text style={styles.statValue}>
-              {formatHours(data?.weekStats?.scheduledHours ?? 0, lang)}h
+        {/* Monthly Stats */}
+        <View style={styles.statsGrid}>
+          {/* Zarobki */}
+          <View style={[styles.statCard, { borderTopColor: emp.success, borderTopWidth: 3 }]}>
+            <Icon name="cash-outline" size={22} color={emp.success} />
+            <View style={styles.statValueRow}>
+              <Text style={styles.statValue}>
+                {data?.stats?.earningsThisMonth != null
+                  ? formatMoney(data.stats.earningsThisMonth)
+                  : "\u2014"}
+              </Text>
+              {data?.stats?.earningsProjected != null && (
+                <Text style={styles.statProjected}>
+                  {" "}/ ~{formatMoney(data.stats.earningsProjected)}
+                </Text>
+              )}
+            </View>
+            <Text style={styles.statUnit}>PLN</Text>
+            <Text style={styles.statLabel}>
+              {t(lang, "dash.earnings")}{data?.stats?.isNetRate === false ? ` ${t(lang, "dash.gross")}` : ""}
             </Text>
-            <Text style={styles.statLabel}>{t(lang, "dash.hours")}</Text>
           </View>
-          <View
-            style={styles.statCard}
-            accessible={true}
-            accessibilityRole="summary"
-            accessibilityLabel={`${data?.weekStats?.completedShifts ?? 0}/${data?.weekStats?.totalShifts ?? 0} ${t(lang, "dash.shifts")}`}
-          >
+
+          {/* Godziny */}
+          <View style={[styles.statCard, { borderTopColor: emp.primary, borderTopWidth: 3 }]}>
+            <Icon name="time-outline" size={22} color={emp.primary} />
+            <View style={styles.statValueRow}>
+              <Text style={styles.statValue}>
+                {formatHours(data?.stats?.hoursThisMonth ?? 0, lang)}
+              </Text>
+              <Text style={styles.statProjected}>
+                {" "}/ {formatHours(data?.stats?.scheduledHoursThisMonth ?? 0, lang)}h
+              </Text>
+            </View>
+            <Text style={styles.statLabel}>{t(lang, "dash.monthlyHours")}</Text>
+          </View>
+
+          {/* Nadgodziny */}
+          <View style={[styles.statCard, { borderTopColor: emp.warning, borderTopWidth: 3 }]}>
+            <Icon name="trending-up-outline" size={22} color={emp.warning} />
             <Text style={styles.statValue}>
-              {data?.weekStats?.completedShifts ?? 0}/{data?.weekStats?.totalShifts ?? 0}
+              {formatHours(data?.stats?.overtimeThisMonth ?? 0, lang)}h
             </Text>
-            <Text style={styles.statLabel}>{t(lang, "dash.shifts")}</Text>
+            <Text style={styles.statLabel}>{t(lang, "dash.overtime")}</Text>
+          </View>
+
+          {/* Urlop */}
+          <View style={[styles.statCard, { borderTopColor: emp.info, borderTopWidth: 3 }]}>
+            <Icon name="sunny-outline" size={22} color={emp.info} />
+            <Text style={styles.statValue}>
+              {data?.leaveBalance?.remainingDays ?? 0}
+            </Text>
+            <Text style={styles.statUnit}>{t(lang, "dash.remaining")}</Text>
+            <Text style={styles.statLabel}>{t(lang, "dash.vacation")}</Text>
           </View>
         </View>
 
@@ -681,25 +716,42 @@ const styles = StyleSheet.create({
   },
 
   // -- Stats --------------------------------------------------------------------
-  statsRow: {
+  statsGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   statCard: {
-    flex: 1,
+    width: "47%" as any,
     backgroundColor: emp.card,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: emp.cardBorder,
     padding: spacing.lg,
     alignItems: "center",
-    gap: 4,
+    gap: spacing.xs,
     ...shadow.sm,
+  },
+  statValueRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
   },
   statValue: {
     fontSize: fontSize.xl,
     fontFamily: "Inter_700Bold",
     color: emp.primary,
+  },
+  statProjected: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: emp.textSecondary,
+  },
+  statUnit: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_500Medium",
+    color: emp.textSecondary,
+    marginTop: -2,
   },
   statLabel: {
     fontSize: fontSize.xs,

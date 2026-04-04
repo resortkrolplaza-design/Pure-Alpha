@@ -83,6 +83,12 @@ const pl: Record<string, string> = {
   "dash.clockOut": "Zako\u0144cz zmian\u0119",
   "dash.hours": "Godziny",
   "dash.shifts": "Zmiany",
+  "dash.earnings": "Zarobki",
+  "dash.monthlyHours": "Godziny w miesi\u0105cu",
+  "dash.overtime": "Nadgodziny",
+  "dash.vacation": "Urlop",
+  "dash.gross": "(brutto)",
+  "dash.remaining": "pozosta\u0142o",
   "dash.upcoming": "Najbli\u017Csze zmiany",
 
   // -- Schedule ---------------------------------------------------------------
@@ -324,6 +330,12 @@ const en: Record<string, string> = {
   "dash.clockOut": "Clock out",
   "dash.hours": "Hours",
   "dash.shifts": "Shifts",
+  "dash.earnings": "Earnings",
+  "dash.monthlyHours": "Hours",
+  "dash.overtime": "Overtime",
+  "dash.vacation": "Vacation",
+  "dash.gross": "(gross)",
+  "dash.remaining": "remaining",
   "dash.upcoming": "Upcoming shifts",
 
   // -- Schedule ---------------------------------------------------------------
