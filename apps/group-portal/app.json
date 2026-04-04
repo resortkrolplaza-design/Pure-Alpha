@@ -14,6 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
+      "appleTeamId": "MX59BMDM89",
       "bundleIdentifier": "com.purealpha.group",
       "buildNumber": "1",
       "infoPlist": {

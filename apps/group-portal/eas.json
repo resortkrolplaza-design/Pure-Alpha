@@ -12,28 +12,10 @@
       }
     },
     "preview": {
-      "distribution": "internal",
-      "ios": {
-        "appleTeamId": "MX59BMDM89"
-      }
+      "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true,
-      "ios": {
-        "appleTeamId": "MX59BMDM89"
-      }
-    }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "arek@krolplaza.pl",
-        "ascAppId": "",
-        "appleTeamId": "MX59BMDM89"
-      },
-      "android": {
-        "serviceAccountKeyPath": ""
-      }
+      "autoIncrement": true
     }
   }
 }
