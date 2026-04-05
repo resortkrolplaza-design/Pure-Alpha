@@ -85,14 +85,40 @@ export async function fetchPortalInit(
   return groupFetch<PortalInitData>(trackingId, "/init");
 }
 
+// Pre-auth helper — bypasses groupFetch 401 interceptor (which would trigger
+// logout on a wrong-PIN 401 instead of showing the error message).
+async function preAuthFetch<T>(
+  trackingId: string,
+  path: string,
+  body: Record<string, unknown>,
+): Promise<ApiResponse<T>> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const url = `${API_BASE}/api/portal/${encodeURIComponent(trackingId)}${path}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    return (await res.json()) as ApiResponse<T>;
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      return { status: "error", errorMessage: "Request timed out" };
+    }
+    return { status: "error", errorMessage: err instanceof Error ? err.message : "Network error" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function loginByLink(
   trackingId: string,
   email?: string,
 ): Promise<ApiResponse<{ token: string; role: PortalRole; hotelName?: string; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
-  return groupFetch(trackingId, "/auth-by-link", {
-    method: "POST",
-    body: JSON.stringify(email ? { email: email.trim().toLowerCase() } : {}),
-  });
+  return preAuthFetch(trackingId, "/auth-by-link", email ? { email: email.trim().toLowerCase() } : {});
 }
 
 export async function verifyPin(
@@ -100,10 +126,7 @@ export async function verifyPin(
   pin: string,
   email?: string,
 ): Promise<ApiResponse<{ token: string; role: PortalRole; email?: string | null; guest: { id: string; firstName: string; lastName?: string; rsvpStatus: string } | null; rsvpToken?: string | null }>> {
-  return groupFetch(trackingId, "/verify-pin", {
-    method: "POST",
-    body: JSON.stringify(email ? { pin, email } : { pin }),
-  });
+  return preAuthFetch(trackingId, "/verify-pin", email ? { pin, email } : { pin });
 }
 
 // ── Portal Info (public, no auth) ----
