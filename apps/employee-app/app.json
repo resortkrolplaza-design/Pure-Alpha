@@ -72,7 +72,8 @@
           "icon": "./assets/icon.png",
           "color": "#1e40af"
         }
-      ]
+      ],
+      "@sentry/react-native/expo"
     ],
     "runtimeVersion": {
       "policy": "appVersion"

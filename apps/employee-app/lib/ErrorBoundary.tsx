@@ -2,13 +2,14 @@
 // Employee App -- Error Boundary (catches React render crashes)
 // =============================================================================
 
-import { Component, type ReactNode } from "react";
+import { Component, type ReactNode, type ErrorInfo } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { emp, fontSize, radius, spacing } from "./tokens";
 import { Icon } from "./icons";
 import { t } from "./i18n";
 import type { Lang } from "./i18n";
 import { useAppStore } from "./store";
+import { Sentry } from "./sentry";
 
 interface Props {
   children: ReactNode;
@@ -29,6 +30,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(): State {
     return { hasError: true };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    Sentry.captureException(error, {
+      extra: { componentStack: errorInfo.componentStack },
+    });
   }
 
   handleRetry = () => {
