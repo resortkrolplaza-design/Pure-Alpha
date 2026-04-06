@@ -19,6 +19,8 @@ import {
   isBiometricEnrolled, setBiometricCredentials, clearBiometricCredentials,
   getCachedCredentials,
 } from "@/lib/auth";
+import { employeeFetch } from "@/lib/employee-api";
+import { getDeviceId } from "@/lib/usePushNotifications";
 import { checkBiometricAvailability, authenticateWithBiometric } from "@/lib/biometric";
 import type { BiometricType } from "@/lib/biometric";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
@@ -45,9 +47,12 @@ function ProfileScreenInner() {
   );
   const biometricEnrolled = useAppStore((s) => s.isBiometricEnrolled);
   const setBioEnrolled = useAppStore((s) => s.setBiometricEnrolled);
+  const pushEnabled = useAppStore((s) => s.pushEnabled);
+  const setPushEnabled = useAppStore((s) => s.setPushEnabled);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [biometricType, setBiometricType] = useState<BiometricType>("none");
   const [bioToggleLoading, setBioToggleLoading] = useState(false);
+  const [pushToggleLoading, setPushToggleLoading] = useState(false);
 
   const logoutPress = useScalePress();
   const pinPress = useScalePress();
@@ -165,6 +170,32 @@ function ProfileScreenInner() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setBioToggleLoading(false);
+    }
+  };
+
+  const handlePushToggle = async (newValue: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPushToggleLoading(true);
+
+    try {
+      if (newValue) {
+        setPushEnabled(true);
+        // Re-registration happens automatically via usePushNotifications hook
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        // Deactivate token on server
+        const deviceId = await getDeviceId();
+        await employeeFetch("/push-subscribe", {
+          method: "DELETE",
+          body: JSON.stringify({ deviceId }),
+        });
+        setPushEnabled(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } catch {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    } finally {
+      setPushToggleLoading(false);
     }
   };
 
@@ -294,6 +325,40 @@ function ProfileScreenInner() {
             </View>
           </View>
         )}
+
+        {/* Push Notifications Toggle */}
+        <View style={styles.actionsCard}>
+          <View style={styles.actionRow}>
+            <View style={styles.actionIcon}>
+              <Icon
+                name={pushEnabled ? "notifications-outline" : "notifications-off-outline"}
+                size={20}
+                color={emp.primary}
+              />
+            </View>
+            <View style={styles.bioTextCol}>
+              <Text style={styles.actionText}>
+                {t(lang, "profile.pushNotifications")}
+              </Text>
+              <Text style={[styles.bioStatus, !pushEnabled && styles.bioStatusOff]}>
+                {pushEnabled
+                  ? t(lang, "profile.pushEnabled")
+                  : t(lang, "profile.pushDisabled")}
+              </Text>
+            </View>
+            <Switch
+              value={pushEnabled}
+              onValueChange={handlePushToggle}
+              disabled={pushToggleLoading}
+              trackColor={{ false: emp.inputBorder, true: emp.success }}
+              thumbColor={emp.white}
+              accessibilityRole="switch"
+              accessibilityLabel={t(lang, "profile.pushNotifications")}
+              accessibilityState={{ checked: pushEnabled }}
+              style={[styles.bioSwitch, pushToggleLoading && { opacity: 0.5 }]}
+            />
+          </View>
+        </View>
 
         <View style={styles.spacer} />
 

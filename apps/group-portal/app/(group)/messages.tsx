@@ -298,7 +298,11 @@ function ChatContent() {
         : t(lang, "messages.participant");
       const res = await groupFetch<GroupMessage>(trackingId, "/messages", {
         method: "POST",
-        body: JSON.stringify({ body, senderName }),
+        body: JSON.stringify({
+          body,
+          senderName,
+          ...(guest?.id ? { guestId: guest.id } : {}),
+        }),
       });
       if (res.status !== "success") throw new Error(res.errorMessage || "Send failed");
       return res.data;

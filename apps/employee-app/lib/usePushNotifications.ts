@@ -55,7 +55,7 @@ async function getExpoPushToken(): Promise<string | null> {
 
 const DEVICE_ID_KEY = "PUSH_DEVICE_ID";
 
-async function getDeviceId(): Promise<string> {
+export async function getDeviceId(): Promise<string> {
   const existing = await SecureStore.getItemAsync(DEVICE_ID_KEY);
   if (existing) return existing;
   const newId = Crypto.randomUUID();
@@ -65,10 +65,11 @@ async function getDeviceId(): Promise<string> {
 
 export function usePushNotifications() {
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const pushEnabled = useAppStore((s) => s.pushEnabled);
   const registered = useRef(false);
 
   useEffect(() => {
-    if (!isAuthenticated || registered.current) return;
+    if (!isAuthenticated || !pushEnabled || registered.current) return;
 
     let cancelled = false;
 
@@ -96,5 +97,12 @@ export function usePushNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, pushEnabled]);
+
+  // Reset registration flag when push is re-enabled so token gets re-registered
+  useEffect(() => {
+    if (pushEnabled) {
+      registered.current = false;
+    }
+  }, [pushEnabled]);
 }

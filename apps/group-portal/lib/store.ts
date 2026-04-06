@@ -22,6 +22,7 @@ interface AppState {
   guest: GuestIdentity | null;
   rsvpToken: string | null;
   portalRole: PortalRole;
+  pushEnabled: boolean;
   setMode: (mode: "group") => void;
   setAuthenticated: (auth: boolean) => void;
   setGroupTrackingId: (id: string | null) => void;
@@ -29,6 +30,7 @@ interface AppState {
   setGuest: (guest: GuestIdentity | null) => void;
   setRsvpTokenState: (token: string | null) => void;
   setPortalRole: (role: PortalRole) => void;
+  setPushEnabled: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -40,6 +42,7 @@ export const useAppStore = create<AppState>((set) => ({
   guest: null,
   rsvpToken: null,
   portalRole: "participant" as PortalRole,
+  pushEnabled: true,
   setMode: (mode) => set({ mode }),
   setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
   setGroupTrackingId: (groupTrackingId) => set({ groupTrackingId }),
@@ -47,5 +50,6 @@ export const useAppStore = create<AppState>((set) => ({
   setGuest: (guest) => set({ guest }),
   setRsvpTokenState: (rsvpToken) => set({ rsvpToken }),
   setPortalRole: (portalRole) => set({ portalRole }),
-  reset: () => set({ mode: null, isAuthenticated: false, groupTrackingId: null, lang: "pl", guest: null, rsvpToken: null, portalRole: "participant" as PortalRole }),
+  setPushEnabled: (pushEnabled) => set({ pushEnabled }),
+  reset: () => set({ mode: null, isAuthenticated: false, groupTrackingId: null, lang: "pl", guest: null, rsvpToken: null, portalRole: "participant" as PortalRole, pushEnabled: true }),
 }));

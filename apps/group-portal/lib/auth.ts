@@ -53,6 +53,7 @@ const GUEST_IDENTITY_KEY = "pa_guest_identity";
 const LANG_KEY = "pa_lang";
 const ROLE_KEY = "pa_portal_role";
 const EMAIL_KEY = "pa_user_email";
+const PUSH_ENABLED_KEY = "pa_push_enabled";
 
 // ── Language Persistence ----
 
@@ -68,6 +69,22 @@ export async function getPersistedLang(): Promise<"pl" | "en" | null> {
 
 export async function setPersistedLang(lang: "pl" | "en"): Promise<void> {
   await setItem(LANG_KEY, lang);
+}
+
+// ── Push Notification Preference Persistence ----
+
+export async function getPersistedPushEnabled(): Promise<boolean> {
+  try {
+    const val = await getItem(PUSH_ENABLED_KEY);
+    if (val === "false") return false;
+    return true; // default: enabled
+  } catch {
+    return true;
+  }
+}
+
+export async function setPersistedPushEnabled(enabled: boolean): Promise<void> {
+  await setItem(PUSH_ENABLED_KEY, enabled ? "true" : "false");
 }
 
 // ── Group Token (JWT from group portal verify-pin) ----

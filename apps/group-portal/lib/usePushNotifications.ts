@@ -26,6 +26,16 @@ async function getExpoPushToken(): Promise<string | null> {
   // Push tokens only work on physical devices
   if (!Device.isDevice) return null;
 
+  // Android 8+ requires a notification channel
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#1e40af",
+    });
+  }
+
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
@@ -53,14 +63,17 @@ function getDeviceId(): string {
   return id ?? `${Platform.OS}-${Date.now()}`;
 }
 
+export { getDeviceId };
+
 export function usePushNotifications() {
   const trackingId = useAppStore((s) => s.groupTrackingId);
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const pushEnabled = useAppStore((s) => s.pushEnabled);
   const guestId = useAppStore((s) => s.guest?.id);
   const registered = useRef(false);
 
   useEffect(() => {
-    if (!trackingId || !isAuthenticated || registered.current) return;
+    if (!trackingId || !isAuthenticated || !pushEnabled || registered.current) return;
 
     let cancelled = false;
 
@@ -89,5 +102,12 @@ export function usePushNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [trackingId, isAuthenticated, guestId]);
+  }, [trackingId, isAuthenticated, pushEnabled, guestId]);
+
+  // Reset registration flag when push is re-enabled so token gets re-registered
+  useEffect(() => {
+    if (pushEnabled) {
+      registered.current = false;
+    }
+  }, [pushEnabled]);
 }

@@ -19,6 +19,7 @@ interface EmployeeState {
   isClockedIn: boolean;
   isBiometricEnrolled: boolean;
   isHotelOnboarded: boolean;
+  pushEnabled: boolean;
   pendingClockIn: { qrToken: string; latitude: number; longitude: number; gpsAccuracy?: number } | null;
   setAuthenticated: (auth: boolean) => void;
   setEmployee: (data: { id: string; name: string; department?: string; position?: string }) => void;
@@ -27,6 +28,7 @@ interface EmployeeState {
   setClockedIn: (value: boolean) => void;
   setBiometricEnrolled: (v: boolean) => void;
   setHotelOnboarded: (v: boolean) => void;
+  setPushEnabled: (v: boolean) => void;
   setPendingClockIn: (data: { qrToken: string; latitude: number; longitude: number; gpsAccuracy?: number } | null) => void;
   reset: () => void;
 }
@@ -44,6 +46,7 @@ const initialState = {
   isClockedIn: false,
   isBiometricEnrolled: false,
   isHotelOnboarded: false,
+  pushEnabled: true,
   pendingClockIn: null,
 };
 
@@ -67,6 +70,7 @@ export const useAppStore = create<EmployeeState>()(
       setClockedIn: (isClockedIn) => set({ isClockedIn }),
       setBiometricEnrolled: (isBiometricEnrolled) => set({ isBiometricEnrolled }),
       setHotelOnboarded: (isHotelOnboarded) => set({ isHotelOnboarded }),
+      setPushEnabled: (pushEnabled) => set({ pushEnabled }),
       setPendingClockIn: (pendingClockIn) => set({ pendingClockIn }),
       reset: () => set(initialState),
     }),
@@ -85,6 +89,7 @@ export const useAppStore = create<EmployeeState>()(
         lang: state.lang,
         isBiometricEnrolled: state.isBiometricEnrolled,
         isHotelOnboarded: state.isHotelOnboarded,
+        pushEnabled: state.pushEnabled,
         // NOT persisted: isClockedIn (re-fetched from API), pendingClockIn (ephemeral)
       }),
     },

@@ -235,6 +235,9 @@ const pl: Record<string, string> = {
   "profile.biometricConfirm": "Potwierd\u017a to\u017csamo\u015b\u0107",
   "profile.biometricReloginNeeded": "Zaloguj si\u0119 ponownie, aby w\u0142\u0105czy\u0107 biometri\u0119",
   "profile.pinResetBiometric": "PIN mo\u017cna zmieni\u0107 po ponownym zalogowaniu. Biometria wymaga aktualnego PIN-u.",
+  "profile.pushNotifications": "Powiadomienia push",
+  "profile.pushEnabled": "W\u0142\u0105czone",
+  "profile.pushDisabled": "Wy\u0142\u0105czone",
 
   // -- App -------------------------------------------------------------------
   "app.subtitle": "Pure Alpha Employee",
@@ -485,6 +488,9 @@ const en: Record<string, string> = {
   "profile.biometricConfirm": "Confirm identity",
   "profile.biometricReloginNeeded": "Log in again to enable biometrics",
   "profile.pinResetBiometric": "PIN can be changed after re-login. Biometrics requires current PIN.",
+  "profile.pushNotifications": "Push notifications",
+  "profile.pushEnabled": "Enabled",
+  "profile.pushDisabled": "Disabled",
 
   // -- App -------------------------------------------------------------------
   "app.subtitle": "Pure Alpha Employee",

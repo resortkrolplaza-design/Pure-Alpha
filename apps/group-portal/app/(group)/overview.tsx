@@ -19,6 +19,7 @@ import {
   Platform,
   Modal,
   TextInput,
+  Switch,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -42,11 +43,11 @@ import type { IconName } from "@/lib/icons";
 import { useSlideUp, useScalePress } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
-import { logout, setPersistedLang, getSecureItem, setSecureItem } from "@/lib/auth";
+import { logout, setPersistedLang, getSecureItem, setSecureItem, getPersistedPushEnabled, setPersistedPushEnabled } from "@/lib/auth";
 import { isImageUrlSafe, isExternalUrlSafe, sanitizePhone, sanitizeEmail } from "@/lib/url-safety";
 import { fetchPortalInit, fetchPolls, votePoll, groupFetch, submitRsvp } from "@/lib/group-api";
 import type { RsvpPayload } from "@/lib/types";
-import { usePushNotifications } from "@/lib/usePushNotifications";
+import { usePushNotifications, getDeviceId as getPushDeviceId } from "@/lib/usePushNotifications";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { GroupAnnouncementData, PortalInitData, PollData, AgendaItemData } from "@/lib/types";
 
@@ -427,6 +428,8 @@ function OverviewScreenInner() {
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
   const guest = useAppStore((s) => s.guest);
   const portalRole = useAppStore((s) => s.portalRole);
+  const pushEnabled = useAppStore((s) => s.pushEnabled);
+  const setPushEnabled = useAppStore((s) => s.setPushEnabled);
   const queryClient = useQueryClient();
   const isParticipant = portalRole === "participant";
 
@@ -434,6 +437,7 @@ function OverviewScreenInner() {
   usePushNotifications();
 
   const [coverError, setCoverError] = useState(false);
+  const [pushToggleLoading, setPushToggleLoading] = useState(false);
   const announcementsRef = useRef<View>(null);
   const announcementsY = useRef(0);
   const scrollRef = useRef<ScrollView>(null);
@@ -455,6 +459,43 @@ function OverviewScreenInner() {
       ]);
     }
   }, [lang]);
+
+  // Restore persisted push preference on mount
+  useEffect(() => {
+    (async () => {
+      const persisted = await getPersistedPushEnabled();
+      setPushEnabled(persisted);
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only
+  }, []);
+
+  const handlePushToggle = useCallback(async (newValue: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPushToggleLoading(true);
+
+    try {
+      if (newValue) {
+        setPushEnabled(true);
+        await setPersistedPushEnabled(true);
+        // Re-registration happens automatically via usePushNotifications hook
+      } else {
+        // Deactivate token on server
+        const deviceId = getPushDeviceId();
+        if (trackingId) {
+          await groupFetch(trackingId, "/push-subscribe", {
+            method: "DELETE",
+            body: JSON.stringify({ deviceId }),
+          });
+        }
+        setPushEnabled(false);
+        await setPersistedPushEnabled(false);
+      }
+    } catch {
+      // Best-effort -- toggle state anyway
+    } finally {
+      setPushToggleLoading(false);
+    }
+  }, [trackingId, setPushEnabled]);
 
   // -- Entrance animations --
   const headerSlide = useSlideUp(0, 12);
@@ -1229,6 +1270,38 @@ function OverviewScreenInner() {
               </View>
             )}
 
+            {/* Push Notifications Toggle */}
+            <View style={styles.pushToggleCard}>
+              <View style={styles.pushToggleRow}>
+                <Icon
+                  name={pushEnabled ? "notifications-outline" : "notifications-off-outline"}
+                  size={18}
+                  color={group.primary}
+                />
+                <View style={styles.pushToggleTextCol}>
+                  <Text style={styles.pushToggleLabel}>
+                    {t(lang, "group.pushNotifications")}
+                  </Text>
+                  <Text style={[styles.pushToggleStatus, !pushEnabled && styles.pushToggleStatusOff]}>
+                    {pushEnabled
+                      ? t(lang, "group.pushEnabled")
+                      : t(lang, "group.pushDisabled")}
+                  </Text>
+                </View>
+                <Switch
+                  value={pushEnabled}
+                  onValueChange={handlePushToggle}
+                  disabled={pushToggleLoading}
+                  trackColor={{ false: group.cardBorder, true: group.primary }}
+                  thumbColor="#fff"
+                  accessibilityRole="switch"
+                  accessibilityLabel={t(lang, "group.pushNotifications")}
+                  accessibilityState={{ checked: pushEnabled }}
+                  style={pushToggleLoading ? { opacity: 0.5 } : undefined}
+                />
+              </View>
+            </View>
+
             {/* Powered by */}
             <Text style={styles.poweredBy}>
               {t(lang, "overview.poweredBy")}
@@ -1998,6 +2071,36 @@ const styles = StyleSheet.create({
     backgroundColor: group.primaryLight,
     alignItems: "center",
     justifyContent: "center",
+  },
+  pushToggleCard: {
+    backgroundColor: group.card,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: group.cardBorder,
+    padding: spacing.lg,
+    marginTop: spacing.lg,
+  },
+  pushToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  pushToggleTextCol: {
+    flex: 1,
+    gap: 2,
+  },
+  pushToggleLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: group.text,
+  },
+  pushToggleStatus: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: group.primary,
+  },
+  pushToggleStatusOff: {
+    color: group.textMuted,
   },
   poweredBy: {
     fontSize: fontSize.xs,
