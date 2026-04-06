@@ -6,13 +6,14 @@ import { Tabs } from "expo-router";
 import { Platform, StyleSheet, Animated, Text } from "react-native";
 import { useRef, useEffect, useState, useCallback } from "react";
 import * as Haptics from "expo-haptics";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { group, fontSize, spacing } from "@/lib/tokens";
 import { Icon, type IconName } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { fetchPortalInit, groupFetch } from "@/lib/group-api";
 import { getSecureItem, setSecureItem } from "@/lib/auth";
+import { getPortalPusher, disconnectPusher } from "@/lib/pusher";
 import type { GroupMessage } from "@/lib/types";
 
 // -- Animated Tab Icon with scale effect on active state --------------------
@@ -70,6 +71,7 @@ export default function GroupLayout() {
   const trackingId = useAppStore((s) => s.groupTrackingId) ?? "";
   const portalRole = useAppStore((s) => s.portalRole);
   const isParticipant = portalRole === "participant";
+  const queryClient = useQueryClient();
 
   // Fix 1: Unified queryFn -- MUST match overview.tsx shape (unwrapped PortalInitData)
   // Both use queryKey ["portal-init", trackingId]. React Query caches ONE shape per key.
@@ -85,6 +87,53 @@ export default function GroupLayout() {
   });
 
   const portal = initData?.portal ?? null;
+  const portalId = portal?.id ?? null;
+
+  // ── Soketi real-time subscription ──
+  const [soketiConnected, setSoketiConnected] = useState(false);
+
+  useEffect(() => {
+    if (!portalId) return;
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
+
+    (async () => {
+      const pusher = await getPortalPusher();
+      if (!pusher || cancelled) return;
+
+      const channel = pusher.subscribe(`private-portal-${portalId}`);
+
+      channel.bind("portal-new-message", () => {
+        queryClient.invalidateQueries({ queryKey: ["group-messages-count", trackingId] });
+        queryClient.invalidateQueries({ queryKey: ["group-messages", trackingId] });
+      });
+      channel.bind("portal-new-announcement", () => {
+        queryClient.invalidateQueries({ queryKey: ["portal-init", trackingId] });
+      });
+      channel.bind("portal-new-poll", () => {
+        queryClient.invalidateQueries({ queryKey: ["portal-polls", trackingId] });
+        queryClient.invalidateQueries({ queryKey: ["portal-init", trackingId] });
+      });
+
+      const onStateChange = ({ current }: { current: string }) => {
+        setSoketiConnected(current === "connected");
+      };
+      pusher.connection.bind("state_change", onStateChange);
+      setSoketiConnected(pusher.connection.state === "connected");
+
+      cleanup = () => {
+        channel.unbind_all();
+        pusher.unsubscribe(`private-portal-${portalId}`);
+        pusher.connection.unbind("state_change", onStateChange);
+      };
+    })();
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+      disconnectPusher();
+    };
+  }, [portalId, trackingId, queryClient]);
 
   // ── TASK 2: Unread message badge ──
   const LAST_SEEN_KEY = `pa_last_seen_msg_count_${trackingId}`;
@@ -99,7 +148,8 @@ export default function GroupLayout() {
       return res.data ?? { replies: [], anchorMessage: null };
     },
     enabled: !!trackingId && !!portal?.messagingEnabled,
-    refetchInterval: 30_000,
+    // Polling fallback: only poll when Soketi is disconnected
+    refetchInterval: soketiConnected ? false : 30_000,
     refetchIntervalInBackground: false,
   });
 

@@ -123,13 +123,9 @@ function stripBidiChars(str: string): string {
   return str.replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, "");
 }
 
-// P2-3: Adaptive polling backoff
-// Polling intervals -- will be replaced by WebSocket after AWS migration
-const POLL_FAST = 3_000;    // Active chat: 3s
-const POLL_MEDIUM = 10_000; // Idle 1min: 10s
-const POLL_SLOW = 30_000;   // Idle 5min: 30s
-const BACKOFF_MEDIUM_AFTER_MS = 60_000;
-const BACKOFF_SLOW_AFTER_MS = 300_000;
+// Polling fallback -- used only when Soketi WebSocket is disconnected.
+// When Soketi is connected, real-time events from _layout.tsx invalidate queries.
+const POLL_FALLBACK = 30_000; // 30s fallback when WebSocket is down
 
 // -- Avatar initials + gradient -----------------------------------------------
 
@@ -206,10 +202,23 @@ function ChatContent() {
     }
   }, [prefill]);
 
-  // P2-3: Adaptive polling backoff
-  const [pollInterval, setPollInterval] = useState(POLL_FAST);
-  const lastNewMsgTimeRef = useRef(Date.now());
-  const prevMsgCountRef2 = useRef<number | null>(null);
+  // Soketi connection state -- when connected, queries are invalidated via
+  // _layout.tsx channel subscription. Polling is fallback only.
+  const [wsConnected, setWsConnected] = useState(false);
+  useEffect(() => {
+    try {
+      const { getPortalPusher } = require("@/lib/pusher");
+      const p = getPortalPusher();
+      if (p) {
+        setWsConnected(p.connection.state === "connected");
+        const handler = ({ current }: { current: string }) => {
+          setWsConnected(current === "connected");
+        };
+        p.connection.bind("state_change", handler);
+        return () => { p.connection.unbind("state_change", handler); };
+      }
+    } catch { /* pusher not available */ }
+  }, []);
 
   const { scaleStyle, onPressIn, onPressOut } = useScalePress();
 
@@ -222,33 +231,10 @@ function ChatContent() {
       return res.data ?? { replies: [], anchorMessage: null };
     },
     enabled: !!trackingId,
-    refetchInterval: pollInterval,
+    // Soketi handles real-time; poll only as fallback when disconnected
+    refetchInterval: wsConnected ? false : POLL_FALLBACK,
     refetchIntervalInBackground: false,
   });
-
-  // P2-3: Detect new messages and adjust polling interval
-  useEffect(() => {
-    if (!msgData) return;
-    const currentCount = (msgData.replies?.length ?? 0) + (msgData.anchorMessage ? 1 : 0);
-    if (prevMsgCountRef2.current !== null && currentCount > prevMsgCountRef2.current) {
-      lastNewMsgTimeRef.current = Date.now();
-      setPollInterval(POLL_FAST);
-    }
-    prevMsgCountRef2.current = currentCount;
-  }, [msgData]);
-
-  // P2-3: Periodic check to increase polling interval when idle
-  useEffect(() => {
-    const checkInterval = setInterval(() => {
-      const idleMs = Date.now() - lastNewMsgTimeRef.current;
-      if (idleMs >= BACKOFF_SLOW_AFTER_MS) {
-        setPollInterval((prev) => (prev !== POLL_SLOW ? POLL_SLOW : prev));
-      } else if (idleMs >= BACKOFF_MEDIUM_AFTER_MS) {
-        setPollInterval((prev) => (prev !== POLL_MEDIUM ? POLL_MEDIUM : prev));
-      }
-    }, 10_000);
-    return () => clearInterval(checkInterval);
-  }, []);
 
   // Build flat list with date separators
   const listItems = useMemo<ListItem[]>(() => {
@@ -318,8 +304,7 @@ function ChatContent() {
       queryClient.invalidateQueries({ queryKey: ["group-messages"] });
       setText("");
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      lastNewMsgTimeRef.current = Date.now();
-      setPollInterval(POLL_FAST);
+      // Soketi will push the new message event; no polling reset needed
     },
     onError: () => {
       Alert.alert(t(lang, "common.error"), t(lang, "messages.sendFailed"));
@@ -575,7 +560,7 @@ function GroupMessagesScreenInner() {
 
       {/* Sub-tab content -- all tabs stay mounted to preserve polling state
           and animations. Hidden tabs use display:"none" instead of unmounting
-          (P1 fix: adaptive polling reset on segment switch). */}
+          Real-time via Soketi WebSocket; polling fallback when disconnected. */}
       <View style={styles.content}>
         <View style={{ display: activeSegment === "chat" ? "flex" : "none", flex: 1 }}>
           <ChatContent />

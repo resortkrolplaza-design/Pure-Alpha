@@ -368,37 +368,99 @@ function PhotosScreen() {
 
       setUploading(true);
 
-      const formData = new FormData();
-      formData.append("file", {
-        uri: asset.uri,
-        type: asset.mimeType || "image/jpeg",
-        name: asset.fileName || `photo-${Date.now()}.jpg`,
-      } as unknown as Blob);
-
-      // Backend requires deviceId (min 8 chars) for dedup
+      const fileName = asset.fileName || `photo-${Date.now()}.jpg`;
+      const contentType = asset.mimeType || "image/jpeg";
       const deviceId = trackingId.slice(0, 8) + "-" + Date.now().toString(36);
-      formData.append("deviceId", deviceId);
-
-      // Guest name for uploadedBy
       const guestName = guest ? [guest.firstName, guest.lastName].filter(Boolean).join(" ") : "";
-      if (guestName) formData.append("uploadedBy", guestName);
 
-      const token = await getGroupToken();
-      const url = `${API_BASE}/api/portal/${encodeURIComponent(trackingId)}/photos`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: formData,
-      });
-      if (res.status === 401 || res.status === 403) {
-        triggerSessionExpired();
-        throw new Error("Session expired");
+      // ── Try S3 presigned URL path first (faster, no server proxy) ──
+      let s3Success = false;
+      try {
+        // Read blob from URI first -- we need its size for the signed URL request
+        const fileResponse = await fetch(asset.uri);
+        const blob = await fileResponse.blob();
+        const fileSize = blob.size;
+
+        if (fileSize && fileSize <= MAX_FILE_SIZE) {
+          // Step 1: Get presigned URL
+          const signedUrlRes = await groupFetch<{
+            signedUrl: string;
+            publicUrl: string;
+            path: string;
+            expiresIn: number;
+          }>(trackingId, "/photos/signed-url", {
+            method: "POST",
+            body: JSON.stringify({
+              fileName,
+              fileSize,
+              contentType,
+            }),
+          });
+
+          if (signedUrlRes.status === "success" && signedUrlRes.data) {
+            const { signedUrl, publicUrl } = signedUrlRes.data;
+
+            // Step 2: Upload blob directly to S3
+            const s3Res = await fetch(signedUrl, {
+              method: "PUT",
+              headers: { "Content-Type": contentType },
+              body: blob,
+            });
+
+            if (s3Res.ok) {
+              // Step 3: Create photo record with metadata + S3 URL (JSON mode)
+              const metadataRes = await groupFetch<{ id: string }>(
+                trackingId,
+                "/photos",
+                {
+                  method: "POST",
+                  body: JSON.stringify({
+                    imageUrl: publicUrl,
+                    caption: "",
+                    deviceId,
+                    uploadedBy: guestName,
+                  }),
+                },
+              );
+
+              if (metadataRes.status === "success") {
+                s3Success = true;
+              }
+            }
+          }
+        }
+      } catch {
+        // S3 path failed -- fall through to legacy FormData upload
       }
-      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-      const json = await res.json();
-      if (json.status !== "success") throw new Error(json.errorMessage || "Upload failed");
+
+      // ── Fallback: legacy FormData upload through server ──
+      if (!s3Success) {
+        const formData = new FormData();
+        formData.append("file", {
+          uri: asset.uri,
+          type: contentType,
+          name: fileName,
+        } as unknown as Blob);
+        formData.append("deviceId", deviceId);
+        if (guestName) formData.append("uploadedBy", guestName);
+
+        const token = await getGroupToken();
+        const url = `${API_BASE}/api/portal/${encodeURIComponent(trackingId)}/photos`;
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: formData,
+        });
+        if (res.status === 401 || res.status === 403) {
+          triggerSessionExpired();
+          throw new Error("Session expired");
+        }
+        if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+        const json = await res.json();
+        if (json.status !== "success") throw new Error(json.errorMessage || "Upload failed");
+      }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       queryClient.invalidateQueries({ queryKey: ["group-photos"] });

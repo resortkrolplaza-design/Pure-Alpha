@@ -8,12 +8,14 @@ import { useRef, useEffect } from "react";
 import { Animated, Platform, StyleSheet, Text } from "react-native";
 import { Tabs, router } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { useQueryClient } from "@tanstack/react-query";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { emp, fontSize, spacing } from "@/lib/tokens";
 import { useReducedMotion } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { usePushNotifications } from "@/lib/usePushNotifications";
+import { getEmployeePusher, disconnectPusher } from "@/lib/pusher";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -80,6 +82,8 @@ function TabLabel({ label, focused }: { label: string; focused: boolean }) {
 export default function EmployeeLayout() {
   const lang = useAppStore((s) => s.lang);
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
+  const hotelId = useAppStore((s) => s.hotelId);
+  const queryClient = useQueryClient();
 
   // Register push token after authentication (best-effort, silent fail)
   usePushNotifications();
@@ -90,6 +94,59 @@ export default function EmployeeLayout() {
       router.replace("/");
     }
   }, [isAuthenticated]);
+
+  // ── Soketi real-time subscription ──
+  useEffect(() => {
+    if (!hotelId) return;
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
+
+    (async () => {
+      const pusher = await getEmployeePusher();
+      if (!pusher || cancelled) return;
+
+      const channel = pusher.subscribe(`private-hotel-${hotelId}`);
+
+      channel.bind("shift:status_changed", () => {
+        queryClient.invalidateQueries({ queryKey: ["employee-dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["employee-shifts"] });
+      });
+      channel.bind("shift:break_changed", () => {
+        queryClient.invalidateQueries({ queryKey: ["employee-dashboard"] });
+      });
+      channel.bind("leave:request_created", () => {
+        queryClient.invalidateQueries({ queryKey: ["employee-leave-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["employee-leave-balance"] });
+      });
+      channel.bind("leave:request_cancelled", () => {
+        queryClient.invalidateQueries({ queryKey: ["employee-leave-requests"] });
+        queryClient.invalidateQueries({ queryKey: ["employee-leave-balance"] });
+      });
+      channel.bind("shift:assigned", () => {
+        queryClient.invalidateQueries({ queryKey: ["employee-shifts"] });
+        queryClient.invalidateQueries({ queryKey: ["employee-dashboard"] });
+      });
+      channel.bind("shift:rescheduled", () => {
+        queryClient.invalidateQueries({ queryKey: ["employee-shifts"] });
+        queryClient.invalidateQueries({ queryKey: ["employee-dashboard"] });
+      });
+      channel.bind("shift:cancelled", () => {
+        queryClient.invalidateQueries({ queryKey: ["employee-shifts"] });
+        queryClient.invalidateQueries({ queryKey: ["employee-dashboard"] });
+      });
+
+      cleanup = () => {
+        channel.unbind_all();
+        pusher.unsubscribe(`private-hotel-${hotelId}`);
+      };
+    })();
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+      disconnectPusher();
+    };
+  }, [hotelId, queryClient]);
 
   return (
     <Tabs

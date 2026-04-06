@@ -2,7 +2,7 @@
 // Employee App -- API helpers (custom JWT auth)
 // =============================================================================
 
-import { getEmployeeToken, setEmployeeToken, isBiometricEnrolled, getCachedCredentials, getHotelId } from "./auth";
+import { getEmployeeToken, setEmployeeToken, isBiometricEnrolled, getCachedCredentials, getHotelId, decodeTokenPayload } from "./auth";
 import { authenticateWithBiometric, checkBiometricAvailability } from "./biometric";
 import { t, type Lang } from "./i18n";
 import { useAppStore } from "./store";
@@ -11,11 +11,13 @@ import type { ApiResponse, LeaveRequest } from "./types";
 const API_BASE = "https://purealphahotel.pl";
 
 const REQUEST_TIMEOUT_MS = 15_000;
+const PROACTIVE_REFRESH_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes before exp
 
 // Session expiry callback -- configured from _layout.tsx
 let onEmployeeSessionExpired: (() => void) | null = null;
 let sessionRefreshPromise: Promise<boolean> | null = null;
 let sessionExpiredFired = false;
+let proactiveRefreshPromise: Promise<void> | null = null;
 
 export function configureEmployeeApi(cb: { onSessionExpired: () => void }) {
   onEmployeeSessionExpired = cb.onSessionExpired;
@@ -100,11 +102,69 @@ function trySessionRefresh(): Promise<boolean> {
   return sessionRefreshPromise;
 }
 
+/**
+ * Proactively refresh token if it expires within 30 minutes.
+ * Runs BEFORE the request (unlike trySessionRefresh which runs after 401).
+ * Uses singleton promise to prevent concurrent refresh attempts.
+ */
+async function _doProactiveRefresh(): Promise<void> {
+  try {
+    const token = await getEmployeeToken();
+    if (!token) return;
+
+    const payload = decodeTokenPayload(token);
+    if (!payload || typeof payload.exp !== "number") return;
+
+    const expiresAt = payload.exp * 1000;
+    const remaining = expiresAt - Date.now();
+
+    // Only refresh if token expires within threshold and is still valid
+    if (remaining > PROACTIVE_REFRESH_THRESHOLD_MS || remaining <= 0) return;
+
+    const controller = new AbortController();
+    const refreshTimeout = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const res = await fetch(`${API_BASE}/api/employee-app/auth/refresh`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        signal: controller.signal,
+      });
+
+      if (!res.ok) return; // Continue with current token
+
+      const json = await res.json();
+      if (json.status === "success" && json.data?.token) {
+        await setEmployeeToken(json.data.token);
+      }
+    } finally {
+      clearTimeout(refreshTimeout);
+    }
+  } catch {
+    // Silently ignore -- continue with current token
+  }
+}
+
+function _maybeRefreshToken(): Promise<void> {
+  if (proactiveRefreshPromise) return proactiveRefreshPromise;
+  proactiveRefreshPromise = _doProactiveRefresh().finally(() => {
+    proactiveRefreshPromise = null;
+  });
+  return proactiveRefreshPromise;
+}
+
 export async function employeeFetch<T>(
   path: string,
   options: RequestInit = {},
   { authenticated = true }: { authenticated?: boolean } = {},
 ): Promise<ApiResponse<T>> {
+  // Proactive token refresh before making the request
+  if (authenticated) {
+    await _maybeRefreshToken();
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   const lang = getLang();
@@ -314,6 +374,93 @@ export async function uploadDocument(
   formData: FormData,
 ): Promise<ApiResponse<{ id: string }>> {
   const lang = getLang();
+
+  // ── Try S3 presigned URL path first (faster, no server proxy) ──
+  const s3Result = await _tryS3Upload(formData, lang);
+  if (s3Result) return s3Result;
+
+  // ── Fallback: legacy FormData upload through server ──
+  return _legacyFormDataUpload(formData, lang);
+}
+
+/**
+ * Attempt upload via S3 presigned URL.
+ * Returns null if signed URL request fails (caller should fall back).
+ */
+async function _tryS3Upload(
+  formData: FormData,
+  lang: Lang,
+): Promise<ApiResponse<{ id: string }> | null> {
+  try {
+    // Extract file info from FormData
+    const file = formData.get("file") as { uri: string; name: string; type: string } | null;
+    const dataStr = formData.get("data") as string | null;
+    if (!file || !dataStr) return null;
+
+    let metadata: Record<string, unknown>;
+    try {
+      metadata = JSON.parse(dataStr);
+    } catch {
+      return null;
+    }
+
+    const fileName = file.name || `doc-${Date.now()}.bin`;
+    const contentType = file.type || "application/octet-stream";
+
+    // Read the file blob from URI first -- we need its size for the signed URL request
+    const fileResponse = await fetch(file.uri);
+    const blob = await fileResponse.blob();
+    const fileSize = blob.size;
+
+    // Validate size before requesting signed URL (same 10MB limit as server)
+    if (!fileSize || fileSize > 10 * 1024 * 1024) return null;
+
+    // Step 1: Get presigned URL from server
+    const signedUrlRes = await employeeFetch<{
+      signedUrl: string;
+      publicUrl: string;
+      path: string;
+      expiresIn: number;
+    }>("/documents/signed-url", {
+      method: "POST",
+      body: JSON.stringify({ fileName, fileSize, contentType }),
+    });
+
+    if (signedUrlRes.status !== "success" || !signedUrlRes.data) return null;
+
+    const { signedUrl, publicUrl } = signedUrlRes.data;
+
+    const s3Res = await fetch(signedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": contentType },
+      body: blob,
+    });
+
+    if (!s3Res.ok) return null;
+
+    // Step 3: Create document record with metadata + S3 URL
+    const docResult = await employeeFetch<{ id: string }>("/documents", {
+      method: "POST",
+      body: JSON.stringify({
+        ...metadata,
+        fileUrl: publicUrl,
+        fileName,
+        fileSize,
+      }),
+    });
+
+    return docResult;
+  } catch {
+    // Any failure in S3 path -> return null to fall back
+    return null;
+  }
+}
+
+/** Legacy FormData upload with 401 retry. */
+async function _legacyFormDataUpload(
+  formData: FormData,
+  lang: Lang,
+): Promise<ApiResponse<{ id: string }>> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
   try {

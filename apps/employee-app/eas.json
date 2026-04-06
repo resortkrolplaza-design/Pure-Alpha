@@ -15,7 +15,17 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "channel": "production"
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "appleId": "klijewskiantonio@gmail.com",
+        "ascAppId": "6761676392",
+        "appleTeamId": "MX59BMDM89"
+      }
     }
   }
 }

@@ -3,7 +3,7 @@
 // =============================================================================
 
 import { API_BASE } from "./api";
-import { getGroupToken } from "./auth";
+import { getGroupToken, setGroupToken, decodeBase64 } from "./auth";
 import type {
   ApiResponse,
   PortalInitData,
@@ -20,12 +20,73 @@ import type {
 } from "./types";
 
 const REQUEST_TIMEOUT_MS = 15_000;
+const PROACTIVE_REFRESH_THRESHOLD_MS = 2 * 60 * 60 * 1000; // 2 hours before exp
 
 // Session expiry callback -- configured from _layout.tsx
 let onGroupSessionExpired: (() => void) | null = null;
+let proactiveRefreshPromise: Promise<void> | null = null;
 
 export function configureGroupApi(cb: { onSessionExpired: () => void }) {
   onGroupSessionExpired = cb.onSessionExpired;
+}
+
+function decodeTokenPayload(token: string): Record<string, unknown> | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2) return null;
+    return JSON.parse(decodeBase64(parts[1]));
+  } catch {
+    return null;
+  }
+}
+
+async function _doProactiveRefresh(trackingId: string): Promise<void> {
+  try {
+    const token = await getGroupToken();
+    if (!token) return;
+
+    const payload = decodeTokenPayload(token);
+    if (!payload || typeof payload.exp !== "number") return;
+
+    const expiresAt = payload.exp * 1000;
+    const remaining = expiresAt - Date.now();
+
+    // Only refresh if token expires within threshold and is still valid
+    if (remaining > PROACTIVE_REFRESH_THRESHOLD_MS || remaining <= 0) return;
+
+    const controller = new AbortController();
+    const refreshTimeout = setTimeout(() => controller.abort(), 10_000);
+    try {
+      const url = `${API_BASE}/api/portal/${encodeURIComponent(trackingId)}/auth/refresh`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        signal: controller.signal,
+      });
+
+      if (!res.ok) return;
+
+      const json = await res.json();
+      if (json.status === "success" && json.data?.token) {
+        await setGroupToken(json.data.token);
+      }
+    } finally {
+      clearTimeout(refreshTimeout);
+    }
+  } catch {
+    // Silently ignore -- continue with current token
+  }
+}
+
+function _maybeRefreshToken(trackingId: string): Promise<void> {
+  if (proactiveRefreshPromise) return proactiveRefreshPromise;
+  proactiveRefreshPromise = _doProactiveRefresh(trackingId).finally(() => {
+    proactiveRefreshPromise = null;
+  });
+  return proactiveRefreshPromise;
 }
 
 export async function groupFetch<T>(
@@ -33,6 +94,9 @@ export async function groupFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<ApiResponse<T>> {
+  // Proactive token refresh before making the request
+  await _maybeRefreshToken(trackingId);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
