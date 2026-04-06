@@ -206,18 +206,21 @@ function ChatContent() {
   // _layout.tsx channel subscription. Polling is fallback only.
   const [wsConnected, setWsConnected] = useState(false);
   useEffect(() => {
-    try {
-      const { getPortalPusher } = require("@/lib/pusher");
-      const p = getPortalPusher();
-      if (p) {
+    let cleanup: (() => void) | null = null;
+    (async () => {
+      try {
+        const { getPortalPusher } = require("@/lib/pusher");
+        const p = await getPortalPusher();
+        if (!p) return;
         setWsConnected(p.connection.state === "connected");
         const handler = ({ current }: { current: string }) => {
           setWsConnected(current === "connected");
         };
         p.connection.bind("state_change", handler);
-        return () => { p.connection.unbind("state_change", handler); };
-      }
-    } catch { /* pusher not available */ }
+        cleanup = () => { p.connection.unbind("state_change", handler); };
+      } catch { /* pusher not available */ }
+    })();
+    return () => { cleanup?.(); };
   }, []);
 
   const { scaleStyle, onPressIn, onPressOut } = useScalePress();
