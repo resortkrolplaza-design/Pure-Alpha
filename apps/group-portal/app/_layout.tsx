@@ -13,9 +13,6 @@ import { StyleSheet } from "react-native";
 import { configureGroupApi } from "@/lib/group-api";
 import { logout } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
-import { initSentry } from "@/lib/sentry";
-
-initSentry();
 
 SplashScreen.preventAutoHideAsync();
 

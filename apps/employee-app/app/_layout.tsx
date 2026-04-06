@@ -13,9 +13,6 @@ import { StyleSheet, AppState, Platform } from "react-native";
 import { configureEmployeeApi } from "@/lib/employee-api";
 import { logout } from "@/lib/auth";
 import { useAppStore } from "@/lib/store";
-import { initSentry } from "@/lib/sentry";
-
-initSentry();
 
 // TanStack Query: refetch on app focus (React Native needs manual AppState wiring)
 if (Platform.OS !== "web") {
