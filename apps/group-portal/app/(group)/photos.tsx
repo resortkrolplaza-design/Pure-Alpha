@@ -21,7 +21,7 @@ import { useScalePress, useSlideUp } from "@/lib/animations";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 // P2-30: SSRF protection — same pattern as documents.tsx
-const ALLOWED_HOSTS = ["purealphahotel.pl", "supabase.co", "supabase.in"];
+const ALLOWED_HOSTS = ["purealphahotel.pl", "supabase.co", "supabase.in", "cloudfront.net", "amazonaws.com"];
 
 function isUrlAllowed(urlStr: string): boolean {
   try {

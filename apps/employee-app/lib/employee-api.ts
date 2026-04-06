@@ -313,21 +313,50 @@ export async function fetchDocuments(): Promise<ApiResponse<unknown[]>> {
 export async function uploadDocument(
   formData: FormData,
 ): Promise<ApiResponse<{ id: string }>> {
-  const token = await getEmployeeToken();
+  const lang = getLang();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 30_000);
   try {
-    const res = await fetch(`${API_BASE}/api/employee-app/documents`, {
+    const token = await getEmployeeToken();
+    const url = `${API_BASE}/api/employee-app/documents`;
+    const res = await fetch(url, {
       method: "POST",
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       body: formData,
       signal: controller.signal,
     });
+
+    // 401 retry with biometric re-auth (same pattern as employeeFetch)
+    if (res.status === 401) {
+      const refreshed = await trySessionRefresh();
+      if (refreshed) {
+        clearTimeout(timeout);
+        const retryController = new AbortController();
+        const retryTimeout = setTimeout(() => retryController.abort(), 30_000);
+        try {
+          const newToken = await getEmployeeToken();
+          const retryRes = await fetch(url, {
+            method: "POST",
+            headers: { ...(newToken ? { Authorization: `Bearer ${newToken}` } : {}) },
+            body: formData,
+            signal: retryController.signal,
+          });
+          if (retryRes.status === 401) {
+            fireSessionExpired();
+            return { status: "error", errorMessage: t(lang, "common.sessionExpired") };
+          }
+          return (await retryRes.json()) as ApiResponse<{ id: string }>;
+        } finally {
+          clearTimeout(retryTimeout);
+        }
+      }
+      fireSessionExpired();
+      return { status: "error", errorMessage: t(lang, "common.sessionExpired") };
+    }
+
     return (await res.json()) as ApiResponse<{ id: string }>;
   } catch {
-    return { status: "error", errorMessage: t(getLang(), "common.networkError") };
+    return { status: "error", errorMessage: t(lang, "common.networkError") };
   } finally {
     clearTimeout(timeout);
   }

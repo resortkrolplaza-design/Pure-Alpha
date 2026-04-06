@@ -7,6 +7,8 @@ const ALLOWED_IMAGE_HOSTS = [
   "supabase.co",
   "supabase.in",
   "r.profitroom.com",
+  "cloudfront.net",         // AWS CloudFront CDN (S3 media)
+  "amazonaws.com",          // AWS S3 direct URLs
 ];
 
 /** Check if a URL is safe to render as an image source */

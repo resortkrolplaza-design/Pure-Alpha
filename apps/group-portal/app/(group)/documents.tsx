@@ -36,7 +36,7 @@ import { useScalePress, useSlideUp } from "@/lib/animations";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 // SSRF protection: only allow downloads from trusted domains
-const ALLOWED_HOSTS = ["purealphahotel.pl", "supabase.co", "supabase.in"];
+const ALLOWED_HOSTS = ["purealphahotel.pl", "supabase.co", "supabase.in", "cloudfront.net", "amazonaws.com"];
 
 function isUrlAllowed(urlStr: string): boolean {
   try {
