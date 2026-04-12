@@ -22,6 +22,7 @@ import { loyal, fontSize, radius, spacing, letterSpacing } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
+import { setPersistedLang } from "@/lib/auth";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 
 // -- Animated sine wave (bottom decorative element) ---------------------------
@@ -252,7 +253,9 @@ function WelcomeScreenInner() {
 
   const handleToggleLang = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setLang(lang === "pl" ? "en" : "pl");
+    const newLang = lang === "pl" ? "en" : "pl";
+    setLang(newLang);
+    setPersistedLang(newLang);
   };
 
   return (

@@ -361,8 +361,8 @@ export async function sendMessage(
 
 export async function subscribePush(
   token: string,
-  data: { pushToken: string; platform: string; deviceName?: string },
-): Promise<ApiResponse<{ subscribed: boolean }>> {
+  data: { expoPushToken: string; deviceId: string; platform: string },
+): Promise<ApiResponse<void>> {
   return loyalFetch(token, "/push-subscribe", {
     method: "POST",
     body: JSON.stringify(data),

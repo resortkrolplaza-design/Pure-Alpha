@@ -88,6 +88,7 @@ const pl: Record<string, string> = {
   "challenge.daysLeft": "Pozosta\u0142o dni",
   "challenge.reward": "Nagroda",
   "challenge.noChallenges": "Brak aktywnych wyzwa\u0144",
+  "challenge.daysLeftN": "{n} dni",
   "challenge.loadError": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wyzwa\u0144.",
 
   // -- Badges -----------------------------------------------------------------
@@ -167,6 +168,7 @@ const pl: Record<string, string> = {
   "msg.keyboardHint": "Enter \u2014 wy\u015blij, Shift+Enter \u2014 nowa linia",
   "msg.loadOlder": "Za\u0142aduj starsze wiadomo\u015bci",
   "msg.loadingOlder": "\u0141adowanie...",
+  "msg.fetchError": "Nie uda\u0142o si\u0119 za\u0142adowa\u0107 wiadomo\u015bci. Spr\u00f3buj ponownie.",
 
   // -- Mobile-specific --------------------------------------------------------
   "common.error": "Wyst\u0105pi\u0142 b\u0142\u0105d",
@@ -185,6 +187,7 @@ const pl: Record<string, string> = {
   "auth.login": "Zaloguj si\u0119",
   "auth.register": "Utw\u00f3rz konto",
   "auth.forgotPassword": "Zapomnia\u0142e\u015b has\u0142a?",
+  "auth.forgotPasswordDesc": "Podaj adres email powi\u0105zany z kontem. Wy\u015Blemy link do resetowania has\u0142a.",
   "auth.email": "Adres email",
   "auth.password": "Has\u0142o",
   "auth.confirmPassword": "Powt\u00f3rz has\u0142o",
@@ -195,6 +198,7 @@ const pl: Record<string, string> = {
   "auth.forgotPasswordLink": "Zapomnia\u0142e\u015b has\u0142a?",
   "auth.sendResetLink": "Wy\u015blij link resetuj\u0105cy",
   "auth.resetSent": "Link do resetowania has\u0142a zosta\u0142 wys\u0142any",
+  "hotelSelect.noPortal": "Ten hotel nie ma aktywnego portalu lojalno\u015bciowego.",
   "auth.checkEmail": "Sprawd\u017a email -- wys\u0142ali\u015bmy link aktywacyjny",
   "auth.activationSent": "Sprawd\u017a skrzynk\u0119 email",
   "auth.selectHotel": "Wybierz hotel",
@@ -399,6 +403,7 @@ const en: Record<string, string> = {
   "challenge.daysLeft": "Days left",
   "challenge.reward": "Reward",
   "challenge.noChallenges": "No active challenges",
+  "challenge.daysLeftN": "{n} days",
   "challenge.loadError": "Failed to load challenges.",
 
   // -- Badges -----------------------------------------------------------------
@@ -478,6 +483,7 @@ const en: Record<string, string> = {
   "msg.keyboardHint": "Enter \u2014 send, Shift+Enter \u2014 new line",
   "msg.loadOlder": "Load older messages",
   "msg.loadingOlder": "Loading...",
+  "msg.fetchError": "Failed to load messages. Please try again.",
 
   // -- Mobile-specific --------------------------------------------------------
   "common.error": "An error occurred",
@@ -496,6 +502,7 @@ const en: Record<string, string> = {
   "auth.login": "Log in",
   "auth.register": "Create account",
   "auth.forgotPassword": "Forgot password?",
+  "auth.forgotPasswordDesc": "Enter the email address associated with your account. We will send a password reset link.",
   "auth.email": "Email address",
   "auth.password": "Password",
   "auth.confirmPassword": "Confirm password",
@@ -506,6 +513,7 @@ const en: Record<string, string> = {
   "auth.forgotPasswordLink": "Forgot password?",
   "auth.sendResetLink": "Send reset link",
   "auth.resetSent": "Password reset link has been sent",
+  "hotelSelect.noPortal": "This hotel does not have an active loyalty portal.",
   "auth.checkEmail": "Check your email -- we sent an activation link",
   "auth.activationSent": "Check your inbox",
   "auth.selectHotel": "Select hotel",

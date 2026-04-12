@@ -1,11 +1,7 @@
-# EAS Build ignore -- overrides .gitignore for build archives
-# Root .gitignore blocks *.png but we need app icons/splash for native builds
-
-# Standard ignores
+# EAS Build ignore
 node_modules/
 .expo/
 web-build/
 dist/
 
 # DO NOT ignore assets -- needed for native builds
-# (overrides root *.png exclusion)

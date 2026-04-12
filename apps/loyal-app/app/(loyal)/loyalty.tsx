@@ -27,6 +27,7 @@ import {
   fetchScratchCards,
   fetchHistory,
   scratchCard,
+  claimScratchCard,
   fetchChallenges,
   fetchBadges,
   type HistoryApiResponse,
@@ -47,10 +48,12 @@ function ScratchCardItem({
   card,
   onReveal,
   lang,
+  pointsName,
 }: {
   card: ScratchCardData;
   onReveal: (id: string) => void;
   lang: "pl" | "en";
+  pointsName: string;
 }) {
   const status = deriveScratchCardStatus(card);
   const isRevealed = status !== "AVAILABLE";
@@ -61,7 +64,7 @@ function ScratchCardItem({
           <Icon name="trophy" size={28} color={loyal.primary} />
           <Text style={styles.scratchPrize}>{card.prizeLabel ?? "--"}</Text>
           {card.prizeValue != null && card.prizeValue > 0 && (
-            <Text style={styles.scratchPoints}>+{card.prizeValue} pkt</Text>
+            <Text style={styles.scratchPoints}>+{card.prizeValue} {pointsName}</Text>
           )}
         </View>
       ) : (
@@ -81,7 +84,7 @@ function ScratchCardItem({
 
 // -- Challenge Card -----------------------------------------------------------
 
-function ChallengeCard({ item, lang }: { item: ChallengeData; lang: "pl" | "en" }) {
+function ChallengeCard({ item, lang, pointsName }: { item: ChallengeData; lang: "pl" | "en"; pointsName: string }) {
   const currentValue = item.progress?.currentValue ?? 0;
   const isCompleted = !!item.progress?.completedAt;
   const progressRatio = item.targetValue > 0 ? Math.min(currentValue / item.targetValue, 1) : 0;
@@ -93,7 +96,7 @@ function ChallengeCard({ item, lang }: { item: ChallengeData; lang: "pl" | "en" 
     <View style={[styles.challengeCard, isCompleted && { opacity: 0.6 }]}>
       <View style={styles.challengeHeader}>
         <Text style={styles.challengeName} numberOfLines={2}>{item.name}</Text>
-        <Text style={styles.challengeReward}>+{item.rewardPoints} pkt</Text>
+        <Text style={styles.challengeReward}>+{item.rewardPoints} {pointsName}</Text>
       </View>
       {item.description && (
         <Text style={styles.challengeDesc} numberOfLines={2}>{item.description}</Text>
@@ -108,7 +111,7 @@ function ChallengeCard({ item, lang }: { item: ChallengeData; lang: "pl" | "en" 
         </Text>
         {daysLeft != null && !isCompleted && (
           <Text style={styles.challengeDays}>
-            {daysLeft} {lang === "pl" ? "dni" : "days"}
+            {t(lang, "challenge.daysLeftN").replace("{n}", String(daysLeft))}
           </Text>
         )}
       </View>
@@ -176,7 +179,7 @@ function LoyaltyScreenInner() {
   const [revealingCardId, setRevealingCardId] = useState<string | null>(null);
 
   // -- Queries ----------------------------------------------------------------
-  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal, isError: isPortalError } = useQuery<PortalData>({
+  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal, isError: isPortalError, isLoading: isPortalLoading } = useQuery<PortalData>({
     queryKey: ["portal", token],
     queryFn: async () => {
       const res = await fetchPortalData(token!);
@@ -289,6 +292,13 @@ function LoyaltyScreenInner() {
       if (res.status !== "success") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(tt("common.error"), res.errorMessage ?? tt("common.retry"));
+      } else if (res.data && res.data.prizeType !== "NONE") {
+        // Auto-claim the prize after a winning scratch
+        try {
+          await claimScratchCard(token, cardId);
+        } catch {
+          // Claim failed silently -- user can retry via the card UI
+        }
       }
     } catch {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -296,8 +306,9 @@ function LoyaltyScreenInner() {
     } finally {
       setRevealingCardId(null);
       refetchCards();
+      refetchPortal();
     }
-  }, [token, revealingCardId, refetchCards, tt]);
+  }, [token, revealingCardId, refetchCards, refetchPortal, tt]);
 
   const handleLoadMore = useCallback(() => {
     if (txData?.hasMore && !isFetchingTx) {
@@ -349,7 +360,7 @@ function LoyaltyScreenInner() {
             horizontal
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
-              <ScratchCardItem card={item} onReveal={handleRevealCard} lang={lang} />
+              <ScratchCardItem card={item} onReveal={handleRevealCard} lang={lang} pointsName={portalData?.program?.pointsName ?? "pkt"} />
             )}
             contentContainerStyle={styles.horizontalList}
           />
@@ -410,7 +421,7 @@ function LoyaltyScreenInner() {
               )}
               {nextTier.minSpent != null && (
                 <Text style={styles.tierCriteria}>
-                  {tt("loyalty.spent")}: {member?.totalSpent ?? 0} / {nextTier.minSpent} PLN
+                  {tt("loyalty.spent")}: {member?.totalSpent ?? 0} / {nextTier.minSpent} {portalData?.program?.currency ?? "PLN"}
                 </Text>
               )}
               {nextTier.minStays != null && (
@@ -456,7 +467,7 @@ function LoyaltyScreenInner() {
         <View>
           <Text style={styles.sectionTitle}>{tt("loyalty.challenges")}</Text>
           {challenges.map((ch) => (
-            <ChallengeCard key={ch.id} item={ch} lang={lang} />
+            <ChallengeCard key={ch.id} item={ch} lang={lang} pointsName={portalData?.program?.pointsName ?? "pkt"} />
           ))}
         </View>
       )}
@@ -500,7 +511,7 @@ function LoyaltyScreenInner() {
                   />
                 </View>
                 <Text style={styles.earningRuleLabel}>{label}</Text>
-                <Text style={styles.earningRulePoints}>+{value} pkt</Text>
+                <Text style={styles.earningRulePoints}>+{value} {portalData?.program?.pointsName ?? "pkt"}</Text>
               </View>
             );
           })}
@@ -536,6 +547,14 @@ function LoyaltyScreenInner() {
     }
     return null;
   };
+
+  if (isPortalLoading && !portalData) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color={loyal.primary} />
+      </View>
+    );
+  }
 
   if (isPortalError) {
     return (

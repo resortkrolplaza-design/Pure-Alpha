@@ -29,6 +29,7 @@
         "backgroundColor": "#D4AF37"
       },
       "permissions": [
+        "android.permission.RECORD_AUDIO",
         "android.permission.RECORD_AUDIO"
       ]
     },
@@ -58,6 +59,12 @@
         "projectId": "217321fc-e3e9-435d-abc7-e3faf907f6aa"
       }
     },
-    "owner": "purealpha"
+    "owner": "purealpha",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/217321fc-e3e9-435d-abc7-e3faf907f6aa"
+    }
   }
 }

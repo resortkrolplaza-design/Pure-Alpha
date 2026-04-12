@@ -8,8 +8,24 @@ import { Platform } from "react-native";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
 import Constants from "expo-constants";
+import * as SecureStore from "expo-secure-store";
 import { subscribePush } from "./loyal-api";
 import { useAppStore } from "./store";
+
+const DEVICE_ID_KEY = "pa_loyal_device_id";
+let _cachedDeviceId: string | null = null;
+
+async function getDeviceId(): Promise<string> {
+  if (_cachedDeviceId) return _cachedDeviceId;
+  try {
+    const stored = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+    if (stored) { _cachedDeviceId = stored; return stored; }
+  } catch { /* first launch */ }
+  const id = `${Platform.OS}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  try { await SecureStore.setItemAsync(DEVICE_ID_KEY, id); } catch { /* web fallback */ }
+  _cachedDeviceId = id;
+  return id;
+}
 
 // Configure how notifications appear when app is foregrounded
 Notifications.setNotificationHandler({
@@ -62,11 +78,13 @@ export function usePushNotifications() {
 
     (async () => {
       try {
-        const pushToken = await getExpoPushToken();
-        if (!pushToken || cancelled) return;
+        const expoPushToken = await getExpoPushToken();
+        if (!expoPushToken || cancelled) return;
 
+        const deviceId = await getDeviceId();
         await subscribePush(token, {
-          pushToken,
+          expoPushToken,
+          deviceId,
           platform: Platform.OS,
         });
 

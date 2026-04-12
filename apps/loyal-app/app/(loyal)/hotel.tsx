@@ -16,6 +16,7 @@ import {
   Modal,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -170,7 +171,7 @@ function GalleryThumbnail({
 
 // -- Service Card -------------------------------------------------------------
 
-function ServiceCard({ item }: { item: ServiceData }) {
+function ServiceCard({ item, currency }: { item: ServiceData; currency: string }) {
   return (
     <View style={styles.serviceCard}>
       <View style={styles.serviceIconWrap}>
@@ -187,7 +188,7 @@ function ServiceCard({ item }: { item: ServiceData }) {
         )}
         {item.price != null && (
           <Text style={styles.servicePrice}>
-            {item.price} {item.currency ?? "PLN"}
+            {item.price} {item.currency ?? currency}
           </Text>
         )}
       </View>
@@ -316,7 +317,7 @@ function HotelScreenInner() {
   const [viewerIndex, setViewerIndex] = useState(0);
   const [logoError, setLogoError] = useState(false);
 
-  const { data, refetch, isRefetching, isError } = useQuery<PortalData>({
+  const { data, refetch, isRefetching, isError, isLoading } = useQuery<PortalData>({
     queryKey: ["portal", token],
     queryFn: async () => {
       const res = await fetchPortalData(token!);
@@ -474,7 +475,7 @@ function HotelScreenInner() {
         <View>
           <Text style={styles.sectionTitle}>{tt("stay.hotelServices")}</Text>
           {services.map((svc) => (
-            <ServiceCard key={svc.id} item={svc} />
+            <ServiceCard key={svc.id} item={svc} currency={data?.program?.currency ?? "PLN"} />
           ))}
         </View>
       )}
@@ -526,6 +527,14 @@ function HotelScreenInner() {
       )}
     </View>
   );
+
+  if (isLoading && !data) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color={loyal.primary} />
+      </View>
+    );
+  }
 
   if (isError) {
     return (

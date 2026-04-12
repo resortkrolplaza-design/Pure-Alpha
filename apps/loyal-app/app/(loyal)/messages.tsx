@@ -15,6 +15,8 @@ import {
   Platform,
   AppState,
   ActivityIndicator,
+  Alert,
+  RefreshControl,
 } from "react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -317,7 +319,7 @@ function MessagesScreenInner() {
   }, []);
 
   // -- Main messages query (polling) ----------------------------------------
-  const { data: latestData, isLoading } = useQuery<{
+  const { data: latestData, isLoading, isError, refetch } = useQuery<{
     messages: MessageData[];
     nextCursor: string | null;
   }>({
@@ -403,8 +405,9 @@ function MessagesScreenInner() {
       queryClient.invalidateQueries({ queryKey: ["messages", token, "latest"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
-    onError: () => {
+    onError: (err) => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(tt("common.error"), String(err.message ?? tt("msg.sendError")));
     },
   });
 
@@ -481,6 +484,19 @@ function MessagesScreenInner() {
           <ActivityIndicator size="large" color={loyal.primary} />
           <Text style={styles.loadingText}>{tt("msg.loading")}</Text>
         </View>
+      ) : isError && allMessages.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Icon name="alert-circle-outline" size={48} color={loyal.lightTextMuted} />
+          <Text style={styles.emptyTitle}>{tt("msg.fetchError")}</Text>
+          <Pressable
+            onPress={() => refetch()}
+            style={styles.retryBtn}
+            accessibilityRole="button"
+            accessibilityLabel={tt("common.retry")}
+          >
+            <Text style={styles.retryBtnText}>{tt("common.retry")}</Text>
+          </Pressable>
+        </View>
       ) : allMessages.length === 0 ? (
         <EmptyState lang={lang} />
       ) : (
@@ -501,6 +517,13 @@ function MessagesScreenInner() {
           showsVerticalScrollIndicator={false}
           keyboardDismissMode="interactive"
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={false}
+              onRefresh={() => refetch()}
+              tintColor={loyal.primary}
+            />
+          }
         />
       )}
 
@@ -665,6 +688,23 @@ const styles = StyleSheet.create({
     color: loyal.lightTextMuted,
     textAlign: "center",
     fontStyle: "italic",
+  },
+
+  // -- Retry Button -----------------------------------------------------------
+  retryBtn: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    backgroundColor: loyal.primary,
+    borderRadius: radius.lg,
+    minHeight: TOUCH_TARGET,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  retryBtnText: {
+    color: loyal.bg,
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
   },
 
   // -- Load Older Button ------------------------------------------------------

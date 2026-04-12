@@ -171,9 +171,7 @@ function ForgotPasswordScreenInner() {
             </View>
 
             <Text style={styles.cardDesc}>
-              {lang === "pl"
-                ? "Podaj adres email powiazany z kontem. Wyslemy link do resetowania hasla."
-                : "Enter the email address associated with your account. We will send a password reset link."}
+              {t(lang, "auth.forgotPasswordDesc")}
             </Text>
 
             {/* Email */}

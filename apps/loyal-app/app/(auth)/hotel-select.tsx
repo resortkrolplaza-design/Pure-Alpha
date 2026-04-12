@@ -86,9 +86,7 @@ function HotelSelectScreenInner() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       Alert.alert(
         t(lang, "common.error"),
-        lang === "pl"
-          ? "Ten hotel nie ma aktywnego portalu lojalnosciowego."
-          : "This hotel does not have an active loyalty portal.",
+        t(lang, "hotelSelect.noPortal"),
       );
       return;
     }

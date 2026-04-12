@@ -37,12 +37,14 @@ function RewardCard({
   onRedeem,
   isRedeeming,
   lang,
+  pointsName,
 }: {
   item: RewardData;
   pointsBalance: number;
   onRedeem: (reward: RewardData) => void;
   isRedeeming: boolean;
   lang: "pl" | "en";
+  pointsName: string;
 }) {
   const tt = (key: string) => t(lang, key);
   const canRedeem = item.canRedeem && pointsBalance >= item.pointsCost;
@@ -81,7 +83,7 @@ function RewardCard({
           </View>
         )}
 
-        <Text style={styles.rewardCost}>{item.pointsCost} pkt</Text>
+        <Text style={styles.rewardCost}>{item.pointsCost} {pointsName}</Text>
 
         {canRedeem ? (
           <Pressable
@@ -118,18 +120,20 @@ function OfferCard({
   lang,
   globalTierNameMap,
   token,
+  currency,
 }: {
   item: OfferData;
   lang: "pl" | "en";
   globalTierNameMap: Map<string, string>;
   token: string | null;
+  currency: string;
 }) {
   const tt = (key: string) => t(lang, key);
   const [imageError, setImageError] = useState(false);
   const discount = item.discountPercent
     ? `-${item.discountPercent}%`
     : item.discountFixed
-      ? `-${item.discountFixed} PLN`
+      ? `-${item.discountFixed} ${currency}`
       : null;
 
   return (
@@ -263,7 +267,7 @@ function RewardsScreenInner() {
   });
 
   // Fetch portal data for points balance
-  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal, isError: isPortalError } = useQuery<PortalData>({
+  const { data: portalData, refetch: refetchPortal, isRefetching: isRefetchingPortal, isError: isPortalError, isLoading: isPortalLoading } = useQuery<PortalData>({
     queryKey: ["portal", token],
     queryFn: async () => {
       const res = await fetchPortalData(token!);
@@ -337,7 +341,7 @@ function RewardsScreenInner() {
 
       Alert.alert(
         tt("rewards.confirmTitle"),
-        `${reward.name}\n\n${tt("rewards.cost")}: ${reward.pointsCost} pkt\n${tt("rewards.remaining")}: ${remaining} pkt`,
+        `${reward.name}\n\n${tt("rewards.cost")}: ${reward.pointsCost} ${portalData?.program?.pointsName ?? "pkt"}\n${tt("rewards.remaining")}: ${remaining} ${portalData?.program?.pointsName ?? "pkt"}`,
         [
           { text: tt("common.cancel"), style: "cancel" },
           {
@@ -361,7 +365,7 @@ function RewardsScreenInner() {
             keyExtractor={(item) => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <OfferCard item={item} lang={lang} globalTierNameMap={globalTierNameMap} token={token} />}
+            renderItem={({ item }) => <OfferCard item={item} lang={lang} globalTierNameMap={globalTierNameMap} token={token} currency={portalData?.program?.currency ?? "PLN"} />}
             contentContainerStyle={styles.offersListContent}
           />
         ) : !isRefetchingOffers ? (
@@ -377,7 +381,7 @@ function RewardsScreenInner() {
       <View style={styles.balanceHeader}>
         <Text style={styles.balanceLabel}>{tt("rewards.yourPoints")}</Text>
         <Text style={styles.balanceValue}>{pointsBalance}</Text>
-        <Text style={styles.balanceUnit}>pkt</Text>
+        <Text style={styles.balanceUnit}>{portalData?.program?.pointsName ?? "pkt"}</Text>
       </View>
 
       {/* Empty state when no rewards AND no offers */}
@@ -392,6 +396,14 @@ function RewardsScreenInner() {
   );
 
   const isError = isOffersError || isRewardsError || isPortalError;
+
+  if (isPortalLoading && !portalData) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color={loyal.primary} />
+      </View>
+    );
+  }
 
   if (isError) {
     return (
@@ -429,6 +441,7 @@ function RewardsScreenInner() {
             onRedeem={handleRedeem}
             isRedeeming={redeemMutation.isPending}
             lang={lang}
+            pointsName={portalData?.program?.pointsName ?? "pkt"}
           />
         )}
         refreshControl={

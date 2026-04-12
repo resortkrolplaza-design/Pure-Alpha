@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Linking,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -384,7 +385,7 @@ function StayScreenInner() {
             keyExtractor={(item) => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <ServiceCard item={item} accentColor={accentColor} currency="PLN" />}
+            renderItem={({ item }) => <ServiceCard item={item} accentColor={accentColor} currency={data?.program?.currency ?? "PLN"} />}
             contentContainerStyle={styles.servicesList}
           />
         </View>
@@ -420,6 +421,14 @@ function StayScreenInner() {
       )}
     </View>
   );
+
+  if (isLoading && !data) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center" }]}>
+        <ActivityIndicator size="large" color={loyal.primary} />
+      </View>
+    );
+  }
 
   if (isError) {
     return (
