@@ -10,6 +10,7 @@ import * as Device from "expo-device";
 import Constants from "expo-constants";
 import { groupFetch } from "./group-api";
 import { useAppStore } from "./store";
+import { getDeviceId } from "./device-id";
 
 // Configure how notifications appear when app is foregrounded
 Notifications.setNotificationHandler({
@@ -54,17 +55,6 @@ async function getExpoPushToken(): Promise<string | null> {
   return tokenData.data;
 }
 
-function getDeviceId(): string {
-  // Use installationId from Constants (deprecated but still works in Expo Go)
-  // Falls back to platform + timestamp for uniqueness
-  const id = Constants.installationId
-    ?? Constants.expoConfig?.extra?.installationId
-    ?? null;
-  return id ?? `${Platform.OS}-${Date.now()}`;
-}
-
-export { getDeviceId };
-
 export function usePushNotifications() {
   const trackingId = useAppStore((s) => s.groupTrackingId);
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
@@ -82,7 +72,7 @@ export function usePushNotifications() {
         const token = await getExpoPushToken();
         if (!token || cancelled) return;
 
-        const deviceId = getDeviceId();
+        const deviceId = await getDeviceId();
         await groupFetch(trackingId, "/push-subscribe", {
           method: "POST",
           body: JSON.stringify({

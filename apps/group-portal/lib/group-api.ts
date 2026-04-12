@@ -4,6 +4,7 @@
 
 import { API_BASE } from "./api";
 import { getGroupToken, setGroupToken, decodeBase64 } from "./auth";
+import { updatePusherAuth } from "./pusher";
 import type {
   ApiResponse,
   PortalInitData,
@@ -72,6 +73,7 @@ async function _doProactiveRefresh(trackingId: string): Promise<void> {
       const json = await res.json();
       if (json.status === "success" && json.data?.token) {
         await setGroupToken(json.data.token);
+        updatePusherAuth().catch(() => {});
       }
     } finally {
       clearTimeout(refreshTimeout);

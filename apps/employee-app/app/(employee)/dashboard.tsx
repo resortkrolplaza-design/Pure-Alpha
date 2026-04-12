@@ -87,7 +87,7 @@ function DashboardScreenInner() {
     queryKey: ["employee-dashboard"],
     queryFn: async () => {
       const res = await employeeFetch<DashboardData>("/dashboard");
-      if (res.status !== "success") throw new Error(res.errorMessage || "Blad serwera");
+      if (res.status !== "success") throw new Error(res.errorMessage || "Błąd serwera");
       if (res.data?.isClockedIn !== undefined) {
         setClockedIn(res.data.isClockedIn);
       }
@@ -217,7 +217,7 @@ function DashboardScreenInner() {
         method: "POST",
         body: JSON.stringify({ action }),
       });
-      if (res.status !== "success") throw new Error(res.errorMessage || "Blad");
+      if (res.status !== "success") throw new Error(res.errorMessage || "Błąd");
       return res;
     },
     onSuccess: () => {

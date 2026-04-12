@@ -45,4 +45,14 @@ export async function persistLogin(trackingId: string, data: LoginData): Promise
   store.setPortalRole(role);
   if (data.guest) store.setGuest(data.guest);
   if (data.rsvpToken) store.setRsvpTokenState(data.rsvpToken);
+
+  // Detect device language on first login only (don't override user preference)
+  if (store.lang === "pl") {
+    try {
+      const rawLocale = Intl.DateTimeFormat().resolvedOptions().locale ?? "";
+      if (!rawLocale.startsWith("pl")) store.setLang("en");
+    } catch {
+      // keep default
+    }
+  }
 }

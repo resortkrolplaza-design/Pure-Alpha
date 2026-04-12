@@ -46,7 +46,7 @@ const initialState = {
   isClockedIn: false,
   isBiometricEnrolled: false,
   isHotelOnboarded: false,
-  pushEnabled: true,
+  pushEnabled: false,
   pendingClockIn: null,
 };
 

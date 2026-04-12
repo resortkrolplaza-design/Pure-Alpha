@@ -46,6 +46,7 @@ const HOTEL_ONBOARDED_KEY = "pa_employee_hotel_onboarded";
 
 export async function getEmployeeToken(): Promise<string | null> {
   try {
+    if (Platform.OS === "web") return null;
     return await getItem(TOKEN_KEY);
   } catch {
     return null;
@@ -137,6 +138,7 @@ export async function clearBiometricCredentials(): Promise<void> {
 
 export async function getCachedCredentials(): Promise<{ login: string; pin: string } | null> {
   try {
+    if (Platform.OS === "web") return null;
     const [login, pin] = await Promise.all([
       getItem(CACHED_LOGIN_KEY),
       getItem(CACHED_PIN_KEY),

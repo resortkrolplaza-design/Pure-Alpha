@@ -79,7 +79,7 @@ function ScheduleScreenInner() {
       const res = await employeeFetch<ShiftData[]>(
         `/shifts?startDate=${startDate}&endDate=${endDate}`,
       );
-      if (res.status !== "success") throw new Error(res.errorMessage || "Blad serwera");
+      if (res.status !== "success") throw new Error(res.errorMessage || "Błąd serwera");
       return res.data ?? [];
     },
   });

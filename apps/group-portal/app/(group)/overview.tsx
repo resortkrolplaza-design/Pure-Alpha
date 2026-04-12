@@ -47,7 +47,7 @@ import { logout, setPersistedLang, getSecureItem, setSecureItem, getPersistedPus
 import { isImageUrlSafe, isExternalUrlSafe, sanitizePhone, sanitizeEmail } from "@/lib/url-safety";
 import { fetchPortalInit, fetchPolls, votePoll, groupFetch, submitRsvp } from "@/lib/group-api";
 import type { RsvpPayload } from "@/lib/types";
-import { usePushNotifications, getDeviceId as getPushDeviceId } from "@/lib/usePushNotifications";
+import { usePushNotifications } from "@/lib/usePushNotifications";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { GroupAnnouncementData, PortalInitData, PollData, AgendaItemData } from "@/lib/types";
 
@@ -480,7 +480,7 @@ function OverviewScreenInner() {
         // Re-registration happens automatically via usePushNotifications hook
       } else {
         // Deactivate token on server
-        const deviceId = getPushDeviceId();
+        const deviceId = await getDeviceId();
         if (trackingId) {
           await groupFetch(trackingId, "/push-subscribe", {
             method: "DELETE",

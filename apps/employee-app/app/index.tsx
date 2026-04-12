@@ -40,8 +40,18 @@ function EntryScreenInner() {
 
       const store = useAppStore.getState();
 
-      // Restore language preference
-      if (savedLang) store.setLang(savedLang);
+      // Restore language preference or detect device language
+      if (savedLang) {
+        store.setLang(savedLang);
+      } else {
+        try {
+          const deviceLocale = Intl.DateTimeFormat().resolvedOptions().locale ?? "";
+          const detectedLang = deviceLocale.startsWith("pl") ? "pl" : "en";
+          store.setLang(detectedLang);
+        } catch {
+          // keep default "pl"
+        }
+      }
 
       if (token && slug && hotelId) {
         if (isTokenExpired(token)) {
@@ -82,7 +92,7 @@ function EntryScreenInner() {
                         department: res.data.employee.department,
                         position: res.data.employee.position,
                       });
-                      store.setHotel({ slug, id: hotelId, name: slug });
+                      store.setHotel({ slug, id: hotelId, name: store.hotelName ?? slug });
                       store.setAuthenticated(true);
                       store.setBiometricEnrolled(true);
                       store.setHotelOnboarded(true);
@@ -138,7 +148,7 @@ function EntryScreenInner() {
       if (cancelled) return;
 
       if (onboarded && slug && hotelId) {
-        store.setHotel({ slug, id: hotelId, name: slug });
+        store.setHotel({ slug, id: hotelId, name: store.hotelName ?? slug });
         store.setHotelOnboarded(true);
         router.replace("/(auth)/login");
         return;

@@ -9,3 +9,7 @@ dist/
 
 # DO NOT ignore assets -- needed for native builds
 # (overrides root *.png exclusion)
+
+# EAS Metadata (App Store screenshots/config) -- not needed for builds
+store/
+store.config.json
