@@ -102,7 +102,12 @@ function ChallengeCard({ item, lang, pointsName }: { item: ChallengeData; lang: 
         <Text style={styles.challengeDesc} numberOfLines={2}>{item.description}</Text>
       )}
       {/* Progress bar */}
-      <View style={styles.progressTrack}>
+      <View
+        style={styles.progressTrack}
+        accessibilityRole="progressbar"
+        accessibilityLabel={`${Math.round(progressRatio * 100)}%`}
+        accessibilityValue={{ min: 0, max: item.targetValue, now: currentValue }}
+      >
         <View style={[styles.progressFill, { width: `${progressRatio * 100}%` }]} />
       </View>
       <View style={styles.challengeFooter}>
@@ -406,7 +411,12 @@ function LoyaltyScreenInner() {
               <Text style={styles.nextTierLabel}>
                 {tt("loyalty.nextTier")}: {nextTier.name}
               </Text>
-              <View style={styles.progressTrack}>
+              <View
+                style={styles.progressTrack}
+                accessibilityRole="progressbar"
+                accessibilityLabel={`${Math.round(tierProgress * 100)}%`}
+                accessibilityValue={{ min: 0, max: 100, now: Math.round(tierProgress * 100) }}
+              >
                 <View
                   style={[
                     styles.progressFill,
@@ -414,6 +424,9 @@ function LoyaltyScreenInner() {
                   ]}
                 />
               </View>
+              <Text style={styles.tierProgressPct}>
+                {Math.round(tierProgress * 100)}%
+              </Text>
               {nextTier.minPoints > 0 && (
                 <Text style={styles.tierCriteria}>
                   {member?.availablePoints ?? 0} / {nextTier.minPoints} {tt("stay.points")}
@@ -711,6 +724,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: "Inter_400Regular",
     color: loyal.lightTextMuted,
+  },
+  tierProgressPct: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_600SemiBold",
+    color: loyal.primary,
+    textAlign: "right",
+    marginTop: -spacing.xxs,
   },
 
   // -- Points -----------------------------------------------------------------

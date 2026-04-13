@@ -25,6 +25,7 @@ import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { fetchPortalData } from "@/lib/loyal-api";
+import { setPersistedLang } from "@/lib/auth";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { PortalData, ServiceData, GlobalTierData } from "@/lib/types";
 
@@ -185,6 +186,14 @@ function StayScreenInner() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Linking.openURL(`mailto:${hotel.email}`);
   }, [hotel?.email]);
+
+  const setLang = useAppStore((s) => s.setLang);
+  const handleToggleLang = useCallback(() => {
+    const next = lang === "pl" ? "en" : "pl";
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setLang(next);
+    setPersistedLang(next);
+  }, [lang, setLang]);
 
   const renderHeader = () => (
     <View>
@@ -419,6 +428,19 @@ function StayScreenInner() {
           )}
         </View>
       )}
+
+      {/* Language Toggle */}
+      <Pressable
+        style={styles.langToggle}
+        onPress={handleToggleLang}
+        accessibilityRole="button"
+        accessibilityLabel={tt("common.language")}
+      >
+        <Icon name="globe-outline" size={18} color={loyal.lightTextMuted} />
+        <Text style={styles.langToggleText}>
+          {lang === "pl" ? "English" : "Polski"}
+        </Text>
+      </Pressable>
     </View>
   );
 
@@ -830,6 +852,24 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: "Inter_600SemiBold",
     color: loyal.primary,
+  },
+
+  // -- Language Toggle ----------------------------------------------------------
+  langToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
+    gap: spacing.sm,
+    marginTop: spacing.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: TOUCH_TARGET,
+  },
+  langToggleText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_500Medium",
+    color: loyal.lightTextMuted,
   },
 });
 

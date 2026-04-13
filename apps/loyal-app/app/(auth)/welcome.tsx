@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
+import Constants from "expo-constants";
 import { loyal, fontSize, radius, spacing, letterSpacing } from "@/lib/tokens";
 import { Icon } from "@/lib/icons";
 import { t } from "@/lib/i18n";
@@ -374,7 +375,10 @@ function WelcomeScreenInner() {
 
         {/* Footer */}
         <Animated.Text style={[styles.footer, { opacity: footerOpacity }]}>
-          Pure Alpha Hotel Intelligence
+          Pure Alpha Hotel Intelligence{"\n"}
+          <Animated.Text style={styles.footerVersion}>
+            v{Constants.expoConfig?.version ?? "1.0.0"}
+          </Animated.Text>
         </Animated.Text>
       </View>
     </View>
@@ -505,6 +509,13 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: loyal.textDim,
     marginTop: spacing.xl,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  footerVersion: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: loyal.textDim,
   },
 });
 

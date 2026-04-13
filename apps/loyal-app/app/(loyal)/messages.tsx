@@ -246,6 +246,10 @@ function ComposerBar({
 
   const canSend = text.trim().length > 0 && !isSending;
 
+  const charCount = text.length;
+  const MAX_LENGTH = 2000;
+  const showCharCount = charCount > 0;
+
   return (
     <View
       style={[
@@ -253,6 +257,17 @@ function ComposerBar({
         { paddingBottom: Math.max(insets.bottom, spacing.md) },
       ]}
     >
+      {showCharCount && (
+        <Text
+          style={[
+            styles.charCount,
+            charCount > MAX_LENGTH * 0.9 ? styles.charCountWarn : null,
+          ]}
+          accessibilityLabel={`${charCount} / ${MAX_LENGTH}`}
+        >
+          {charCount}/{MAX_LENGTH}
+        </Text>
+      )}
       <View style={styles.composerRow}>
         <TextInput
           ref={inputRef}
@@ -262,7 +277,7 @@ function ComposerBar({
           placeholder={t(lang, "msg.placeholder")}
           placeholderTextColor={loyal.textDim}
           multiline
-          maxLength={2000}
+          maxLength={MAX_LENGTH}
           returnKeyType="default"
           accessibilityLabel={t(lang, "msg.textareaLabel")}
         />
@@ -762,6 +777,18 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: {
     backgroundColor: loyal.inputBg,
+  },
+
+  // -- Character Count ----------------------------------------------------------
+  charCount: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextMuted,
+    textAlign: "right",
+    marginBottom: spacing.xs,
+  },
+  charCountWarn: {
+    color: loyal.warning,
   },
 });
 
