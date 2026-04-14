@@ -3,8 +3,9 @@
 // Scratch cards, tier, points, challenges, badges, transaction history
 // =============================================================================
 
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import {
+  Animated,
   View,
   Text,
   FlatList,
@@ -13,6 +14,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -49,33 +51,58 @@ function ScratchCardItem({
   onReveal,
   lang,
   pointsName,
+  isRevealing,
 }: {
   card: ScratchCardData;
   onReveal: (id: string) => void;
   lang: "pl" | "en";
   pointsName: string;
+  isRevealing: boolean;
 }) {
   const status = deriveScratchCardStatus(card);
   const isRevealed = status !== "AVAILABLE";
+  const revealAnim = useRef(new Animated.Value(isRevealed ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (isRevealed) {
+      Animated.spring(revealAnim, {
+        toValue: 1,
+        damping: 10,
+        stiffness: 120,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isRevealed, revealAnim]);
+
   return (
     <View style={styles.scratchCard}>
       {isRevealed ? (
-        <View style={styles.scratchRevealed}>
+        <Animated.View style={[styles.scratchRevealed, {
+          opacity: revealAnim,
+          transform: [{ scale: revealAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+        }]}>
           <Icon name="trophy" size={28} color={loyal.primary} />
           <Text style={styles.scratchPrize}>{card.prizeLabel ?? "--"}</Text>
           {card.prizeValue != null && card.prizeValue > 0 && (
             <Text style={styles.scratchPoints}>+{card.prizeValue} {pointsName}</Text>
           )}
-        </View>
+        </Animated.View>
       ) : (
         <Pressable
-          style={styles.scratchOverlay}
+          style={[styles.scratchOverlay, isRevealing && { opacity: 0.7 }]}
           onPress={() => onReveal(card.id)}
+          disabled={isRevealing}
           accessibilityRole="button"
           accessibilityLabel={t(lang, "scratch.tapToScratch")}
         >
-          <Icon name="sparkles" size={28} color={loyal.bg} />
-          <Text style={styles.scratchBtnText}>{t(lang, "scratch.tapToScratch")}</Text>
+          {isRevealing ? (
+            <ActivityIndicator size="small" color={loyal.bg} />
+          ) : (
+            <Icon name="sparkles" size={28} color={loyal.bg} />
+          )}
+          <Text style={styles.scratchBtnText}>
+            {isRevealing ? (lang === "pl" ? "Odkrywam..." : "Revealing...") : t(lang, "scratch.tapToScratch")}
+          </Text>
         </Pressable>
       )}
     </View>
@@ -126,23 +153,56 @@ function ChallengeCard({ item, lang, pointsName }: { item: ChallengeData; lang: 
 
 // -- Badge Item ---------------------------------------------------------------
 
-function BadgeItem({ item }: { item: BadgeData }) {
+function BadgeItem({ item, lang }: { item: BadgeData; lang: "pl" | "en" }) {
   const earned = item.isEarned;
-  // Use emoji as display icon if available, otherwise fall back to generic icon
   const displayLabel = item.emoji ?? null;
+  const [showDetail, setShowDetail] = useState(false);
   return (
-    <View style={[styles.badgeItem, !earned && styles.badgeLocked]}>
-      <View style={[styles.badgeIconWrap, earned ? styles.badgeIconEarned : styles.badgeIconGrey]}>
-        {displayLabel ? (
-          <Text style={{ fontSize: 24 }}>{displayLabel}</Text>
-        ) : (
-          <Icon name="medal" size={24} color={earned ? loyal.primary : loyal.lightTextMuted} />
-        )}
-      </View>
-      <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]} numberOfLines={2}>
-        {item.name}
-      </Text>
-    </View>
+    <>
+      <Pressable
+        style={[styles.badgeItem, !earned && styles.badgeLocked]}
+        onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowDetail(true); }}
+        accessibilityRole="button"
+        accessibilityLabel={item.name}
+      >
+        <View style={[styles.badgeIconWrap, earned ? styles.badgeIconEarned : styles.badgeIconGrey]}>
+          {displayLabel ? (
+            <Text style={{ fontSize: 24 }}>{displayLabel}</Text>
+          ) : (
+            <Icon name="medal" size={24} color={earned ? loyal.primary : loyal.lightTextMuted} />
+          )}
+        </View>
+        <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]} numberOfLines={2}>
+          {item.name}
+        </Text>
+      </Pressable>
+      <Modal visible={showDetail} transparent animationType="fade" onRequestClose={() => setShowDetail(false)}>
+        <Pressable style={styles.badgeModalOverlay} onPress={() => setShowDetail(false)}>
+          <View style={styles.badgeModalCard}>
+            <View style={[styles.badgeModalIcon, earned ? styles.badgeIconEarned : styles.badgeIconGrey]}>
+              {displayLabel ? (
+                <Text style={{ fontSize: 40 }}>{displayLabel}</Text>
+              ) : (
+                <Icon name="medal" size={40} color={earned ? loyal.primary : loyal.lightTextMuted} />
+              )}
+            </View>
+            <Text style={styles.badgeModalName}>{item.name}</Text>
+            {item.description ? (
+              <Text style={styles.badgeModalDesc}>{item.description}</Text>
+            ) : null}
+            {earned && item.earnedAt ? (
+              <Text style={styles.badgeModalDate}>
+                {lang === "pl" ? "Zdobyta" : "Earned"}: {new Date(item.earnedAt).toLocaleDateString(lang === "pl" ? "pl-PL" : "en-GB")}
+              </Text>
+            ) : !earned ? (
+              <Text style={styles.badgeModalDate}>
+                {lang === "pl" ? "Jeszcze nie zdobyta" : "Not yet earned"}
+              </Text>
+            ) : null}
+          </View>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -365,7 +425,7 @@ function LoyaltyScreenInner() {
             horizontal
             showsHorizontalScrollIndicator={false}
             renderItem={({ item }) => (
-              <ScratchCardItem card={item} onReveal={handleRevealCard} lang={lang} pointsName={portalData?.program?.pointsName ?? "pkt"} />
+              <ScratchCardItem card={item} onReveal={handleRevealCard} lang={lang} pointsName={portalData?.program?.pointsName ?? "pkt"} isRevealing={revealingCardId === item.id} />
             )}
             contentContainerStyle={styles.horizontalList}
           />
@@ -494,7 +554,7 @@ function LoyaltyScreenInner() {
             keyExtractor={(item) => item.id}
             horizontal
             showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => <BadgeItem item={item} />}
+            renderItem={({ item }) => <BadgeItem item={item} lang={lang} />}
             contentContainerStyle={styles.horizontalList}
           />
         </View>
@@ -874,6 +934,49 @@ const styles = StyleSheet.create({
   },
   badgeNameLocked: {
     color: loyal.lightTextMuted,
+  },
+  badgeModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing["3xl"],
+  },
+  badgeModalCard: {
+    backgroundColor: loyal.white,
+    borderRadius: radius.xl,
+    padding: spacing["3xl"],
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 300,
+    gap: spacing.md,
+  },
+  badgeModalIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+  },
+  badgeModalName: {
+    fontSize: fontSize.xl,
+    fontFamily: "Inter_700Bold",
+    color: loyal.lightText,
+    textAlign: "center",
+  },
+  badgeModalDesc: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  badgeModalDate: {
+    fontSize: fontSize.xs,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextMuted,
+    textAlign: "center",
   },
 
   // -- Transactions -----------------------------------------------------------

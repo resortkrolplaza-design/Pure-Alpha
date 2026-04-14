@@ -44,6 +44,8 @@ function RegisterScreenInner() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -156,6 +158,29 @@ function RegisterScreenInner() {
             accessibilityLabel={t(lang, "auth.login")}
           >
             <Text style={styles.successButtonText}>{t(lang, "auth.login")}</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.resendButton, (resending || resent) && { opacity: 0.5 }]}
+            disabled={resending || resent}
+            onPress={async () => {
+              setResending(true);
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              try {
+                await guestRegister({ email: email.trim().toLowerCase(), password, firstName: firstName.trim(), lastName: lastName.trim() });
+              } catch { /* anti-enumeration: always show success */ }
+              setResending(false);
+              setResent(true);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }}
+            accessibilityRole="button"
+          >
+            <Text style={styles.resendButtonText}>
+              {resent
+                ? (lang === "pl" ? "Wyslano ponownie" : "Resent")
+                : resending
+                  ? (lang === "pl" ? "Wysylanie..." : "Sending...")
+                  : (lang === "pl" ? "Wyslij ponownie" : "Resend email")}
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -582,6 +607,19 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: loyal.bg,
     letterSpacing: letterSpacing.tight,
+  },
+  resendButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  resendButtonText: {
+    fontSize: fontSize.sm,
+    fontFamily: "Inter_500Medium",
+    color: loyal.textSecondary,
+    textDecorationLine: "underline" as const,
   },
 });
 
