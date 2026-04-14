@@ -159,7 +159,7 @@ function TransactionItem({ item }: { item: TransactionData }) {
     <View style={styles.transactionRow}>
       <Icon name={iconName as any} size={24} color={color} />
       <View style={styles.transactionInfo}>
-        <Text style={styles.transactionDesc} numberOfLines={1}>{item.description}</Text>
+        <Text style={styles.transactionDesc} numberOfLines={1}>{item.description || item.type}</Text>
         <Text style={styles.transactionDate}>
           {new Date(item.createdAt).toLocaleDateString()}
         </Text>

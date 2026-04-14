@@ -135,9 +135,10 @@ function OfferCard({
     : item.discountFixed
       ? `-${item.discountFixed} ${currency}`
       : null;
+  const isExpired = item.validUntil ? new Date(item.validUntil) < new Date() : false;
 
   return (
-    <View style={styles.offerCard}>
+    <View style={[styles.offerCard, isExpired && { opacity: 0.5 }]}>
       {item.imageUrl && !imageError ? (
         <Image
           source={{ uri: item.imageUrl }}
@@ -177,8 +178,10 @@ function OfferCard({
         )}
 
         {item.validUntil && (
-          <Text style={styles.offerValidUntil}>
-            {tt("offers.validUntil")}: {new Date(item.validUntil).toLocaleDateString(lang === "en" ? "en-GB" : "pl-PL", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}
+          <Text style={[styles.offerValidUntil, isExpired && { color: "#c0392b" }]}>
+            {isExpired
+              ? tt("offers.expired")
+              : `${tt("offers.validUntil")}: ${new Date(item.validUntil).toLocaleDateString(lang === "en" ? "en-GB" : "pl-PL", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })}`}
           </Text>
         )}
 
@@ -201,7 +204,7 @@ function OfferCard({
           </View>
         )}
 
-        {item.isUnlocked && item.bookingUrl ? (
+        {item.isUnlocked && item.bookingUrl && !isExpired ? (
           <Pressable
             style={styles.offerBookBtn}
             onPress={() => {

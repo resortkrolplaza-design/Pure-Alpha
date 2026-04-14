@@ -137,6 +137,7 @@ function SettingsScreenInner() {
 
   const handleChangeHotel = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    disconnectPusher();
     router.replace("/(auth)/hotel-select");
   }, []);
 

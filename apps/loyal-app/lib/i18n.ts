@@ -23,9 +23,6 @@ const pl: Record<string, string> = {
   "shell.navLabel": "Nawigacja portalu",
 
   // -- StayTab ----------------------------------------------------------------
-  "stay.greetMorning": "Dzie\u0144 dobry",
-  "stay.greetAfternoon": "Witaj",
-  "stay.greetEvening": "Dobry wiecz\u00f3r",
   "stay.guest": "Go\u015b\u0107",
   "stay.highestTier": "Najwy\u017cszy poziom",
   "stay.stays": "Pobyty",
@@ -289,6 +286,7 @@ const pl: Record<string, string> = {
   "offers.noOffers": "Brak dost\u0119pnych ofert",
   "offers.noOffersDesc": "Nowe oferty pojawi\u0105 si\u0119 wkr\u00f3tce.",
   "offers.locked": "Zablokowana",
+  "offers.expired": "Wygas\u0142a",
   "offers.unlocked": "Odblokowana",
   "offers.tierRequired": "Wymagany poziom: {tier}",
   "offers.discount": "Zni\u017cka",
@@ -361,9 +359,6 @@ const en: Record<string, string> = {
   "shell.navLabel": "Portal navigation",
 
   // -- StayTab ----------------------------------------------------------------
-  "stay.greetMorning": "Good morning",
-  "stay.greetAfternoon": "Welcome",
-  "stay.greetEvening": "Good evening",
   "stay.guest": "Guest",
   "stay.highestTier": "Highest tier",
   "stay.stays": "Stays",
@@ -627,6 +622,7 @@ const en: Record<string, string> = {
   "offers.noOffers": "No offers available",
   "offers.noOffersDesc": "New offers coming soon.",
   "offers.locked": "Locked",
+  "offers.expired": "Expired",
   "offers.unlocked": "Unlocked",
   "offers.tierRequired": "Required tier: {tier}",
   "offers.discount": "Discount",

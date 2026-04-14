@@ -367,8 +367,8 @@ function MessagesScreenInner() {
           pusher.unsubscribe(channelName);
           pusher.connection.unbind("state_change", onStateChange);
         };
-      } catch {
-        /* pusher not available -- polling fallback */
+      } catch (err) {
+        console.warn("[Soketi] Connection failed, using polling fallback:", err);
       }
     })();
 

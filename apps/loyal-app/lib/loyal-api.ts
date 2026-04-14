@@ -272,6 +272,10 @@ export async function fetchHistory(
       },
       signal: controller.signal,
     });
+    if (res.status === 401) {
+      useAppStore.getState().setSessionExpired(true);
+      return { status: "error", errorMessage: t(lang, "shell.sessionExpired") };
+    }
     return (await res.json()) as HistoryApiResponse;
   } catch (err) {
     if (err instanceof Error && err.name === "AbortError") {
