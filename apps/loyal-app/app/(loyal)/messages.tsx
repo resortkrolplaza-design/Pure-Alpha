@@ -1,6 +1,7 @@
 // =============================================================================
 // Loyal App -- Messages Tab
-// Chat with hotel: polling, inverted FlatList, message bubbles, date separators
+// Chat with hotel: Soketi real-time + polling fallback, inverted FlatList,
+// message bubbles, date separators
 // =============================================================================
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
@@ -29,7 +30,7 @@ import { fetchMessages, sendMessage } from "@/lib/loyal-api";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { MessageData } from "@/lib/types";
 
-const POLL_INTERVAL_MS = 15_000;
+const POLL_FALLBACK_MS = 15_000; // Fallback polling when WS disconnected
 
 // -- Date helpers -------------------------------------------------------------
 
@@ -315,6 +316,7 @@ function MessagesScreenInner() {
   const [loadingOlder, setLoadingOlder] = useState(false);
   const appStateRef = useRef(AppState.currentState);
   const [pollingEnabled, setPollingEnabled] = useState(true);
+  const [wsConnected, setWsConnected] = useState(false);
   const [clearTrigger, setClearTrigger] = useState(0);
 
   // -- AppState listener: pause polling when backgrounded -------------------
@@ -333,6 +335,49 @@ function MessagesScreenInner() {
     return () => sub.remove();
   }, []);
 
+  // -- Soketi real-time subscription ----------------------------------------
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    let cleanup: (() => void) | null = null;
+
+    (async () => {
+      try {
+        const { getLoyalPusher } = require("@/lib/pusher");
+        const pusher = await getLoyalPusher(token);
+        if (!pusher || cancelled) return;
+
+        const channelName = `private-loyal-${token}`;
+        const channel = pusher.subscribe(channelName);
+
+        channel.bind("loyal-new-message", () => {
+          queryClient.invalidateQueries({
+            queryKey: ["messages", token, "latest"],
+          });
+        });
+
+        const onStateChange = ({ current }: { current: string }) => {
+          if (!cancelled) setWsConnected(current === "connected");
+        };
+        pusher.connection.bind("state_change", onStateChange);
+        setWsConnected(pusher.connection.state === "connected");
+
+        cleanup = () => {
+          channel.unbind_all();
+          pusher.unsubscribe(channelName);
+          pusher.connection.unbind("state_change", onStateChange);
+        };
+      } catch {
+        /* pusher not available -- polling fallback */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [token, queryClient]);
+
   // -- Main messages query (polling) ----------------------------------------
   const { data: latestData, isLoading, isError, refetch } = useQuery<{
     messages: MessageData[];
@@ -345,7 +390,10 @@ function MessagesScreenInner() {
       return res.data;
     },
     enabled: !!token && pollingEnabled,
-    refetchInterval: pollingEnabled ? POLL_INTERVAL_MS : false,
+    // WS connected: no polling needed (Soketi delivers events instantly).
+    // WS disconnected: poll every 15s as fallback.
+    refetchInterval:
+      !pollingEnabled ? false : wsConnected ? false : POLL_FALLBACK_MS,
   });
 
   // Merge latest data into allMessages

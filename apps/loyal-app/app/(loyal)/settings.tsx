@@ -26,6 +26,7 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { fetchPortalData } from "@/lib/loyal-api";
 import { logout as clearSecureStore, setPersistedLang } from "@/lib/auth";
+import { disconnectPusher } from "@/lib/pusher";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import type { PortalData } from "@/lib/types";
 
@@ -152,6 +153,7 @@ function SettingsScreenInner() {
           onPress: async () => {
             setLoggingOut(true);
             try {
+              disconnectPusher();
               await clearSecureStore();
               reset();
               router.replace("/(auth)/welcome");

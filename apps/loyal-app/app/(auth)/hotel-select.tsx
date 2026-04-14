@@ -26,6 +26,7 @@ import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { fetchGuestHotels, fetchPortalData, type GuestHotelData } from "@/lib/loyal-api";
 import { saveSelectedToken, setHotelName, setMemberName, getGuestJwt, logout } from "@/lib/auth";
+import { disconnectPusher } from "@/lib/pusher";
 import { ErrorBoundary } from "@/lib/ErrorBoundary";
 import { useSlideUp } from "@/lib/animations";
 
@@ -134,6 +135,7 @@ function HotelSelectScreenInner() {
 
   const handleLogout = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    disconnectPusher();
     await logout();
     store().reset();
     router.replace("/(auth)/welcome");
