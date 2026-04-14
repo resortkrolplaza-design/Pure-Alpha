@@ -16,6 +16,7 @@ import {
 import { Tabs, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
+import * as Notifications from "expo-notifications";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { loyal, fontSize, spacing, radius } from "@/lib/tokens";
 import { useReducedMotion } from "@/lib/animations";
@@ -140,6 +141,46 @@ export default function LoyalLayout() {
 
   // Register push token after authentication (best-effort, silent fail)
   usePushNotifications();
+
+  // Handle push notification taps -- navigate to relevant screen
+  useEffect(() => {
+    function handleNotificationData(data: Record<string, unknown> | undefined) {
+      if (!data?.type) return;
+      switch (data.type) {
+        case "chat_message":
+          router.navigate("/(loyal)/messages");
+          break;
+        case "offer":
+        case "reward":
+          router.navigate("/(loyal)/rewards");
+          break;
+        case "badge":
+        case "tier_promotion":
+          router.navigate("/(loyal)/loyalty");
+          break;
+      }
+    }
+
+    // Warm start: user taps notification while app is running
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        handleNotificationData(
+          response.notification.request.content.data as Record<string, unknown> | undefined,
+        );
+      },
+    );
+
+    // Cold start: app was killed, opened via notification tap
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        handleNotificationData(
+          response.notification.request.content.data as Record<string, unknown> | undefined,
+        );
+      }
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   // Auth guard -- redirect unauthenticated users to entry screen
   useEffect(() => {
