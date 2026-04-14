@@ -511,6 +511,9 @@ function LoyaltyScreenInner() {
               review: "chatbubble-ellipses-outline",
               referral: "people-outline",
               booking: "calendar-outline",
+              signup: "person-add-outline",
+              checkin: "log-in-outline",
+              checkout: "log-out-outline",
             };
             const labelKey = `loyalty.earningRule.${key}`;
             const label = tt(labelKey);
