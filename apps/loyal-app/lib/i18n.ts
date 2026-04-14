@@ -93,6 +93,7 @@ const pl: Record<string, string> = {
   "badge.earned": "Zdobyta",
   "badge.locked": "Zablokowana",
   "badge.earnedOn": "Zdobyto",
+  "badge.notYetEarned": "Jeszcze nie zdobyta",
   "badge.noBadges": "Brak odznak",
 
   // -- ScratchCard ------------------------------------------------------------
@@ -198,6 +199,9 @@ const pl: Record<string, string> = {
   "hotelSelect.noPortal": "Ten hotel nie ma aktywnego portalu lojalno\u015bciowego.",
   "auth.checkEmail": "Sprawd\u017a email -- wys\u0142ali\u015bmy link aktywacyjny",
   "auth.activationSent": "Sprawd\u017a skrzynk\u0119 email",
+  "auth.resendEmail": "Wy\u015blij ponownie",
+  "auth.resending": "Wysy\u0142anie...",
+  "auth.resent": "Wys\u0142ano ponownie",
   "auth.selectHotel": "Wybierz hotel",
   "auth.yourHotels": "Twoje hotele",
   "auth.points": "pkt",
@@ -429,6 +433,7 @@ const en: Record<string, string> = {
   "badge.earned": "Earned",
   "badge.locked": "Locked",
   "badge.earnedOn": "Earned on",
+  "badge.notYetEarned": "Not yet earned",
   "badge.noBadges": "No badges",
 
   // -- ScratchCard ------------------------------------------------------------
@@ -534,6 +539,9 @@ const en: Record<string, string> = {
   "hotelSelect.noPortal": "This hotel does not have an active loyalty portal.",
   "auth.checkEmail": "Check your email -- we sent an activation link",
   "auth.activationSent": "Check your inbox",
+  "auth.resendEmail": "Resend email",
+  "auth.resending": "Sending...",
+  "auth.resent": "Resent",
   "auth.selectHotel": "Select hotel",
   "auth.yourHotels": "Your hotels",
   "auth.points": "pts",

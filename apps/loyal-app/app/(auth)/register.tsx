@@ -176,10 +176,10 @@ function RegisterScreenInner() {
           >
             <Text style={styles.resendButtonText}>
               {resent
-                ? (lang === "pl" ? "Wyslano ponownie" : "Resent")
+                ? t(lang, "auth.resent")
                 : resending
-                  ? (lang === "pl" ? "Wysylanie..." : "Sending...")
-                  : (lang === "pl" ? "Wyslij ponownie" : "Resend email")}
+                  ? t(lang, "auth.resending")
+                  : t(lang, "auth.resendEmail")}
             </Text>
           </Pressable>
         </View>

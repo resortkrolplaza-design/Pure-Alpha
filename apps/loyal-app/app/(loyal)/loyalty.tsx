@@ -101,7 +101,7 @@ function ScratchCardItem({
             <Icon name="sparkles" size={28} color={loyal.bg} />
           )}
           <Text style={styles.scratchBtnText}>
-            {isRevealing ? (lang === "pl" ? "Odkrywam..." : "Revealing...") : t(lang, "scratch.tapToScratch")}
+            {isRevealing ? t(lang, "scratch.revealing") : t(lang, "scratch.tapToScratch")}
           </Text>
         </Pressable>
       )}
@@ -192,11 +192,11 @@ function BadgeItem({ item, lang }: { item: BadgeData; lang: "pl" | "en" }) {
             ) : null}
             {earned && item.earnedAt ? (
               <Text style={styles.badgeModalDate}>
-                {lang === "pl" ? "Zdobyta" : "Earned"}: {new Date(item.earnedAt).toLocaleDateString(lang === "pl" ? "pl-PL" : "en-GB")}
+                {t(lang, "badge.earnedOn")}: {new Date(item.earnedAt).toLocaleDateString(lang === "pl" ? "pl-PL" : "en-GB")}
               </Text>
             ) : !earned ? (
               <Text style={styles.badgeModalDate}>
-                {lang === "pl" ? "Jeszcze nie zdobyta" : "Not yet earned"}
+                {t(lang, "badge.notYetEarned")}
               </Text>
             ) : null}
           </View>
