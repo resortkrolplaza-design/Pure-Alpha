@@ -162,6 +162,8 @@ function BadgeItem({ item, lang }: { item: BadgeData; lang: "pl" | "en" }) {
       <Pressable
         style={[styles.badgeItem, !earned && styles.badgeLocked]}
         onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setShowDetail(true); }}
+        hitSlop={8}
+        pressRetentionOffset={{ top: 20, left: 20, right: 20, bottom: 20 }}
         accessibilityRole="button"
         accessibilityLabel={item.name}
       >
