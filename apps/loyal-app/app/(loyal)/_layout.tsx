@@ -1,20 +1,30 @@
 // =============================================================================
 // Loyal App -- Bottom Tab Navigator (Navy bar + Gold accents + spring icons)
-// 5 tabs: Pobyt, Lojalnosc, Nagrody, Hotel, Wiadomosci
+// 6 tabs: Pobyt, Lojalnosc, Nagrody, Hotel, Wiadomosci, Ustawienia
 // =============================================================================
 
-import { useRef, useEffect, useMemo } from "react";
-import { Animated, Platform, StyleSheet, Text } from "react-native";
+import { useRef, useEffect, useMemo, useCallback } from "react";
+import {
+  Animated,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+  Modal,
+  Pressable,
+} from "react-native";
 import { Tabs, router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import * as Haptics from "expo-haptics";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { loyal, fontSize, spacing } from "@/lib/tokens";
+import { loyal, fontSize, spacing, radius } from "@/lib/tokens";
 import { useReducedMotion } from "@/lib/animations";
 import { t } from "@/lib/i18n";
 import { useAppStore } from "@/lib/store";
 import { fetchPortalData } from "@/lib/loyal-api";
+import { logout as clearSecureStore } from "@/lib/auth";
 import { usePushNotifications } from "@/lib/usePushNotifications";
+import { Icon } from "@/lib/icons";
 import type { PortalData } from "@/lib/types";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
@@ -79,12 +89,54 @@ function TabLabel({ label, focused, activeColor = loyal.primary }: { label: stri
   );
 }
 
+// -- Session Expired Modal ----------------------------------------------------
+
+function SessionExpiredModal({
+  visible,
+  lang,
+  onReLogin,
+}: {
+  visible: boolean;
+  lang: "pl" | "en";
+  onReLogin: () => void;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onReLogin}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalCard}>
+          <View style={styles.modalIconWrap}>
+            <Icon name="time-outline" size={36} color={loyal.primary} />
+          </View>
+          <Text style={styles.modalTitle}>{t(lang, "settings.sessionExpired")}</Text>
+          <Text style={styles.modalDesc}>{t(lang, "settings.sessionExpiredDesc")}</Text>
+          <Pressable
+            style={styles.modalButton}
+            onPress={onReLogin}
+            accessibilityRole="button"
+            accessibilityLabel={t(lang, "settings.reLogin")}
+          >
+            <Text style={styles.modalButtonText}>{t(lang, "settings.reLogin")}</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 // -- Layout -------------------------------------------------------------------
 
 export default function LoyalLayout() {
   const lang = useAppStore((s) => s.lang);
   const isAuthenticated = useAppStore((s) => s.isAuthenticated);
   const token = useAppStore((s) => s.token);
+  const sessionExpired = useAppStore((s) => s.sessionExpired);
+  const reset = useAppStore((s) => s.reset);
 
   // Register push token after authentication (best-effort, silent fail)
   usePushNotifications();
@@ -95,6 +147,17 @@ export default function LoyalLayout() {
       router.replace("/");
     }
   }, [isAuthenticated]);
+
+  // Session expired handler -- clear store + navigate to login
+  const handleReLogin = useCallback(async () => {
+    try {
+      await clearSecureStore();
+    } catch {
+      // best-effort
+    }
+    reset();
+    router.replace("/(auth)/login");
+  }, [reset]);
 
   // P2-4: Read portalThemeConfig for dynamic accent color
   const { data: portalData } = useQuery<PortalData>({
@@ -115,116 +178,142 @@ export default function LoyalLayout() {
   }, [portalData?.program?.portalThemeConfig]);
 
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: accentColor,
-        tabBarInactiveTintColor: loyal.tabInactive,
-        tabBarShowLabel: false,
-      }}
-      screenListeners={{
-        tabPress: () => {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="stay"
-        options={{
-          title: t(lang, "tab.stay"),
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon
-              active={focused}
-              activeName="home"
-              inactiveName="home-outline"
-              activeColor={accentColor}
-            />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.stay")} focused={focused} activeColor={accentColor} />
-          ),
-          tabBarShowLabel: true,
-          tabBarAccessibilityLabel: t(lang, "tab.stay"),
-        }}
+    <>
+      <SessionExpiredModal
+        visible={sessionExpired}
+        lang={lang}
+        onReLogin={handleReLogin}
       />
-      <Tabs.Screen
-        name="loyalty"
-        options={{
-          title: t(lang, "tab.loyalty"),
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon
-              active={focused}
-              activeName="star"
-              inactiveName="star-outline"
-              activeColor={accentColor}
-            />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.loyalty")} focused={focused} activeColor={accentColor} />
-          ),
-          tabBarShowLabel: true,
-          tabBarAccessibilityLabel: t(lang, "tab.loyalty"),
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: styles.tabBar,
+          tabBarActiveTintColor: accentColor,
+          tabBarInactiveTintColor: loyal.tabInactive,
+          tabBarShowLabel: false,
         }}
-      />
-      <Tabs.Screen
-        name="rewards"
-        options={{
-          title: t(lang, "tab.rewards"),
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon
-              active={focused}
-              activeName="gift"
-              inactiveName="gift-outline"
-              activeColor={accentColor}
-            />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.rewards")} focused={focused} activeColor={accentColor} />
-          ),
-          tabBarShowLabel: true,
-          tabBarAccessibilityLabel: t(lang, "tab.rewards"),
+        screenListeners={{
+          tabPress: () => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          },
         }}
-      />
-      <Tabs.Screen
-        name="hotel"
-        options={{
-          title: t(lang, "tab.hotel"),
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon
-              active={focused}
-              activeName="business"
-              inactiveName="business-outline"
-              activeColor={accentColor}
-            />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.hotel")} focused={focused} activeColor={accentColor} />
-          ),
-          tabBarShowLabel: true,
-          tabBarAccessibilityLabel: t(lang, "tab.hotel"),
-        }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: t(lang, "tab.messages"),
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon
-              active={focused}
-              activeName="chatbubbles"
-              inactiveName="chatbubbles-outline"
-              activeColor={accentColor}
-            />
-          ),
-          tabBarLabel: ({ focused }) => (
-            <TabLabel label={t(lang, "tab.messages")} focused={focused} activeColor={accentColor} />
-          ),
-          tabBarShowLabel: true,
-          tabBarAccessibilityLabel: t(lang, "tab.messages"),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="stay"
+          options={{
+            title: t(lang, "tab.stay"),
+            tabBarIcon: ({ focused }) => (
+              <AnimatedTabIcon
+                active={focused}
+                activeName="home"
+                inactiveName="home-outline"
+                activeColor={accentColor}
+              />
+            ),
+            tabBarLabel: ({ focused }) => (
+              <TabLabel label={t(lang, "tab.stay")} focused={focused} activeColor={accentColor} />
+            ),
+            tabBarShowLabel: true,
+            tabBarAccessibilityLabel: t(lang, "tab.stay"),
+          }}
+        />
+        <Tabs.Screen
+          name="loyalty"
+          options={{
+            title: t(lang, "tab.loyalty"),
+            tabBarIcon: ({ focused }) => (
+              <AnimatedTabIcon
+                active={focused}
+                activeName="star"
+                inactiveName="star-outline"
+                activeColor={accentColor}
+              />
+            ),
+            tabBarLabel: ({ focused }) => (
+              <TabLabel label={t(lang, "tab.loyalty")} focused={focused} activeColor={accentColor} />
+            ),
+            tabBarShowLabel: true,
+            tabBarAccessibilityLabel: t(lang, "tab.loyalty"),
+          }}
+        />
+        <Tabs.Screen
+          name="rewards"
+          options={{
+            title: t(lang, "tab.rewards"),
+            tabBarIcon: ({ focused }) => (
+              <AnimatedTabIcon
+                active={focused}
+                activeName="gift"
+                inactiveName="gift-outline"
+                activeColor={accentColor}
+              />
+            ),
+            tabBarLabel: ({ focused }) => (
+              <TabLabel label={t(lang, "tab.rewards")} focused={focused} activeColor={accentColor} />
+            ),
+            tabBarShowLabel: true,
+            tabBarAccessibilityLabel: t(lang, "tab.rewards"),
+          }}
+        />
+        <Tabs.Screen
+          name="hotel"
+          options={{
+            title: t(lang, "tab.hotel"),
+            tabBarIcon: ({ focused }) => (
+              <AnimatedTabIcon
+                active={focused}
+                activeName="business"
+                inactiveName="business-outline"
+                activeColor={accentColor}
+              />
+            ),
+            tabBarLabel: ({ focused }) => (
+              <TabLabel label={t(lang, "tab.hotel")} focused={focused} activeColor={accentColor} />
+            ),
+            tabBarShowLabel: true,
+            tabBarAccessibilityLabel: t(lang, "tab.hotel"),
+          }}
+        />
+        <Tabs.Screen
+          name="messages"
+          options={{
+            title: t(lang, "tab.messages"),
+            tabBarIcon: ({ focused }) => (
+              <AnimatedTabIcon
+                active={focused}
+                activeName="chatbubbles"
+                inactiveName="chatbubbles-outline"
+                activeColor={accentColor}
+              />
+            ),
+            tabBarLabel: ({ focused }) => (
+              <TabLabel label={t(lang, "tab.messages")} focused={focused} activeColor={accentColor} />
+            ),
+            tabBarShowLabel: true,
+            tabBarAccessibilityLabel: t(lang, "tab.messages"),
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: t(lang, "tab.settings"),
+            tabBarIcon: ({ focused }) => (
+              <AnimatedTabIcon
+                active={focused}
+                activeName="settings"
+                inactiveName="settings-outline"
+                activeColor={accentColor}
+              />
+            ),
+            tabBarLabel: ({ focused }) => (
+              <TabLabel label={t(lang, "tab.settings")} focused={focused} activeColor={accentColor} />
+            ),
+            tabBarShowLabel: true,
+            tabBarAccessibilityLabel: t(lang, "tab.settings"),
+          }}
+        />
+      </Tabs>
+    </>
   );
 }
 
@@ -249,5 +338,59 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: fontSize.xs,
     marginTop: 2,
+  },
+
+  // -- Session Expired Modal --------------------------------------------------
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: loyal.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing["3xl"],
+  },
+  modalCard: {
+    backgroundColor: loyal.white,
+    borderRadius: radius.xl,
+    padding: spacing["3xl"],
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 340,
+    gap: spacing.md,
+  },
+  modalIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: loyal.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+  },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    fontFamily: "Inter_700Bold",
+    color: loyal.lightText,
+    textAlign: "center",
+  },
+  modalDesc: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_400Regular",
+    color: loyal.lightTextSecondary,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  modalButton: {
+    backgroundColor: loyal.primary,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing["3xl"],
+    marginTop: spacing.sm,
+    minWidth: 200,
+    alignItems: "center",
+  },
+  modalButtonText: {
+    fontSize: fontSize.base,
+    fontFamily: "Inter_600SemiBold",
+    color: loyal.bg,
   },
 });

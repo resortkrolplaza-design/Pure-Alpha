@@ -12,6 +12,7 @@ interface LoyalState {
   memberName: string | null;
   hotelName: string | null;
   programName: string | null;
+  sessionExpired: boolean;
   // setters
   setAuthenticated: (v: boolean) => void;
   setToken: (v: string | null) => void;
@@ -20,6 +21,7 @@ interface LoyalState {
   setMemberName: (v: string | null) => void;
   setHotelName: (v: string | null) => void;
   setProgramName: (v: string | null) => void;
+  setSessionExpired: (v: boolean) => void;
   reset: () => void;
 }
 
@@ -31,6 +33,7 @@ const initialState = {
   memberName: null as string | null,
   hotelName: null as string | null,
   programName: null as string | null,
+  sessionExpired: false,
 };
 
 export const useAppStore = create<LoyalState>((set) => ({
@@ -42,5 +45,6 @@ export const useAppStore = create<LoyalState>((set) => ({
   setMemberName: (memberName) => set({ memberName }),
   setHotelName: (hotelName) => set({ hotelName }),
   setProgramName: (programName) => set({ programName }),
+  setSessionExpired: (sessionExpired) => set({ sessionExpired }),
   reset: () => set(initialState),
 }));

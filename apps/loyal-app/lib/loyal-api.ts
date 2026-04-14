@@ -46,6 +46,12 @@ export async function loyalFetch<T>(
       signal: controller.signal,
     });
 
+    // 401 interceptor -- signal session expiry to the UI
+    if (res.status === 401) {
+      useAppStore.getState().setSessionExpired(true);
+      return { status: "error", errorMessage: t(lang, "shell.sessionExpired") };
+    }
+
     const json = (await res.json()) as ApiResponse<T>;
     return json;
   } catch (err) {

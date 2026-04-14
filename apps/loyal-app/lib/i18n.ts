@@ -315,6 +315,26 @@ const pl: Record<string, string> = {
   "globalTier.maxTier": "Najwy\u017cszy poziom!",
   "globalTier.getFirstTier": "Zdobądź pierwszy poziom!",
 
+  // -- Settings ----------------------------------------------------------------
+  "tab.settings": "Ustawienia",
+  "settings.title": "Ustawienia",
+  "settings.profile": "Profil",
+  "settings.name": "Imi\u0119 i nazwisko",
+  "settings.email": "Email",
+  "settings.memberNumber": "Numer cz\u0142onka",
+  "settings.language": "J\u0119zyk",
+  "settings.hotel": "Hotel",
+  "settings.changeHotel": "Zmie\u0144 hotel",
+  "settings.logout": "Wyloguj si\u0119",
+  "settings.logoutConfirm": "Na pewno chcesz si\u0119 wylogowa\u0107?",
+  "settings.appInfo": "Informacje o aplikacji",
+  "settings.version": "Wersja",
+  "settings.deleteAccount": "Usu\u0144 konto",
+  "settings.deleteAccountDesc": "Aby usun\u0105\u0107 konto i dane osobowe (RODO), skontaktuj si\u0119 z recepcj\u0105 hotelu lub wy\u015blij email na adres: privacy@purealphahotel.pl",
+  "settings.sessionExpired": "Sesja wygas\u0142a",
+  "settings.sessionExpiredDesc": "Twoja sesja wygas\u0142a. Zaloguj si\u0119 ponownie.",
+  "settings.reLogin": "Zaloguj ponownie",
+
   // -- Error Boundary ---------------------------------------------------------
   "error.fallback": "Co\u015b posz\u0142o nie tak",
   "error.retry": "Spr\u00f3buj ponownie",
@@ -629,6 +649,26 @@ const en: Record<string, string> = {
   "globalTier.earnFirst": "Start collecting points!",
   "globalTier.maxTier": "Highest tier!",
   "globalTier.getFirstTier": "Earn your first tier!",
+
+  // -- Settings ----------------------------------------------------------------
+  "tab.settings": "Settings",
+  "settings.title": "Settings",
+  "settings.profile": "Profile",
+  "settings.name": "Name",
+  "settings.email": "Email",
+  "settings.memberNumber": "Member number",
+  "settings.language": "Language",
+  "settings.hotel": "Hotel",
+  "settings.changeHotel": "Change hotel",
+  "settings.logout": "Log out",
+  "settings.logoutConfirm": "Are you sure you want to log out?",
+  "settings.appInfo": "App information",
+  "settings.version": "Version",
+  "settings.deleteAccount": "Delete account",
+  "settings.deleteAccountDesc": "To delete your account and personal data (GDPR), contact the hotel reception or send an email to: privacy@purealphahotel.pl",
+  "settings.sessionExpired": "Session expired",
+  "settings.sessionExpiredDesc": "Your session has expired. Please log in again.",
+  "settings.reLogin": "Log in again",
 
   // -- Error Boundary ---------------------------------------------------------
   "error.fallback": "Something went wrong",
